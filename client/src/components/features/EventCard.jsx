@@ -1,0 +1,77 @@
+import { Link } from 'react-router-dom';
+import { formatDate, formatTime } from '../../utils/dateHelpers';
+import './EventCard.css';
+
+function RegistrationBadge({ status }) {
+  const map = {
+    OPEN: { label: 'Registration Open', cls: 'badge--open' },
+    NOT_OPEN: { label: 'Coming Soon', cls: 'badge--upcoming' },
+    CLOSED: { label: 'Registration Closed', cls: 'badge--closed' },
+  };
+  const { label, cls } = map[status] || { label: status, cls: '' };
+  return <span className={`badge ${cls}`}>{label}</span>;
+}
+
+export default function EventCard({ event }) {
+  const { slug, name, short_description, event_date, start_time, venue,
+    registration_status, allows_solo, allows_team, min_team_size, max_team_size } = event;
+
+  const participationType = allows_solo && allows_team
+    ? 'Solo & Team'
+    : allows_team
+    ? `Team (${min_team_size}–${max_team_size})`
+    : 'Solo';
+
+  return (
+    <div className="event-card card card--hover">
+      <div className="event-card__header">
+        <RegistrationBadge status={registration_status} />
+        {allows_team && (
+          <span className="badge badge--team">👥 {participationType}</span>
+        )}
+        {allows_solo && !allows_team && (
+          <span className="badge badge--solo">👤 Solo</span>
+        )}
+      </div>
+
+      <div className="event-card__body">
+        <h3 className="event-card__title">{name}</h3>
+        {short_description && (
+          <p className="event-card__desc">{short_description}</p>
+        )}
+
+        <div className="event-card__meta">
+          {event_date && (
+            <div className="event-card__meta-item">
+              <span className="event-card__meta-icon">📅</span>
+              <span>{formatDate(event_date)}</span>
+            </div>
+          )}
+          {start_time && (
+            <div className="event-card__meta-item">
+              <span className="event-card__meta-icon">🕐</span>
+              <span>{formatTime(start_time)}</span>
+            </div>
+          )}
+          {venue && (
+            <div className="event-card__meta-item">
+              <span className="event-card__meta-icon">📍</span>
+              <span>{venue}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="event-card__footer card__footer">
+        <Link to={`/events/${slug}`} className="btn btn--ghost btn--sm">
+          View Details →
+        </Link>
+        {registration_status === 'OPEN' && (
+          <Link to={`/events/${slug}/register`} className="btn btn--primary btn--sm">
+            Register Now
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}

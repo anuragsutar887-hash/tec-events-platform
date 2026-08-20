@@ -1,0 +1,282 @@
+/* ══════════════════════════════════════════════════════════
+   ADMIN CHECK-IN CONSOLE — High-Speed Event Verification
+   ══════════════════════════════════════════════════════════ */
+
+.checkin-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ─── Top Header ─────────────────────────────────────────── */
+.checkin__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.checkin__header-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ─── Search Card ────────────────────────────────────────── */
+.checkin__search-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+}
+
+.checkin__form {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: var(--space-4);
+  align-items: flex-end;
+}
+
+.checkin__event-field,
+.checkin__search-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.checkin__select {
+  background: var(--bg-surface) !important;
+  font-family: var(--font-mono) !important;
+  font-size: var(--text-sm) !important;
+  height: 48px;
+}
+
+.checkin__input-group {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.checkin__input {
+  flex: 1;
+  font-family: var(--font-mono) !important;
+  font-size: var(--text-base) !important;
+  height: 48px;
+  background: var(--bg-surface) !important;
+}
+
+.checkin__submit-btn {
+  height: 48px;
+  padding: 0 var(--space-6) !important;
+  font-size: var(--text-base) !important;
+  flex-shrink: 0;
+}
+
+.checkin__tip {
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ─── Result Card ────────────────────────────────────────── */
+.checkin__result {
+  border-color: var(--border-strong);
+  animation: fadeInUp 0.3s ease;
+}
+
+.checkin__result--checked {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.03) 0%, transparent 100%);
+}
+
+.checkin__result-grid {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.checkin__team-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-black);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  letter-spacing: -0.02em;
+}
+
+.checkin__participants-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  margin-top: var(--space-4);
+}
+
+.checkin__participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.checkin__participant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.checkin__participant-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.checkin__participant-avatar {
+  font-size: 1.25rem;
+}
+
+.checkin__participant-name {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkin__participant-meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.checkin__participant-contact {
+  color: var(--text-accent);
+}
+
+.checkin__timestamp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+}
+
+.checkin__result-qr-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+}
+
+.checkin__qr-wrap {
+  background: white;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.checkin__result-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ─── Live Queues ────────────────────────────────────────── */
+.checkin__queues-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+.checkin__queue-card {
+  overflow: hidden;
+}
+
+.checkin__queue-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.checkin__queue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: var(--transition-fast);
+}
+
+.checkin__queue-item:last-child {
+  border-bottom: none;
+}
+
+.checkin__queue-item:hover {
+  background: var(--bg-hover);
+}
+
+.checkin__queue-item--done {
+  background: rgba(52, 211, 153, 0.02);
+}
+
+.checkin__queue-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .checkin__form {
+    grid-template-columns: 1fr;
+  }
+  .checkin__result-grid {
+    grid-template-columns: 1fr;
+  }
+  .checkin__result-qr-panel {
+    display: none;
+  }
+  .checkin__queues-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .checkin__input-group {
+    flex-direction: column;
+  }
+  .checkin__submit-btn {
+    width: 100%;
+  }
+  .checkin__result-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .checkin__result-footer .btn {
+    width: 100%;
+  }
+}

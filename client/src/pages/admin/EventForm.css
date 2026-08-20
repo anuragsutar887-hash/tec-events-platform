@@ -1,0 +1,107 @@
+.event-form-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.event-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 860px;
+}
+
+.event-form__section-title {
+  font-size: var(--text-base);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.event-form__toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 600px) { .event-form__toggles { grid-template-columns: 1fr; } }
+
+.event-form__toggle {
+  display: block;
+  cursor: pointer;
+}
+
+.event-form__toggle input[type="checkbox"] {
+  display: none;
+}
+
+.event-form__toggle-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-fast);
+}
+
+.event-form__toggle input:checked + .event-form__toggle-body {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.event-form__toggle:hover .event-form__toggle-body {
+  border-color: var(--border-hover);
+}
+
+.event-form__toggle-icon { font-size: 1.5rem; }
+
+.event-form__toggle-title {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.event-form__toggle-desc {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.event-form__features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.event-form__feature-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background 0.15s;
+}
+
+.event-form__feature-toggle:hover {
+  background: var(--bg-elevated);
+}
+
+.event-form__feature-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.event-form__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+}
