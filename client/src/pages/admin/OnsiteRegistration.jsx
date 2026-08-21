@@ -3,69 +3,44 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 import './OnsiteRegistration.css';
 
-const emptyLeader = { full_name: '', email: '', phone: '', college: '', department: '', year: '' };
-const emptyMember = { full_name: '', email: '', department: '', year: '' };
-
 export default function OnsiteRegistration() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [selectedEventId, setSelectedEventId] = useState(searchParams.get('event_id') || '');
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [mode, setMode] = useState('SOLO'); // SOLO | TEAM
+  
   const [teamName, setTeamName] = useState('');
-  const [leader, setLeader] = useState({ ...emptyLeader });
-  const [members, setMembers] = useState([{ ...emptyMember }]);
+  const [player1, setPlayer1] = useState({ full_name: '', email: '' });
+  const [player2, setPlayer2] = useState({ full_name: '', email: '' });
   const [checkInImmediately, setCheckInImmediately] = useState(true);
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(null);
 
-  useEffect(() => { loadEvents(); }, []);
   useEffect(() => {
-    if (selectedEventId) {
-      const ev = events.find((e) => String(e.id) === String(selectedEventId));
-      setSelectedEvent(ev || null);
-      if (ev) {
-        if (ev.allows_team && !ev.allows_solo) setMode('TEAM');
-        else if (ev.allows_solo && !ev.allows_team) setMode('SOLO');
-      }
-    }
-  }, [selectedEventId, events]);
+    loadEvents();
+  }, []);
 
   const loadEvents = async () => {
     try {
       const { data } = await apiClient.get('/admin/events');
-      setEvents(data.events.filter((e) => ['PUBLISHED', 'DRAFT', 'COMPLETED'].includes(e.status)));
-    } catch { }
+      const evs = data.events.filter((e) => ['PUBLISHED', 'DRAFT', 'COMPLETED'].includes(e.status));
+      setEvents(evs);
+      if (!selectedEventId && evs.length > 0) {
+        setSelectedEventId(String(evs[0].id));
+      }
+    } catch {}
   };
-
-  const setLeaderField = (f, v) => setLeader((l) => ({ ...l, [f]: v }));
-  const setMemberField = (i, f, v) => {
-    setMembers((ms) => ms.map((m, idx) => idx === i ? { ...m, [f]: v } : m));
-  };
-  const addMember = () => {
-    if (selectedEvent && members.length + 1 >= selectedEvent.max_team_size) return;
-    setMembers((ms) => [...ms, { ...emptyMember }]);
-  };
-  const removeMember = (i) => setMembers((ms) => ms.filter((_, idx) => idx !== i));
 
   const validate = () => {
     const errs = {};
     if (!selectedEventId) errs.event = 'Select an event';
-    if (!leader.full_name.trim()) errs.leader_name = 'Leader name required';
-    if (!leader.email.trim()) errs.leader_email = 'Leader email required';
-    if (!leader.phone.trim()) errs.leader_phone = 'Leader phone required';
-    if (mode === 'TEAM') {
-      if (!teamName.trim()) errs.team_name = 'Team name required';
-      const total = 1 + members.length;
-      if (selectedEvent && total < selectedEvent.min_team_size) {
-        errs.members = `Need at least ${selectedEvent.min_team_size} members total (including leader)`;
-      }
-      if (selectedEvent && total > selectedEvent.max_team_size) {
-        errs.members = `Maximum ${selectedEvent.max_team_size} members (including leader)`;
-      }
-    }
+    if (!teamName.trim()) errs.team_name = 'Team name required';
+    if (!player1.full_name.trim()) errs.p1_name = 'Player 1 name required';
+    if (!player1.email.trim()) errs.p1_email = 'Player 1 email required';
+    if (!player2.full_name.trim()) errs.p2_name = 'Player 2 name required';
+    if (!player2.email.trim()) errs.p2_email = 'Player 2 email required';
     return errs;
   };
 
@@ -74,23 +49,23 @@ export default function OnsiteRegistration() {
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
+
     setLoading(true);
     try {
       const payload = {
         event_id: parseInt(selectedEventId),
-        participation_mode: mode,
-        team_name: mode === 'TEAM' ? teamName.trim() : undefined,
-        leader,
-        members: mode === 'TEAM' ? members : [],
+        team_name: teamName.trim(),
+        player_1: player1,
+        player_2: player2,
         check_in_immediately: checkInImmediately,
       };
       const { data } = await apiClient.post('/admin/registrations', payload);
       setSuccess(data.registration);
-      setLeader({ ...emptyLeader });
-      setMembers([{ ...emptyMember }]);
       setTeamName('');
+      setPlayer1({ full_name: '', email: '' });
+      setPlayer2({ full_name: '', email: '' });
     } catch (err) {
-      setErrors({ submit: err.response?.data?.error || err.response?.data?.errors?.join(', ') || 'Registration failed' });
+      setErrors({ submit: err.response?.data?.error || 'Registration failed' });
     } finally {
       setLoading(false);
     }
@@ -100,18 +75,18 @@ export default function OnsiteRegistration() {
     return (
       <div className="onsite-success">
         <div className="onsite-success__icon">✅</div>
-        <h2 className="onsite-success__title">On-site Registration Successful!</h2>
+        <h2 className="onsite-success__title">On-site Duo Registered!</h2>
         <div className="onsite-success__reg-id">
-          <div className="text-xs text-muted mb-2">REGISTRATION ID</div>
-          <span className="reg-id">{success.registration_id}</span>
+          <div className="text-xs text-muted mb-2 font-mono fw-bold">REGISTRATION ID</div>
+          <span className="reg-id" style={{ fontSize: '1.4rem' }}>{success.registration_id}</span>
         </div>
         {success.team_name && (
           <p className="onsite-success__team">Team: <strong>{success.team_name}</strong></p>
         )}
-        {checkInImmediately && <p className="text-success mt-2">✓ Participant checked in</p>}
+        {checkInImmediately && <p className="text-success mt-2 fw-bold">✓ Team Checked-in to Live Arena</p>}
         <div className="onsite-success__actions">
-          <button className="btn btn--secondary" onClick={() => setSuccess(null)}>Add Another</button>
-          <button className="btn btn--primary" onClick={() => navigate('/admin/checkin')}>Go to Check-in</button>
+          <button className="btn btn--secondary" onClick={() => setSuccess(null)}>+ Register Another Duo</button>
+          <button className="btn btn--primary" onClick={() => navigate('/admin/checkin')}>Go to Check-in Console</button>
         </div>
       </div>
     );
@@ -121,17 +96,22 @@ export default function OnsiteRegistration() {
     <div className="onsite-page">
       <div className="onsite-page__header">
         <div>
-          <h1 className="dashboard__title">On-site Registration</h1>
-          <p className="dashboard__subtitle">Register a participant or team on the day of the event</p>
+          <h1 className="dashboard__title">ON-SITE REGISTRATION</h1>
+          <p className="dashboard__subtitle">Fast desk registration for 2-player duo teams on event day</p>
         </div>
       </div>
 
       {errors.submit && <div className="alert alert--error mb-4">⚠️ {errors.submit}</div>}
 
-      <form onSubmit={handleSubmit} className="onsite-form">
-        {/* Event & Mode */}
+      <form onSubmit={handleSubmit} className="onsite-form" noValidate>
+        {/* Event Selection & Team Name */}
         <div className="onsite-form__section card">
-          <div className="card__header"><h2 className="event-form__section-title">📅 Event & Mode</h2></div>
+          <div className="card__header">
+            <span className="section__label" style={{ marginBottom: 0 }}>STEP 1</span>
+            <h2 className="event-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+              EVENT & TEAM NAME
+            </h2>
+          </div>
           <div className="card__body form-section">
             <div className="form-group">
               <label className="form-label form-label--required">Select Event</label>
@@ -147,172 +127,107 @@ export default function OnsiteRegistration() {
               {errors.event && <span className="form-error">{errors.event}</span>}
             </div>
 
-            {selectedEvent && (
-              <div>
-                <label className="form-label mb-2">Registration Mode</label>
-                <div className="onsite-form__mode-toggle">
-                  {selectedEvent.allows_solo && (
-                    <button
-                      type="button"
-                      className={`onsite-form__mode-btn ${mode === 'SOLO' ? 'active' : ''}`}
-                      onClick={() => setMode('SOLO')}
-                    >
-                      👤 Solo Participant
-                    </button>
-                  )}
-                  {selectedEvent.allows_team && (
-                    <button
-                      type="button"
-                      className={`onsite-form__mode-btn ${mode === 'TEAM' ? 'active' : ''}`}
-                      onClick={() => setMode('TEAM')}
-                    >
-                      👥 Team ({selectedEvent.min_team_size}–{selectedEvent.max_team_size} members)
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {mode === 'TEAM' && (
-              <div className="form-group">
-                <label className="form-label form-label--required">Team Name</label>
-                <input
-                  type="text"
-                  className={`form-input ${errors.team_name ? 'form-input--error' : ''}`}
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  placeholder="Enter unique team name"
-                />
-                {errors.team_name && <span className="form-error">{errors.team_name}</span>}
-              </div>
-            )}
+            <div className="form-group">
+              <label className="form-label form-label--required">Duo Team Name</label>
+              <input
+                type="text"
+                className={`form-input ${errors.team_name ? 'form-input--error' : ''}`}
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                placeholder="Enter unique team name"
+                required
+              />
+              {errors.team_name && <span className="form-error">{errors.team_name}</span>}
+            </div>
           </div>
         </div>
 
-        {/* Leader */}
+        {/* Player 1 */}
         <div className="onsite-form__section card">
           <div className="card__header">
-            <h2 className="event-form__section-title">
-              {mode === 'SOLO' ? '👤 Participant Details' : '👑 Team Leader'}
+            <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 1</span>
+            <h2 className="event-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+              PLAYER 1
             </h2>
           </div>
           <div className="card__body form-section">
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label form-label--required">Full Name</label>
-                <input type="text" className={`form-input ${errors.leader_name ? 'form-input--error' : ''}`}
-                  value={leader.full_name} onChange={(e) => setLeaderField('full_name', e.target.value)}
-                  id="leader-name" placeholder="Full name" />
-                {errors.leader_name && <span className="form-error">{errors.leader_name}</span>}
+                <input
+                  type="text"
+                  className={`form-input ${errors.p1_name ? 'form-input--error' : ''}`}
+                  value={player1.full_name}
+                  onChange={(e) => setPlayer1({ ...player1, full_name: e.target.value })}
+                  placeholder="Player 1 Name"
+                  required
+                />
+                {errors.p1_name && <span className="form-error">{errors.p1_name}</span>}
               </div>
               <div className="form-group">
                 <label className="form-label form-label--required">Email</label>
-                <input type="email" className={`form-input ${errors.leader_email ? 'form-input--error' : ''}`}
-                  value={leader.email} onChange={(e) => setLeaderField('email', e.target.value)}
-                  placeholder="email@example.com" />
-                {errors.leader_email && <span className="form-error">{errors.leader_email}</span>}
-              </div>
-              <div className="form-group">
-                <label className="form-label form-label--required">Phone</label>
-                <input type="tel" className={`form-input ${errors.leader_phone ? 'form-input--error' : ''}`}
-                  value={leader.phone} onChange={(e) => setLeaderField('phone', e.target.value)}
-                  placeholder="+91 98765 43210" />
-                {errors.leader_phone && <span className="form-error">{errors.leader_phone}</span>}
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">College / Institution</label>
-                <input type="text" className="form-input" value={leader.college}
-                  onChange={(e) => setLeaderField('college', e.target.value)} placeholder="College name" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Department</label>
-                <input type="text" className="form-input" value={leader.department}
-                  onChange={(e) => setLeaderField('department', e.target.value)} placeholder="e.g. CSE" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Year</label>
-                <select className="form-input form-select" value={leader.year}
-                  onChange={(e) => setLeaderField('year', e.target.value)}>
-                  <option value="">Select year</option>
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                  <option value="3rd Year">3rd Year</option>
-                  <option value="4th Year">4th Year</option>
-                  <option value="PG">PG</option>
-                </select>
+                <input
+                  type="email"
+                  className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
+                  value={player1.email}
+                  onChange={(e) => setPlayer1({ ...player1, email: e.target.value })}
+                  placeholder="player1@gmail.com"
+                  required
+                />
+                {errors.p1_email && <span className="form-error">{errors.p1_email}</span>}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Team Members */}
-        {mode === 'TEAM' && (
-          <div className="onsite-form__section card">
-            <div className="card__header">
-              <h2 className="event-form__section-title">👥 Team Members</h2>
-              {errors.members && <span className="form-error">{errors.members}</span>}
-            </div>
-            <div className="card__body form-section">
-              {members.map((member, i) => (
-                <div key={i} className="onsite-form__member">
-                  <div className="onsite-form__member-header">
-                    <span className="text-sm fw-semibold text-secondary">Member {i + 2}</span>
-                    {members.length > 1 && (
-                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => removeMember(i)}>
-                        ✕ Remove
-                      </button>
-                    )}
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label form-label--required">Full Name</label>
-                      <input type="text" className="form-input" value={member.full_name}
-                        onChange={(e) => setMemberField(i, 'full_name', e.target.value)} placeholder="Full name" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label form-label--required">Email</label>
-                      <input type="email" className="form-input" value={member.email}
-                        onChange={(e) => setMemberField(i, 'email', e.target.value)} placeholder="email@example.com" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Department</label>
-                      <input type="text" className="form-input" value={member.department}
-                        onChange={(e) => setMemberField(i, 'department', e.target.value)} placeholder="CSE" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Year</label>
-                      <select className="form-input form-select" value={member.year}
-                        onChange={(e) => setMemberField(i, 'year', e.target.value)}>
-                        <option value="">Select year</option>
-                        <option value="1st Year">1st Year</option>
-                        <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="4th Year">4th Year</option>
-                        <option value="PG">PG</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {selectedEvent && (members.length + 1) < selectedEvent.max_team_size && (
-                <button type="button" className="btn btn--secondary btn--sm" onClick={addMember}>
-                  + Add Member
-                </button>
-              )}
+        {/* Player 2 */}
+        <div className="onsite-form__section card">
+          <div className="card__header">
+            <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2</span>
+            <h2 className="event-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+              PLAYER 2
+            </h2>
+          </div>
+          <div className="card__body form-section">
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label form-label--required">Full Name</label>
+                <input
+                  type="text"
+                  className={`form-input ${errors.p2_name ? 'form-input--error' : ''}`}
+                  value={player2.full_name}
+                  onChange={(e) => setPlayer2({ ...player2, full_name: e.target.value })}
+                  placeholder="Player 2 Name"
+                  required
+                />
+                {errors.p2_name && <span className="form-error">{errors.p2_name}</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label form-label--required">Email</label>
+                <input
+                  type="email"
+                  className={`form-input ${errors.p2_email ? 'form-input--error' : ''}`}
+                  value={player2.email}
+                  onChange={(e) => setPlayer2({ ...player2, email: e.target.value })}
+                  placeholder="player2@gmail.com"
+                  required
+                />
+                {errors.p2_email && <span className="form-error">{errors.p2_email}</span>}
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Options */}
         <div className="onsite-form__section card">
           <div className="card__body">
             <label className="event-form__feature-toggle">
-              <input type="checkbox" checked={checkInImmediately}
-                onChange={(e) => setCheckInImmediately(e.target.checked)} />
-              <span>Check in immediately after registration</span>
+              <input
+                type="checkbox"
+                checked={checkInImmediately}
+                onChange={(e) => setCheckInImmediately(e.target.checked)}
+              />
+              <span>Check in immediately into Live Arena upon registration</span>
             </label>
           </div>
         </div>
@@ -327,7 +242,7 @@ export default function OnsiteRegistration() {
             className={`btn btn--primary btn--lg ${loading ? 'btn--loading' : ''}`}
             disabled={loading}
           >
-            {loading ? '' : 'Register On-site'}
+            {loading ? '' : 'Register Duo On-site →'}
           </button>
         </div>
       </form>

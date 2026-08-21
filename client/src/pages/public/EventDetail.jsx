@@ -72,11 +72,7 @@ export default function EventDetail() {
   };
   const regBadge = regBadgeMap[regStatus] || { cls: '', label: regStatus };
 
-  const participationType = event.allows_solo && event.allows_team
-    ? `Solo & Duo Team (${event.min_team_size}–${event.max_team_size} members)`
-    : event.allows_team
-    ? `Duo Team (${event.min_team_size}–${event.max_team_size} members)`
-    : 'Solo Participant';
+  const participationType = 'Duo Team (2 Players)';
 
   return (
     <div className="event-detail">

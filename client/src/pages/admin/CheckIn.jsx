@@ -281,25 +281,22 @@ export default function CheckIn() {
                 </div>
 
                 <div className="checkin__participants-box">
-                  <span className="section__label">TEAM MEMBERS ({result.participants?.length || 0})</span>
+                  <span className="section__label">DUO TEAM MEMBERS (2 PLAYERS)</span>
                   <div className="checkin__participants-list">
                     {result.participants?.map((p, i) => (
                       <div key={i} className="checkin__participant-row">
                         <div className="checkin__participant-left">
-                          <span className="checkin__participant-avatar">
-                            {p.is_leader ? '👑' : '👤'}
+                          <span className="badge badge--tag" style={{ fontSize: '0.65rem', marginRight: 'var(--space-2)' }}>
+                            PLAYER {i + 1}
                           </span>
                           <div>
                             <div className="checkin__participant-name">
-                              {p.full_name} {p.is_leader && <span className="badge badge--solo" style={{ fontSize: '0.65rem' }}>Leader</span>}
+                              {p.full_name}
                             </div>
                             <div className="checkin__participant-meta">
-                              {[p.department, p.year, p.college].filter(Boolean).join(' • ')}
+                              📧 {p.email}
                             </div>
                           </div>
-                        </div>
-                        <div className="checkin__participant-contact">
-                          <span className="font-mono text-xs">{p.phone || p.email || ''}</span>
                         </div>
                       </div>
                     ))}

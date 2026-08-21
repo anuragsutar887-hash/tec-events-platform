@@ -96,20 +96,11 @@ export default function AdminRegistrations() {
       'Registration ID',
       'Event Name',
       'Team Name',
-      'Participation Mode',
       'Registration Type',
-      'Leader Full Name',
-      'Leader Email',
-      'Leader Phone',
-      'Leader College',
-      'Leader Department',
-      'Leader Year',
-      'Teammate Full Name',
-      'Teammate Email',
-      'Teammate Phone',
-      'Teammate College',
-      'Teammate Department',
-      'Teammate Year',
+      'Player 1 Full Name',
+      'Player 1 Email',
+      'Player 2 Full Name',
+      'Player 2 Email',
       'Checked In Status',
       'Checked In Time',
       'Registered Timestamp'
@@ -117,8 +108,8 @@ export default function AdminRegistrations() {
 
     const rows = registrations.map((r) => {
       const participants = r.participants || [];
-      const leader = participants.find((p) => p.is_leader) || participants[0] || {};
-      const teammate = participants.find((p) => !p.is_leader) || (participants.length > 1 ? participants[1] : {});
+      const p1 = participants.find((p) => p.is_leader) || participants[0] || {};
+      const p2 = participants.find((p) => !p.is_leader) || (participants.length > 1 ? participants[1] : {});
 
       const escText = (val) => {
         if (!val) return '""';
@@ -133,22 +124,13 @@ export default function AdminRegistrations() {
 
       return [
         escText(r.registration_id),
-        escVal(r.event_name || 'codeDebug'),
-        escVal(r.team_name || `${leader.full_name || 'Team'}'s Duo`),
-        escVal(r.participation_mode || 'TEAM'),
+        escVal(r.event_name || 'Technical Event'),
+        escVal(r.team_name || `${p1.full_name || 'Team'}'s Duo`),
         escVal(r.registration_type || 'ONLINE'),
-        escVal(leader.full_name || 'N/A'),
-        escVal(leader.email || 'N/A'),
-        escText(leader.phone || 'N/A'),
-        escVal(leader.college || 'Indira College of Engineering'),
-        escVal(leader.department || 'N/A'),
-        escVal(leader.year || 'N/A'),
-        escVal(teammate.full_name || 'N/A'),
-        escVal(teammate.email || 'N/A'),
-        escText(teammate.phone || 'N/A'),
-        escVal(teammate.college || leader.college || 'Indira College of Engineering'),
-        escVal(teammate.department || leader.department || 'N/A'),
-        escVal(teammate.year || leader.year || 'N/A'),
+        escVal(p1.full_name || 'N/A'),
+        escVal(p1.email || 'N/A'),
+        escVal(p2.full_name || 'N/A'),
+        escVal(p2.email || 'N/A'),
         escVal(r.checked_in ? 'YES (In Arena)' : 'NO (Pending)'),
         escVal(r.checked_in_at ? formatDateTime(r.checked_in_at) : 'Not Checked In'),
         escVal(formatDateTime(r.created_at)),
@@ -403,22 +385,18 @@ export default function AdminRegistrations() {
 
                                 {/* Col 2: Duo Members */}
                                 <div className="inline-detail-box__col inline-detail-box__col--members">
-                                  <span className="detail-field__label">DUO TEAM MEMBERS ({r.participants?.length || 1})</span>
+                                  <span className="detail-field__label">DUO TEAM MEMBERS (2 PLAYERS)</span>
                                   <div className="inline-members-list">
                                     {r.participants?.map((p, pIdx) => (
                                       <div key={pIdx} className="inline-member-pill">
                                         <div className="inline-member-pill__top">
                                           <span className="inline-member-pill__name">{p.full_name}</span>
-                                          {p.is_leader ? (
-                                            <span className="badge badge--team" style={{ fontSize: '0.65rem' }}>👑 Leader</span>
-                                          ) : (
-                                            <span className="badge badge--solo" style={{ fontSize: '0.65rem' }}>🤝 Teammate</span>
-                                          )}
+                                          <span className="badge badge--tag" style={{ fontSize: '0.65rem' }}>
+                                            PLAYER {pIdx + 1}
+                                          </span>
                                         </div>
                                         <div className="inline-member-pill__meta">
                                           <span>📧 {p.email}</span>
-                                          {p.phone && <span>📱 {p.phone}</span>}
-                                          <span>🏛️ {[p.department, p.year, p.college].filter(Boolean).join(' • ')}</span>
                                         </div>
                                       </div>
                                     ))}

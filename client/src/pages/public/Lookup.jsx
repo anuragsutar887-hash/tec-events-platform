@@ -234,39 +234,26 @@ export default function Lookup() {
                         </div>
                       </div>
 
-                      {/* Participants Breakdown */}
-                      {result.participants?.length > 0 && (
-                        <div>
-                          <div className="text-xs text-muted font-mono fw-bold mb-2" style={{ textTransform: 'uppercase' }}>
-                            Registered Participants ({result.participants.length})
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                            {result.participants.map((p, i) => (
-                              <div key={i} style={{
-                                padding: 'var(--space-3) var(--space-4)',
-                                background: '#fafafa',
-                                border: '1px solid var(--border)',
-                                borderRadius: 'var(--radius-sm)'
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                                  <span className="text-sm fw-bold text-primary">{p.full_name}</span>
-                                  {p.is_leader && (
-                                    <span className="badge badge--team" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
-                                      Leader
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xs text-muted mt-1">
-                                  {p.email} {p.phone && `• ${p.phone}`}
-                                </div>
-                                <div className="text-xs text-muted">
-                                  {[p.department, p.year, p.college].filter(Boolean).join(' • ')}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                      {/* Duo Players (Player 1 & Player 2) */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                        <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
+                          Duo Team Members (2 Players)
                         </div>
-                      )}
+                        {result.participants?.map((p, i) => (
+                          <div key={i} style={{
+                            padding: 'var(--space-3) var(--space-4)',
+                            background: '#fafafa',
+                            border: '1px solid var(--border)',
+                            borderRadius: 'var(--radius-sm)'
+                          }}>
+                            <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase', marginBottom: '2px' }}>
+                              PLAYER {i + 1}
+                            </div>
+                            <div className="text-primary fw-bold text-sm">{p.full_name}</div>
+                            <div className="text-secondary text-xs">{p.email}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Right QR Desk Pass */}

@@ -137,10 +137,10 @@ export default function RegistrationDetailModal({ registrationId, onClose, onChe
                     )}
                   </div>
 
-                  {/* Participants */}
+                  {/* Participants (Player 1 & Player 2) */}
                   <div>
                     <div className="text-xs text-muted fw-bold mb-2" style={{ textTransform: 'uppercase' }}>
-                      Participants ({reg.participants?.length || 0})
+                      DUO TEAM MEMBERS (2 PLAYERS)
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                       {reg.participants?.map((p, i) => (
@@ -150,12 +150,13 @@ export default function RegistrationDetailModal({ registrationId, onClose, onChe
                           borderRadius: 'var(--radius-sm)',
                           border: '1px solid var(--border)',
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-1)' }}>
                             <span className="text-sm fw-bold text-primary">{p.full_name}</span>
-                            {p.is_leader && <span className="badge badge--team" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>Leader</span>}
+                            <span className="badge badge--tag" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
+                              PLAYER {i + 1}
+                            </span>
                           </div>
-                          <div className="text-xs text-muted">{p.email} {p.phone && `• ${p.phone}`}</div>
-                          <div className="text-xs text-muted">{[p.department, p.year, p.college].filter(Boolean).join(' • ')}</div>
+                          <div className="text-xs text-muted">📧 {p.email}</div>
                         </div>
                       ))}
                     </div>

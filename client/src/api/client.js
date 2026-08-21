@@ -244,10 +244,13 @@ export const apiClient = {
       return { data: { event: parseEvent(data) } };
     }
 
-    // 2. Register Participant / Duo Team
+    // 2. Register Duo Team (Player 1 & Player 2)
     if (url === '/registrations' || url === '/admin/registrations') {
-      const { event_slug, event_id, participation_mode, team_name, leader, members, check_in_immediately } = payload;
+      const { event_slug, event_id, team_name, leader, members, player_1, player_2, check_in_immediately } = payload;
       
+      const p1 = player_1 || leader || {};
+      const p2 = player_2 || (members && members[0]) || {};
+
       let eventRecord = null;
       if (event_id) {
         const { data } = await supabase.from('events').select('id, name, event_date').eq('id', event_id).single();
@@ -267,8 +270,8 @@ export const apiClient = {
         registration_id,
         event_id: eventRecord.id,
         registration_type: url.includes('admin') ? 'ON_SITE' : 'ONLINE',
-        participation_mode: participation_mode || 'TEAM',
-        team_name: team_name?.trim() || `${leader.full_name}'s Duo`,
+        participation_mode: 'TEAM',
+        team_name: team_name?.trim() || `${p1.full_name || 'Team'}'s Duo`,
         status: 'CONFIRMED',
         checked_in: Boolean(check_in_immediately),
         checked_in_at: check_in_immediately ? new Date().toISOString() : null,
@@ -278,32 +281,33 @@ export const apiClient = {
 
       if (regErr) throw new Error(regErr.message);
 
-      // Insert Leader
+      // Insert Player 1
       await supabase.from('participants').insert({
         registration_id: reg.id,
         event_id: eventRecord.id,
         is_leader: true,
-        full_name: leader.full_name,
-        email: leader.email,
-        phone: leader.phone,
-        college: leader.college,
-        department: leader.department,
-        year: leader.year,
-        student_id: leader.student_id
+        full_name: p1.full_name || '',
+        email: p1.email || '',
+        phone: p1.phone || '',
+        college: p1.college || 'ICEM Pune',
+        department: p1.department || 'IT',
+        year: p1.year || '',
+        student_id: p1.student_id || ''
       });
 
-      // Insert Teammate
-      if (members && members.length > 0 && members[0].full_name) {
+      // Insert Player 2
+      if (p2.full_name) {
         await supabase.from('participants').insert({
           registration_id: reg.id,
           event_id: eventRecord.id,
           is_leader: false,
-          full_name: members[0].full_name,
-          email: members[0].email,
-          phone: members[0].phone,
-          college: members[0].college || leader.college,
-          department: members[0].department || leader.department,
-          year: members[0].year || leader.year
+          full_name: p2.full_name || '',
+          email: p2.email || '',
+          phone: p2.phone || '',
+          college: p2.college || p1.college || 'ICEM Pune',
+          department: p2.department || p1.department || 'IT',
+          year: p2.year || p1.year || '',
+          student_id: p2.student_id || ''
         });
       }
 
@@ -315,7 +319,11 @@ export const apiClient = {
             event_name: eventRecord.name,
             qr_token: reg.qr_token,
             team_name: reg.team_name,
-            participation_mode: reg.participation_mode
+            participation_mode: 'TEAM',
+            participants: [
+              { is_leader: true, full_name: p1.full_name, email: p1.email },
+              { is_leader: false, full_name: p2.full_name, email: p2.email }
+            ]
           }
         }
       };
