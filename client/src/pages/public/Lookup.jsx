@@ -1,24 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { formatDate } from '../../utils/dateHelpers';
+import { formatDate, formatTime } from '../../utils/dateHelpers';
+import { QRCodeSVG } from 'qrcode.react';
 import './Lookup.css';
 
 export default function Lookup() {
-  const [searchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('id') || '');
-  const [token] = useState(searchParams.get('token') || '');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [searched, setSearched] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialId = searchParams.get('id') || localStorage.getItem('my_ticket_id') || '';
+  const token = searchParams.get('token') || '';
 
-  // Auto-search if token is in URL (QR code scan)
+  const [query, setQuery] = useState(initialId);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(Boolean(initialId || token));
+  const [error, setError] = useState('');
+  const [showManualInput, setShowManualInput] = useState(!initialId && !token);
+
   useEffect(() => {
     if (token) {
       handleTokenLookup(token);
-    } else if (searchParams.get('id')) {
-      handleSearch(null, searchParams.get('id'));
+    } else if (initialId) {
+      fetchRegistration(initialId);
     }
   }, []);
 
@@ -26,56 +28,75 @@ export default function Lookup() {
     setLoading(true);
     setError('');
     setResult(null);
-    setSearched(true);
     try {
       const { data } = await apiClient.get(`/registrations/lookup-by-token/${tok}`);
       setResult(data.registration);
+      if (data.registration?.registration_id) {
+        localStorage.setItem('my_ticket_id', data.registration.registration_id);
+      }
     } catch {
-      setError('Registration not found for this QR code.');
+      setError('Registration not found for this QR pass.');
+      setShowManualInput(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = async (e, overrideQuery) => {
-    if (e) e.preventDefault();
-    const q = (overrideQuery || query).trim();
+  const fetchRegistration = async (idToFetch) => {
+    const q = (idToFetch || query).trim();
     if (!q) return;
     setLoading(true);
     setError('');
     setResult(null);
-    setSearched(true);
     try {
       const { data } = await apiClient.get(`/registrations/lookup/${q}`);
       setResult(data.registration);
+      localStorage.setItem('my_ticket_id', data.registration.registration_id);
+      setShowManualInput(false);
     } catch {
       setError(`No registration found for "${q}". Please check the ID and try again.`);
+      setShowManualInput(true);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    fetchRegistration(query);
+  };
+
+  const handleClearSaved = () => {
+    localStorage.removeItem('my_ticket_id');
+    setResult(null);
+    setQuery('');
+    setError('');
+    setShowManualInput(true);
+    setSearchParams({});
+  };
+
   return (
     <div className="lookup-page">
+      {/* Header */}
       <div className="lookup-page__hero">
         <div className="container">
-          <div className="section__label">Registration Lookup</div>
-          <h1 className="lookup-page__title">Find Your Registration</h1>
+          <div className="section__label">OFFICIAL PASS // DIGITAL TICKET</div>
+          <h1 className="lookup-page__title">MY REGISTRATION</h1>
           <p className="lookup-page__subtitle">
-            Enter your Registration ID to view your registration details and check-in status.
+            Access your verified event ticket, duo team details, and QR desk check-in pass for IT Department events.
           </p>
         </div>
       </div>
 
       <div className="section">
         <div className="container--narrow">
-          {/* Search form */}
-          {!token && (
-            <form onSubmit={handleSearch} className="lookup-form card">
+          {/* Manual ID Input (Only shown if no saved ticket or if user clicks 'Switch Pass') */}
+          {showManualInput && (
+            <form onSubmit={handleSearchSubmit} className="lookup-form card mb-6">
               <div className="card__body">
                 <div className="form-group">
                   <label htmlFor="lookup-input" className="form-label form-label--required">
-                    Registration ID
+                    Enter Your Registration ID
                   </label>
                   <div className="lookup-form__row">
                     <input
@@ -87,6 +108,7 @@ export default function Lookup() {
                       onChange={(e) => setQuery(e.target.value)}
                       autoComplete="off"
                       style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}
+                      required
                     />
                     <button
                       id="lookup-submit-btn"
@@ -94,10 +116,12 @@ export default function Lookup() {
                       className={`btn btn--primary ${loading ? 'btn--loading' : ''}`}
                       disabled={loading || !query.trim()}
                     >
-                      {loading ? 'Searching...' : '🔍 Search'}
+                      {loading ? '' : 'Load My Pass →'}
                     </button>
                   </div>
-                  <span className="form-hint text-xs text-muted mt-2">Format: TEC-YYYY-NNNN (e.g. TEC-2026-0042)</span>
+                  <span className="form-hint text-xs text-muted mt-2">
+                    Format: TEC-YYYY-NNNN (e.g. TEC-2026-0042)
+                  </span>
                 </div>
               </div>
             </form>
@@ -105,135 +129,207 @@ export default function Lookup() {
 
           {/* Skeleton Loading State */}
           {loading && (
-            <div className="mt-6">
-              <div className="card skeleton-card" style={{ height: '260px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
-                  <div className="skeleton" style={{ width: '160px', height: '28px' }} />
-                  <div className="skeleton" style={{ width: '100px', height: '24px', borderRadius: 'var(--radius-full)' }} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-4)', margin: 'var(--space-4) 0' }}>
-                  <div className="skeleton" style={{ height: '40px' }} />
-                  <div className="skeleton" style={{ height: '40px' }} />
-                  <div className="skeleton" style={{ height: '40px' }} />
-                </div>
-                <div className="skeleton" style={{ height: '60px', marginTop: 'var(--space-4)' }} />
+            <div className="card skeleton-card" style={{ height: '320px', padding: 'var(--space-6)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+                <div className="skeleton" style={{ width: '180px', height: '32px' }} />
+                <div className="skeleton" style={{ width: '120px', height: '24px' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 'var(--space-6)', marginTop: 'var(--space-6)' }}>
+                <div className="skeleton" style={{ height: '180px' }} />
+                <div className="skeleton" style={{ height: '180px' }} />
               </div>
             </div>
           )}
 
-          {/* Error */}
+          {/* Error Message */}
           {!loading && error && (
-            <div className="alert alert--error mt-4">
+            <div className="alert alert--error mb-6">
               <span>⚠️</span>
               <span>{error}</span>
             </div>
           )}
 
-          {/* Result */}
+          {/* User's Verified Ticket Pass */}
           {!loading && result && (
-            <div className="lookup-result mt-4">
-              <div className="lookup-result__card card">
-                <div className="card__body">
-                  <div className="lookup-result__header">
-                    <div>
-                      <div className="lookup-result__label">Registration ID</div>
-                      <div className="reg-id lookup-result__reg-id">{result.registration_id}</div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', alignItems: 'flex-end' }}>
-                      <span className={`badge ${result.checked_in ? 'badge--checked' : 'badge--unchecked'}`}>
-                        {result.checked_in ? '✓ Checked In' : 'Not Checked In'}
-                      </span>
-                      <span className={`badge ${result.registration_type === 'ONLINE' ? 'badge--online' : 'badge--onsite'}`}>
-                        {result.registration_type}
-                      </span>
-                    </div>
+            <div className="lookup-result">
+              <div className="lookup-result__card card" style={{ border: '1px solid #000000', overflow: 'hidden' }}>
+                {/* Top Pass Header */}
+                <div className="card__header" style={{
+                  background: '#fafafa',
+                  borderBottom: '1px solid var(--border)',
+                  padding: 'var(--space-4) var(--space-6)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 'var(--space-2)'
+                }}>
+                  <div>
+                    <span className="section__label" style={{ marginBottom: 0 }}>VERIFIED DIGITAL PASS</span>
+                    <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>
+                      {result.event?.name || 'Department Technical Event'}
+                    </h2>
                   </div>
-
-                  <div className="lookup-result__grid">
-                    <div className="lookup-result__item">
-                      <div className="lookup-result__item-label">Event</div>
-                      <div className="lookup-result__item-val">{result.event?.name || '—'}</div>
-                    </div>
-                    {result.event?.event_date && (
-                      <div className="lookup-result__item">
-                        <div className="lookup-result__item-label">Date</div>
-                        <div className="lookup-result__item-val">{formatDate(result.event.event_date)}</div>
-                      </div>
-                    )}
-                    {result.event?.venue && (
-                      <div className="lookup-result__item">
-                        <div className="lookup-result__item-label">Venue</div>
-                        <div className="lookup-result__item-val">{result.event.venue}</div>
-                      </div>
-                    )}
-                    <div className="lookup-result__item">
-                      <div className="lookup-result__item-label">Mode</div>
-                      <div className="lookup-result__item-val">
-                        <span className={`badge ${result.participation_mode === 'SOLO' ? 'badge--solo' : 'badge--team'}`}>
-                          {result.participation_mode}
-                        </span>
-                      </div>
-                    </div>
-                    {result.team_name && (
-                      <div className="lookup-result__item">
-                        <div className="lookup-result__item-label">Team Name</div>
-                        <div className="lookup-result__item-val fw-semibold text-primary">{result.team_name}</div>
-                      </div>
-                    )}
-                    <div className="lookup-result__item">
-                      <div className="lookup-result__item-label">Status</div>
-                      <div className="lookup-result__item-val">
-                        <span className={`badge ${result.status === 'CONFIRMED' ? 'badge--open' : 'badge--closed'}`}>
-                          {result.status}
-                        </span>
-                      </div>
-                    </div>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                    <span className={`badge ${result.checked_in ? 'badge--checked' : 'badge--unchecked'}`}>
+                      {result.checked_in ? '✓ Checked In (In Arena)' : '• Pending Check-in'}
+                    </span>
+                    <span className="badge badge--tag">{result.registration_type}</span>
                   </div>
-
-                  {/* Participants (safe fields only) */}
-                  {result.participants?.length > 0 && (
-                    <div className="lookup-result__participants">
-                      <div className="lookup-result__label" style={{ marginBottom: 'var(--space-3)' }}>
-                        Participants ({result.participants.length})
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                        {result.participants.map((p, i) => (
-                          <div key={i} className="lookup-result__participant">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                              {p.is_leader && <span className="badge badge--solo" style={{ fontSize: '0.65rem' }}>Leader</span>}
-                              <span className="text-sm fw-medium text-primary">{p.full_name}</span>
-                            </div>
-                            <div className="text-xs text-muted">
-                              {[p.department, p.year].filter(Boolean).join(' · ')}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
 
-              <div className="lookup-result__actions mt-4">
-                <Link to="/events" className="btn btn--ghost">Browse More Events</Link>
-                {!token && (
-                  <button className="btn btn--secondary" onClick={() => { setResult(null); setError(''); setSearched(false); setQuery(''); }}>
-                    Search Again
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+                {/* Main Pass Body */}
+                <div className="card__body" style={{ padding: 'var(--space-6)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 'var(--space-6)', alignItems: 'start' }}>
+                    {/* Left Details */}
+                    <div>
+                      <div style={{ marginBottom: 'var(--space-4)' }}>
+                        <div className="text-xs text-muted font-mono fw-bold" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                          Registration ID
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: '2px' }}>
+                          <span className="reg-id" style={{ fontSize: '1.4rem', color: '#000000' }}>
+                            {result.registration_id}
+                          </span>
+                          <button
+                            className="btn btn--secondary btn--sm"
+                            style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                            onClick={() => navigator.clipboard.writeText(result.registration_id)}
+                            title="Copy ID"
+                          >
+                            📋 Copy
+                          </button>
+                        </div>
+                      </div>
 
-          {/* No search yet */}
-          {!loading && !searched && !result && !error && !token && (
-            <div className="lookup-hint card mt-6">
-              <div className="card__body" style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
-                <div className="lookup-hint__icon" style={{ fontSize: '2.5rem', marginBottom: 'var(--space-3)' }}>🔍</div>
-                <p className="lookup-hint__text">
-                  Enter your Registration ID above to find your registration.
-                  <br />Your ID looks like: <span className="reg-id" style={{ fontSize: '1rem' }}>TEC-2026-0042</span>
-                </p>
+                      {result.team_name && (
+                        <div style={{ marginBottom: 'var(--space-4)' }}>
+                          <div className="text-xs text-muted font-mono fw-bold" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                            Duo Team Name
+                          </div>
+                          <div className="text-primary fw-bold text-lg">{result.team_name}</div>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+                        {result.event?.event_date && (
+                          <div>
+                            <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Event Date</div>
+                            <div className="text-primary text-sm fw-semibold">{formatDate(result.event.event_date)}</div>
+                          </div>
+                        )}
+                        {result.event?.venue && (
+                          <div>
+                            <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Venue</div>
+                            <div className="text-primary text-sm fw-semibold">{result.event.venue}</div>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Format</div>
+                          <div className="text-primary text-sm fw-semibold">{result.participation_mode}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Status</div>
+                          <div className="text-success text-sm fw-bold">Confirmed</div>
+                        </div>
+                      </div>
+
+                      {/* Participants Breakdown */}
+                      {result.participants?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-muted font-mono fw-bold mb-2" style={{ textTransform: 'uppercase' }}>
+                            Registered Participants ({result.participants.length})
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                            {result.participants.map((p, i) => (
+                              <div key={i} style={{
+                                padding: 'var(--space-3) var(--space-4)',
+                                background: '#fafafa',
+                                border: '1px solid var(--border)',
+                                borderRadius: 'var(--radius-sm)'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                  <span className="text-sm fw-bold text-primary">{p.full_name}</span>
+                                  {p.is_leader && (
+                                    <span className="badge badge--team" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
+                                      Leader
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted mt-1">
+                                  {p.email} {p.phone && `• ${p.phone}`}
+                                </div>
+                                <div className="text-xs text-muted">
+                                  {[p.department, p.year, p.college].filter(Boolean).join(' • ')}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right QR Desk Pass */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: 'var(--space-4)',
+                      background: '#fafafa',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)'
+                    }}>
+                      <div style={{
+                        padding: 'var(--space-2)',
+                        background: 'white',
+                        border: '1px solid #000000',
+                        display: 'inline-block',
+                        marginBottom: 'var(--space-2)',
+                      }}>
+                        <QRCodeSVG
+                          value={`${window.location.origin}/lookup?token=${result.qr_token}`}
+                          size={125}
+                          level="M"
+                          fgColor="#000000"
+                        />
+                      </div>
+                      <div className="text-xs text-muted font-mono text-center" style={{ fontSize: '0.6875rem', fontWeight: 700 }}>
+                        SHOW AT ARENA DESK
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Controls */}
+                <div className="card__footer" style={{
+                  background: '#fafafa',
+                  borderTop: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: 'var(--space-4) var(--space-6)',
+                  flexWrap: 'wrap',
+                  gap: 'var(--space-3)'
+                }}>
+                  <Link to="/#events-section" className="btn btn--ghost btn--sm">
+                    ← Browse Events
+                  </Link>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <button
+                      className="btn btn--secondary btn--sm"
+                      onClick={() => setShowManualInput(!showManualInput)}
+                    >
+                      {showManualInput ? 'Hide Search' : 'Enter Different ID'}
+                    </button>
+                    <button
+                      className="btn btn--ghost btn--sm text-danger"
+                      onClick={handleClearSaved}
+                      title="Clear saved pass from this device"
+                    >
+                      ✕ Clear Saved Pass
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

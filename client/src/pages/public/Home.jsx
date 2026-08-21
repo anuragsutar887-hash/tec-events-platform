@@ -11,9 +11,9 @@ export default function Home() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ⚡ Hacker / Matrix Code Decrypt Animations for Committee Headline
-  const word1 = useScrambleText('ENGINEERING IDEAS.', { delay: 100, speed: 25, duration: 600 });
-  const word2 = useScrambleText('BUILDING THE FUTURE.', { delay: 650, speed: 25, duration: 600 });
+  // ⚡ Hacker / Matrix Code Decrypt Animations (Only runs once on first visit per session)
+  const word1 = useScrambleText('ENGINEERING IDEAS.', { delay: 100, speed: 25, duration: 600, oncePerSession: true });
+  const word2 = useScrambleText('BUILDING THE FUTURE.', { delay: 650, speed: 25, duration: 600, oncePerSession: true });
 
   useEffect(() => {
     loadHomeData();
@@ -43,17 +43,11 @@ export default function Home() {
       <section className="home__hero">
         <div className="container">
           <div className="home__hero-content">
-            {/* Top Committee Badges */}
-            <div className="home__hero-tag">
-              <span className="home__hero-tag-sys">[TECHNICAL COMMITTEE] // DEPARTMENT OF IT</span>
-              <span className="home__hero-tag-vol">INDIRA COLLEGE OF ENGINEERING & MANAGEMENT</span>
-            </div>
-
             {/* Main Editorial Serif Heading */}
-            <h1 className="home__hero-title">
-              <span className="scramble-word">{word1.text || '░░░░░░░░░░░░░░░░░░'}</span>
+            <h1 className="home__hero-title" style={{ marginTop: 'var(--space-2)' }}>
+              <span className="scramble-word">{word1.text || 'ENGINEERING IDEAS.'}</span>
               <br />
-              <span className="scramble-word">{word2.text || '░░░░░░░░░░░░░░░░░░░░'}</span>
+              <span className="scramble-word">{word2.text || 'BUILDING THE FUTURE.'}</span>
               <span className="hero-block-cursor">█</span>
             </h1>
 
@@ -74,37 +68,34 @@ export default function Home() {
                 to="/lookup"
                 className="btn btn--secondary btn--lg"
               >
-                LOOKUP REGISTRATION
+                MY REGISTRATION →
               </Link>
             </div>
 
-            {/* IT Department Committee Specifications Matrix */}
+            {/* 4 Feature Cards (Events, Learning, Community, Opportunity) */}
             <div className="home__specs-grid">
               <div className="home__spec-card">
-                <span className="home__spec-label">DEPARTMENT</span>
-                <span className="home__spec-val">Information Technology</span>
-                <span className="home__spec-sub">IT Technical Committee</span>
+                <span className="home__spec-label">01 — EVENTS</span>
+                <span className="home__spec-val">Technical Events</span>
+                <span className="home__spec-sub">Coding competitions, hackathons, debugging challenges, project showcases & more.</span>
               </div>
 
               <div className="home__spec-card">
-                <span className="home__spec-label">INSTITUTION</span>
-                <span className="home__spec-val">ICEM Pune</span>
-                <span className="home__spec-sub">Affiliated to SPPU</span>
+                <span className="home__spec-label">02 — LEARNING</span>
+                <span className="home__spec-val">Workshops & Talks</span>
+                <span className="home__spec-sub">Hands-on workshops, technical sessions, seminars, and peer-to-peer learning.</span>
               </div>
 
               <div className="home__spec-card">
-                <span className="home__spec-label">COMMITTEE MISSION</span>
-                <span className="home__spec-val">Technical Excellence</span>
-                <span className="home__spec-sub">Workshops & Hackathons</span>
+                <span className="home__spec-label">03 — COMMUNITY</span>
+                <span className="home__spec-val">Student Community</span>
+                <span className="home__spec-sub">A space for students to collaborate, share ideas, build projects, and learn together.</span>
               </div>
 
               <div className="home__spec-card">
-                <span className="home__spec-label">ARENA SYSTEM</span>
-                <span className="home__spec-val home__spec-val--status">
-                  <span className="status-dot"></span>
-                  LIVE & ACTIVE
-                </span>
-                <span className="home__spec-sub">Real-Time QR Telemetry</span>
+                <span className="home__spec-label">04 — OPPORTUNITY</span>
+                <span className="home__spec-val">Build & Compete</span>
+                <span className="home__spec-sub">Turn your skills into experience through real-world challenges and competitions.</span>
               </div>
             </div>
           </div>

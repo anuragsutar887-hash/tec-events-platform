@@ -145,6 +145,9 @@ export default function Register() {
         team_name: mode === 'TEAM' ? teamName.trim() : undefined,
       };
       const { data } = await apiClient.post('/registrations', payload);
+      if (data.registration?.registration_id) {
+        localStorage.setItem('my_ticket_id', data.registration.registration_id);
+      }
       navigate(`/events/${slug}/register/success`, {
         state: { registration: data.registration },
       });

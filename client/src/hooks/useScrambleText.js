@@ -3,11 +3,19 @@ import { useState, useEffect } from 'react';
 const CHARS = '01<>/{}[];_+=*#%!&$?~█▓▒░ABCDEF0123456789';
 
 export function useScrambleText(targetText, options = {}) {
-  const { delay = 0, speed = 35, duration = 800 } = options;
-  const [displayText, setDisplayText] = useState('');
-  const [isDone, setIsDone] = useState(false);
+  const { delay = 0, speed = 35, duration = 800, oncePerSession = true } = options;
+  const hasPlayed = oncePerSession && typeof window !== 'undefined' && sessionStorage.getItem('hero_scramble_played');
+
+  const [displayText, setDisplayText] = useState(hasPlayed ? targetText : '');
+  const [isDone, setIsDone] = useState(Boolean(hasPlayed));
 
   useEffect(() => {
+    if (hasPlayed) {
+      setDisplayText(targetText);
+      setIsDone(true);
+      return;
+    }
+
     let timeoutId;
     let intervalId;
     let startTime;
@@ -37,6 +45,9 @@ export function useScrambleText(targetText, options = {}) {
           clearInterval(intervalId);
           setDisplayText(targetText);
           setIsDone(true);
+          if (oncePerSession) {
+            sessionStorage.setItem('hero_scramble_played', 'true');
+          }
         }
       }, speed);
     }, delay);
@@ -45,7 +56,7 @@ export function useScrambleText(targetText, options = {}) {
       clearTimeout(timeoutId);
       clearInterval(intervalId);
     };
-  }, [targetText, delay, speed, duration]);
+  }, [targetText, delay, speed, duration, hasPlayed, oncePerSession]);
 
-  return { text: displayText || (delay > 0 ? '' : targetText), isDone };
+  return { text: displayText || (hasPlayed || delay === 0 ? targetText : ''), isDone };
 }
