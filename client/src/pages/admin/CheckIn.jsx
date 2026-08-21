@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 import jsQR from 'jsqr';
 import apiClient from '../../api/client';
 import { formatDateTime, timeAgo } from '../../utils/dateHelpers';
@@ -45,23 +46,11 @@ export default function CheckIn() {
   const [scanSuccessFlash, setScanSuccessFlash] = useState(false);
 
   const videoRef = useRef(null);
-  const canvasRef = useRef(document.createElement('canvas'));
-  const streamRef = useRef(null);
-  const scanLoopIdRef = useRef(null);
+  const zxingControlsRef = useRef(null);
+  const zxingReaderRef = useRef(null);
+  const fallbackLoopRef = useRef(null);
   const isProcessingScanRef = useRef(false);
-  const barcodeDetectorRef = useRef(null);
   const inputRef = useRef(null);
-
-  // Initialize Native BarcodeDetector if browser supports it
-  useEffect(() => {
-    if ('BarcodeDetector' in window) {
-      try {
-        barcodeDetectorRef.current = new window.BarcodeDetector({ formats: ['qr_code'] });
-      } catch (e) {
-        barcodeDetectorRef.current = null;
-      }
-    }
-  }, []);
 
   useEffect(() => {
     loadEvents();
@@ -98,7 +87,7 @@ export default function CheckIn() {
     } catch {}
   };
 
-  // ─── 📷 High-Speed Camera Scanner Engine (Sub-Second Detection) ───
+  // ─── 📷 ZXing Industrial-Grade Camera Scanner Engine ──────────────
   const startCamera = async (deviceIdToUse = null) => {
     setCameraError('');
     setIsCameraActive(true);
@@ -113,51 +102,43 @@ export default function CheckIn() {
         setCameras(devices);
       } catch {}
 
-      // 2. Build media constraints for HD resolution with environment preference
-      let videoConstraints = {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      };
-
-      if (deviceIdToUse) {
-        videoConstraints.deviceId = { exact: deviceIdToUse };
-        setSelectedCameraId(deviceIdToUse);
-      } else {
-        // Prefer rear/environment camera on phones
-        videoConstraints.facingMode = { ideal: 'environment' };
-        if (devices.length > 0) {
-          const rearCam = devices.find((d) =>
-            d.label.toLowerCase().includes('back') ||
-            d.label.toLowerCase().includes('rear') ||
-            d.label.toLowerCase().includes('environment')
-          );
-          if (rearCam) setSelectedCameraId(rearCam.deviceId);
-          else setSelectedCameraId(devices[0].deviceId);
-        }
+      // 2. Select camera device ID
+      let targetDeviceId = deviceIdToUse;
+      if (!targetDeviceId && devices.length > 0) {
+        const rearCam = devices.find((d) =>
+          d.label.toLowerCase().includes('back') ||
+          d.label.toLowerCase().includes('rear') ||
+          d.label.toLowerCase().includes('environment')
+        );
+        targetDeviceId = rearCam ? rearCam.deviceId : devices[0].deviceId;
       }
+      setSelectedCameraId(targetDeviceId || '');
 
-      // 3. Request camera stream
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: videoConstraints,
-      });
+      // 3. Initialize ZXing MultiFormat Reader with hints
+      const codeReader = new BrowserMultiFormatReader();
+      zxingReaderRef.current = codeReader;
 
-      streamRef.current = stream;
+      setScanningStatus('Active — Point QR code at camera');
 
-      // 4. Attach stream to video element
+      // 4. Start continuous decoding from video element
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', 'true');
-        await videoRef.current.play();
+        const controls = await codeReader.decodeFromVideoDevice(
+          targetDeviceId || undefined,
+          videoRef.current,
+          (scanResult, scanErr) => {
+            if (scanResult && scanResult.getText()) {
+              handleQrScanSuccess(scanResult.getText());
+            }
+          }
+        );
+        zxingControlsRef.current = controls;
 
-        setScanningStatus('Active — Point QR code at camera');
-
-        // 5. Start rapid dual-engine scan loop (60 FPS / ~16ms loop)
-        startScanLoop();
+        // 5. Run Secondary High-Speed Native BarcodeDetector / jsQR Scanner in parallel
+        startFallbackScanLoop();
       }
     } catch (err) {
       console.error('Camera start error:', err);
-      setCameraError('Camera access denied or unavailable. Please enable camera permissions in your browser settings.');
+      setCameraError('Camera access denied or unavailable. Please verify browser camera permissions.');
       setIsCameraActive(false);
     }
   };
@@ -168,18 +149,24 @@ export default function CheckIn() {
   };
 
   const stopCamera = () => {
-    if (scanLoopIdRef.current) {
-      cancelAnimationFrame(scanLoopIdRef.current);
-      scanLoopIdRef.current = null;
+    if (zxingControlsRef.current) {
+      try {
+        zxingControlsRef.current.stop();
+      } catch {}
+      zxingControlsRef.current = null;
     }
 
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+    if (fallbackLoopRef.current) {
+      cancelAnimationFrame(fallbackLoopRef.current);
+      fallbackLoopRef.current = null;
     }
 
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+    if (videoRef.current && videoRef.current.srcObject) {
+      try {
+        const stream = videoRef.current.srcObject;
+        stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+      } catch {}
     }
 
     setIsCameraActive(false);
@@ -187,69 +174,60 @@ export default function CheckIn() {
     isProcessingScanRef.current = false;
   };
 
-  // ─── 🚀 Dual-Engine Ultra-Fast QR Decoder Loop ─────────────────
-  const startScanLoop = () => {
-    const scanFrame = async () => {
+  // Secondary high-speed canvas decoder running alongside ZXing for 100% detection coverage
+  const startFallbackScanLoop = () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    let barcodeDetector = null;
+    if ('BarcodeDetector' in window) {
+      try {
+        barcodeDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      } catch {}
+    }
+
+    const loop = async () => {
       if (!videoRef.current || videoRef.current.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        scanLoopIdRef.current = requestAnimationFrame(scanFrame);
+        fallbackLoopRef.current = requestAnimationFrame(loop);
         return;
       }
 
-      // If currently processing a previous scan or on cooldown, keep frame loop spinning
       if (!isProcessingScanRef.current) {
         const video = videoRef.current;
-        let qrCodeText = null;
 
-        // ENGINE 1: Hardware-Accelerated Native BarcodeDetector (Chrome, Edge, Android, iOS Safari 17+)
-        if (barcodeDetectorRef.current) {
+        // Native BarcodeDetector (instant GPU decode)
+        if (barcodeDetector) {
           try {
-            const barcodes = await barcodeDetectorRef.current.detect(video);
+            const barcodes = await barcodeDetector.detect(video);
             if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-              qrCodeText = barcodes[0].rawValue;
+              handleQrScanSuccess(barcodes[0].rawValue);
             }
           } catch {}
         }
 
-        // ENGINE 2: High-Performance jsQR Software Decoder (Works everywhere, 100% full frame)
-        if (!qrCodeText) {
+        // jsQR full-frame processor
+        if (!isProcessingScanRef.current && video.videoWidth > 0) {
           try {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            
-            // Subsample for lightning fast decoding if frame is huge (e.g. max 640 width)
-            const scale = Math.min(1, 640 / video.videoWidth);
-            const w = Math.floor(video.videoWidth * scale);
-            const h = Math.floor(video.videoHeight * scale);
-
-            if (canvas.width !== w || canvas.height !== h) {
-              canvas.width = w;
-              canvas.height = h;
+            if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
             }
-
-            ctx.drawImage(video, 0, 0, w, h);
-            const imageData = ctx.getImageData(0, 0, w, h);
-            const code = jsQR(imageData.data, w, h, {
-              inversionAttempts: 'dontInvert',
+            ctx.drawImage(video, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'attemptBoth',
             });
-
             if (code && code.data) {
-              qrCodeText = code.data;
+              handleQrScanSuccess(code.data);
             }
-          } catch (err) {
-            console.error('jsQR frame error:', err);
-          }
-        }
-
-        // Trigger Instant Check-In if QR is detected
-        if (qrCodeText) {
-          handleQrScanSuccess(qrCodeText);
+          } catch {}
         }
       }
 
-      scanLoopIdRef.current = requestAnimationFrame(scanFrame);
+      fallbackLoopRef.current = requestAnimationFrame(loop);
     };
 
-    scanLoopIdRef.current = requestAnimationFrame(scanFrame);
+    fallbackLoopRef.current = requestAnimationFrame(loop);
   };
 
   // ─── ⚡ Instant Auto Check-In Handler ───────────────────────────
@@ -278,7 +256,7 @@ export default function CheckIn() {
 
       if (!reg) {
         setError(`Scanned QR code is not associated with any active registration.`);
-        setScanningStatus('Ready — Point participant QR code at camera');
+        setScanningStatus('Active — Point participant QR code at camera');
         setTimeout(() => {
           isProcessingScanRef.current = false;
         }, 1500);
@@ -297,9 +275,9 @@ export default function CheckIn() {
 
       setResult(reg);
       loadLiveQueues();
-      setScanningStatus('✓ Success! Showing details below. Ready for next participant.');
+      setScanningStatus('✓ Success! Ready for next participant.');
 
-      // 2-second cooldown to let the admin comfortably transition to the next student
+      // 2-second cooldown to let the admin comfortably transition to next student
       setTimeout(() => {
         isProcessingScanRef.current = false;
         setScanningStatus('Active — Point participant QR code at camera');
@@ -653,9 +631,11 @@ export default function CheckIn() {
                 <div className="checkin__qr-wrap">
                   <QRCodeSVG
                     value={`${window.location.origin}/lookup?token=${result.qr_token}`}
-                    size={120}
-                    level="M"
+                    size={140}
+                    level="L"
+                    includeMargin={true}
                     fgColor="#000000"
+                    bgColor="#ffffff"
                   />
                 </div>
                 <span className="font-mono text-xs text-muted mt-2">QR DESK PASS</span>

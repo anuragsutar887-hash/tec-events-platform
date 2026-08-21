@@ -275,9 +275,11 @@ export default function Lookup() {
                       }}>
                         <QRCodeSVG
                           value={`${window.location.origin}/lookup?token=${result.qr_token}`}
-                          size={125}
-                          level="M"
+                          size={150}
+                          level="L"
+                          includeMargin={true}
                           fgColor="#000000"
+                          bgColor="#ffffff"
                         />
                       </div>
                       <div className="text-xs text-muted font-mono text-center" style={{ fontSize: '0.6875rem', fontWeight: 700 }}>

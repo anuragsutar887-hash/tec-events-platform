@@ -124,8 +124,9 @@ export default function RegisterSuccess() {
                 }}>
                   <QRCodeSVG
                     value={`${window.location.origin}/lookup?token=${qr_token}`}
-                    size={140}
-                    level="M"
+                    size={160}
+                    level="L"
+                    includeMargin={true}
                     fgColor="#000000"
                     bgColor="#ffffff"
                   />
