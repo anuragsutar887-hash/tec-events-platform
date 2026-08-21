@@ -95,7 +95,7 @@ export default function Home() {
               <div className="home__spec-card">
                 <span className="home__spec-label">COMMITTEE MISSION</span>
                 <span className="home__spec-val">Technical Excellence</span>
-                <span className="home__spec-sub">Workshops & Coding Battles</span>
+                <span className="home__spec-sub">Workshops & Hackathons</span>
               </div>
 
               <div className="home__spec-card">
@@ -111,16 +111,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── 2. COMMITTEE MANDATE & INITIATIVES ───────────────────── */}
+      {/* ─── 2. CORE PILLARS // OUR MISSION ───────────────────────── */}
       <section className="section home__methodology">
         <div className="container">
           <RevealOnScroll delay={50}>
             <div className="home__methodology-header">
-              <span className="section__label">CORE PILLARS // COMMITTEE MANDATE</span>
-              <h2 className="section__title">WHAT WE DO</h2>
-              <p className="home__methodology-lead">
-                The Technical Committee of the Department of IT provides students with industry-grade competitive platforms, hands-on algorithmic problem solving, and collaborative engineering opportunities.
-              </p>
+              <span className="section__label">CORE PILLARS</span>
+              <h2 className="section__title">OUR MISSION</h2>
             </div>
           </RevealOnScroll>
 
@@ -129,9 +126,9 @@ export default function Home() {
               <div className="home__methodology-card card">
                 <div className="card__body">
                   <span className="home__methodology-num">01</span>
-                  <h3 className="home__methodology-title">Competitive Symposia</h3>
+                  <h3 className="home__methodology-title">Learn</h3>
                   <p className="home__methodology-desc">
-                    Organizing intra and inter-college coding battles, speed debugging championships, algorithmic arenas, and web development challenges under real-time constraints.
+                    Building technical knowledge through workshops, seminars, and industry-oriented learning experiences.
                   </p>
                 </div>
               </div>
@@ -141,9 +138,9 @@ export default function Home() {
               <div className="home__methodology-card card">
                 <div className="card__body">
                   <span className="home__methodology-num">02</span>
-                  <h3 className="home__methodology-title">Collaborative Duo Engineering</h3>
+                  <h3 className="home__methodology-title">Build</h3>
                   <p className="home__methodology-desc">
-                    Promoting pair programming and collaborative problem solving where 2-engineer squads collaborate on architecture, code refactoring, and logic resolution.
+                    Encouraging students to develop projects, participate in hackathons, and apply concepts to real-world problems.
                   </p>
                 </div>
               </div>
@@ -153,9 +150,9 @@ export default function Home() {
               <div className="home__methodology-card card">
                 <div className="card__body">
                   <span className="home__methodology-num">03</span>
-                  <h3 className="home__methodology-title">Live Arena Telemetry</h3>
+                  <h3 className="home__methodology-title">Lead</h3>
                   <p className="home__methodology-desc">
-                    State-of-the-art digital infrastructure with instant QR desk verification, live arena leaderboard streaming, and transparent evaluation metrics.
+                    Developing leadership, teamwork, and event management skills through committee-driven initiatives.
                   </p>
                 </div>
               </div>
