@@ -12,8 +12,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   // ⚡ Hacker / Matrix Code Decrypt Animations for Committee Headline
-  const word1 = useScrambleText('INNOVATE. COMPETE.', { delay: 100, speed: 25, duration: 600 });
-  const word2 = useScrambleText('EXCEL TOGETHER.', { delay: 650, speed: 25, duration: 600 });
+  const word1 = useScrambleText('ENGINEERING IDEAS.', { delay: 100, speed: 25, duration: 600 });
+  const word2 = useScrambleText('BUILDING THE FUTURE.', { delay: 650, speed: 25, duration: 600 });
 
   useEffect(() => {
     loadHomeData();
@@ -39,13 +39,13 @@ export default function Home() {
 
   return (
     <div className="home" id="top">
-      {/* ─── 1. DEPARTMENT TECHNICAL COMMITTEE HERO ───────────────── */}
+      {/* ─── 1. IT DEPARTMENT TECHNICAL COMMITTEE HERO ────────────── */}
       <section className="home__hero">
         <div className="container">
           <div className="home__hero-content">
             {/* Top Committee Badges */}
             <div className="home__hero-tag">
-              <span className="home__hero-tag-sys">[TECHNICAL COMMITTEE] // DEPARTMENT OF COMPUTER & IT</span>
+              <span className="home__hero-tag-sys">[TECHNICAL COMMITTEE] // DEPARTMENT OF IT</span>
               <span className="home__hero-tag-vol">INDIRA COLLEGE OF ENGINEERING & MANAGEMENT</span>
             </div>
 
@@ -53,14 +53,13 @@ export default function Home() {
             <h1 className="home__hero-title">
               <span className="scramble-word">{word1.text || '░░░░░░░░░░░░░░░░░░'}</span>
               <br />
-              <span className="scramble-word">{word2.text || '░░░░░░░░░░░░░░░'}</span>
+              <span className="scramble-word">{word2.text || '░░░░░░░░░░░░░░░░░░░░'}</span>
               <span className="hero-block-cursor">█</span>
             </h1>
 
             {/* Committee Focused Mission Subtitle */}
             <p className="home__hero-subtitle">
-              Welcome to the official Technical Events Platform of the Department at <strong>Indira College of Engineering and Management</strong>. 
-              Organizing premier coding hackathons, debugging challenges, project symposia, and collaborative arena competitions to cultivate world-class engineering talent.
+              The Technical Committee of the Department of IT brings together students who build, compete, collaborate, and create. From coding competitions and hackathons to technical workshops and project showcases, we create opportunities to turn ideas into real skills.
             </p>
 
             {/* Committee CTAs */}
@@ -79,12 +78,12 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Department Committee Specifications Matrix */}
+            {/* IT Department Committee Specifications Matrix */}
             <div className="home__specs-grid">
               <div className="home__spec-card">
                 <span className="home__spec-label">DEPARTMENT</span>
-                <span className="home__spec-val">Computer & IT</span>
-                <span className="home__spec-sub">Engineering Council</span>
+                <span className="home__spec-val">Information Technology</span>
+                <span className="home__spec-sub">IT Technical Committee</span>
               </div>
 
               <div className="home__spec-card">
@@ -96,7 +95,7 @@ export default function Home() {
               <div className="home__spec-card">
                 <span className="home__spec-label">COMMITTEE MISSION</span>
                 <span className="home__spec-val">Technical Excellence</span>
-                <span className="home__spec-sub">Innovation & Pair Coding</span>
+                <span className="home__spec-sub">Workshops & Coding Battles</span>
               </div>
 
               <div className="home__spec-card">
@@ -120,7 +119,7 @@ export default function Home() {
               <span className="section__label">CORE PILLARS // COMMITTEE MANDATE</span>
               <h2 className="section__title">WHAT WE DO</h2>
               <p className="home__methodology-lead">
-                The Department Technical Committee provides students with industry-grade competitive platforms, hands-on algorithmic problem solving, and collaborative engineering opportunities.
+                The Technical Committee of the Department of IT provides students with industry-grade competitive platforms, hands-on algorithmic problem solving, and collaborative engineering opportunities.
               </p>
             </div>
           </RevealOnScroll>
@@ -170,7 +169,7 @@ export default function Home() {
         <div className="container">
           <RevealOnScroll delay={50}>
             <div className="section__header" style={{ textAlign: 'center' }}>
-              <span className="section__label">ACTIVE COMPETITIONS // DEPARTMENT SCHEDULE</span>
+              <span className="section__label">ACTIVE COMPETITIONS // IT DEPARTMENT SCHEDULE</span>
               <h2 className="section__title">UPCOMING TECHNICAL EVENTS</h2>
               <p className="section__subtitle" style={{ margin: '0 auto' }}>
                 Select an event below to view its brief, rules, and initialize your team registration.
@@ -189,7 +188,7 @@ export default function Home() {
               <div className="card__body">
                 <div className="empty-state__icon">📅</div>
                 <div className="empty-state__title">No events published yet</div>
-                <p className="empty-state__text">The Technical Committee will publish upcoming department events shortly.</p>
+                <p className="empty-state__text">The IT Technical Committee will publish upcoming department events shortly.</p>
               </div>
             </div>
           ) : (

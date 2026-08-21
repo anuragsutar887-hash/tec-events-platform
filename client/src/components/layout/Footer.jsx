@@ -11,7 +11,7 @@ export default function Footer() {
             INDIRA COLLEGE OF ENGINEERING AND MANAGEMENT
           </div>
           <div className="footer__sub-dept">
-            DEPARTMENT TECHNICAL COMMITTEE
+            DEPARTMENT OF INFORMATION TECHNOLOGY • TECHNICAL COMMITTEE
           </div>
 
           {/* Clean Direct Contact Us Information Block (No Buttons) */}
