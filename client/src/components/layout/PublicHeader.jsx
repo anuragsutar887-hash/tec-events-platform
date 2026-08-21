@@ -49,48 +49,50 @@ export default function PublicHeader() {
             <span className="pub-header__logo-brand">TECH EVENTS</span>
           </Link>
 
-          {/* Navigation Links */}
-          <nav className={`pub-header__nav ${mobileMenuOpen ? 'open' : ''}`}>
-            <a
-              href="/#top"
-              className={`pub-header__link ${location.pathname === '/' && !location.hash ? 'active' : ''}`}
-              onClick={(e) => handleNavClick(e, 'top', '/')}
-            >
-              Home
-            </a>
+          {/* Right Group: Navigation links aligned right with Admin Login logo */}
+          <div className="pub-header__right">
+            <nav className={`pub-header__nav ${mobileMenuOpen ? 'open' : ''}`}>
+              <a
+                href="/#top"
+                className={`pub-header__link ${location.pathname === '/' && !location.hash ? 'active' : ''}`}
+                onClick={(e) => handleNavClick(e, 'top', '/')}
+              >
+                Home
+              </a>
 
-            <a
-              href="/#events-section"
-              className={`pub-header__link ${location.pathname.startsWith('/events') ? 'active' : ''}`}
-              onClick={(e) => handleNavClick(e, 'events-section', '/events')}
-            >
-              Events
-            </a>
+              <a
+                href="/#events-section"
+                className={`pub-header__link ${location.pathname.startsWith('/events') ? 'active' : ''}`}
+                onClick={(e) => handleNavClick(e, 'events-section', '/events')}
+              >
+                Events
+              </a>
 
-            <Link
-              to="/lookup"
-              className={`pub-header__link ${location.pathname === '/lookup' ? 'active' : ''}`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Lookup
+              <Link
+                to="/lookup"
+                className={`pub-header__link ${location.pathname === '/lookup' ? 'active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Lookup
+              </Link>
+
+              <Link
+                to="/leaderboard"
+                className={`pub-header__link ${location.pathname.startsWith('/leaderboard') ? 'active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Standings
+              </Link>
+            </nav>
+
+            {/* Admin User Icon aligned on the right with the navigation */}
+            <Link to="/admin/login" className="pub-header__user-icon" title="Admin Portal Login">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
             </Link>
-
-            <Link
-              to="/leaderboard"
-              className={`pub-header__link ${location.pathname.startsWith('/leaderboard') ? 'active' : ''}`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Standings
-            </Link>
-          </nav>
-
-          {/* Admin User Icon Only (Single Entry Point for Admin) */}
-          <Link to="/admin/login" className="pub-header__user-icon" title="Admin Portal Login">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </Link>
+          </div>
         </div>
       </div>
     </header>

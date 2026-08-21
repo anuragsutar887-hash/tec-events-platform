@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════
-   PUBLIC HEADER — Editorial Monochrome Navbar (CODEDEBUG Theme)
+   PUBLIC HEADER — Editorial Monochrome Navbar (Aligned Right)
    ══════════════════════════════════════════════════════════ */
 .pub-header {
   position: sticky;
@@ -43,6 +43,13 @@
   color: #000000;
   cursor: pointer;
   padding: var(--space-1);
+}
+
+/* ─── Right Group (Nav links + Admin Icon aligned together) ── */
+.pub-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
 }
 
 .pub-header__user-icon {
@@ -120,10 +127,5 @@
 
   .pub-header__nav.open {
     display: flex;
-  }
-
-  .pub-header__admin-btn {
-    width: 100%;
-    text-align: center;
   }
 }

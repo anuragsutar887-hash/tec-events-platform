@@ -18,7 +18,7 @@
 
 .footer__logo-serif {
   font-family: var(--font-serif);
-  font-size: 1.6rem;
+  font-size: 1.75rem;
   font-weight: 900;
   letter-spacing: 0.04em;
   color: #000000;
@@ -27,83 +27,97 @@
 
 .footer__sub-org {
   font-family: var(--font-serif);
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: #000000;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  max-width: 700px;
+  max-width: 760px;
 }
 
 .footer__sub-dept {
   font-family: var(--font-mono);
-  font-size: 0.725rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.footer__links-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-6);
-  flex-wrap: wrap;
-  margin: var(--space-3) 0 var(--space-2);
-}
-
-.footer__link {
-  font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: var(--transition-fast);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
+  margin-bottom: var(--space-2);
 }
 
-.footer__link:hover {
+/* ─── Direct Contact Us Section (No Buttons) ──────────────── */
+.footer__contact-section {
+  width: 100%;
+  max-width: 820px;
+  margin: var(--space-3) 0;
+  padding: var(--space-5) var(--space-6);
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.footer__contact-heading {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   color: #000000;
-  text-decoration: underline;
+  text-transform: uppercase;
+  margin-bottom: var(--space-4);
 }
 
-.footer__contact-info {
+.footer__contact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+  text-align: left;
+}
+
+.footer__contact-item {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  font-size: 0.78125rem;
-  color: var(--text-secondary);
-  flex-wrap: wrap;
-  margin-top: var(--space-1);
+  font-size: 0.8125rem;
 }
 
-.footer__contact-info a {
-  color: var(--text-primary);
+.footer__contact-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.footer__contact-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.45;
+}
+
+.footer__contact-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.footer__contact-text a {
+  color: #000000;
+  font-weight: 600;
   text-decoration: none;
-  font-weight: 500;
 }
 
-.footer__contact-info a:hover {
+.footer__contact-text a:hover {
   text-decoration: underline;
-}
-
-.footer__contact-sep {
-  color: var(--border-strong);
 }
 
 .footer__legal {
   padding-top: var(--space-5);
   border-top: 1px solid var(--border-subtle);
   width: 100%;
-  max-width: 640px;
-  margin-top: var(--space-2);
+  max-width: 680px;
+  margin-top: var(--space-3);
 }
 
 .footer__copy {
@@ -113,53 +127,9 @@
   letter-spacing: 0.04em;
 }
 
-/* ─── Contact Modal ───────────────────────────────────────── */
-.footer__contact-modal {
-  max-width: 520px;
-  width: 100%;
-  background: #ffffff;
-  border: 1px solid #000000;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-}
-
-.footer__modal-title {
-  font-family: var(--font-serif);
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #000000;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
-  margin-top: var(--space-1);
-}
-
-.footer__modal-desc {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: var(--space-5);
-}
-
-.footer__contact-cards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.footer__contact-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background: #fafafa;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-}
-
-.footer__card-icon {
-  font-size: 1.25rem;
-  flex-shrink: 0;
-  margin-top: 2px;
+@media (max-width: 768px) {
+  .footer__contact-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
 }

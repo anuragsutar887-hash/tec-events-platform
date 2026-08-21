@@ -57,7 +57,7 @@ export default function EventDetail() {
         <div className="card__body">
           <div className="empty-state__icon">🔍</div>
           <div className="empty-state__title">Event Not Found</div>
-          <Link to="/events" className="btn btn--primary mt-4">Back to Events</Link>
+          <Link to="/#events-section" className="btn btn--primary mt-4">Back to Events</Link>
         </div>
       </div>
     </div>
@@ -65,17 +65,17 @@ export default function EventDetail() {
 
   const regStatus = event.registration_status;
   const regBadgeMap = {
-    OPEN: { cls: 'badge--open', label: '🟢 Registration Open' },
-    NOT_OPEN: { cls: 'badge--upcoming', label: '🕐 Registration Not Open Yet' },
-    CLOSED: { cls: 'badge--closed', label: '🔴 Registration Closed' },
+    OPEN: { cls: 'badge--open', label: '• REGISTRATION OPEN' },
+    NOT_OPEN: { cls: 'badge--upcoming', label: '• COMING SOON' },
+    CLOSED: { cls: 'badge--closed', label: '• REGISTRATION CLOSED' },
   };
   const regBadge = regBadgeMap[regStatus] || { cls: '', label: regStatus };
 
   const participationType = event.allows_solo && event.allows_team
-    ? `Solo & Team (${event.min_team_size}–${event.max_team_size} members)`
+    ? `Solo & Duo Team (${event.min_team_size}–${event.max_team_size} members)`
     : event.allows_team
-    ? `Team Only (${event.min_team_size}–${event.max_team_size} members)`
-    : 'Solo Only';
+    ? `Duo Team (${event.min_team_size}–${event.max_team_size} members)`
+    : 'Solo Participant';
 
   return (
     <div className="event-detail">
@@ -86,12 +86,13 @@ export default function EventDetail() {
         </div>
       )}
 
-      {/* Hero */}
+      {/* Hero Header */}
       <div className="event-detail__hero">
         <div className="container">
-          <Link to="/events" className="event-detail__back">← Back to Events</Link>
+          <Link to="/#events-section" className="event-detail__back">← Back to Department Events</Link>
           <div className="event-detail__badges">
             <span className={`badge ${regBadge.cls}`}>{regBadge.label}</span>
+            <span className="badge badge--tag">DEPARTMENT EVENT</span>
           </div>
           <h1 className="event-detail__title">{event.name}</h1>
           <div className="event-detail__meta">
@@ -129,20 +130,68 @@ export default function EventDetail() {
         <div className="event-detail__layout">
           {/* Main content */}
           <div className="event-detail__main">
+            {/* 1. Short Info & Registration Options Card (Task 2) */}
+            <div className="card event-detail__quick-reg-card mb-6">
+              <div className="card__header">
+                <div>
+                  <span className="section__label" style={{ marginBottom: 0 }}>EVENT BRIEF & REGISTRATION MATRIX</span>
+                  <h3 className="text-lg fw-bold text-primary" style={{ fontFamily: 'var(--font-serif)', marginTop: '2px' }}>
+                    {event.short_description || 'Department Technical Challenge'}
+                  </h3>
+                </div>
+              </div>
+              <div className="card__body">
+                <p className="text-secondary text-sm mb-4" style={{ lineHeight: 1.6 }}>
+                  {event.short_description || 'Join this competitive technical symposium organized by the Department Technical Committee.'}
+                </p>
+
+                {/* Direct Registration Options */}
+                <div className="event-detail__reg-actions">
+                  {regStatus === 'OPEN' ? (
+                    <div className="event-detail__reg-buttons-row">
+                      <Link
+                        to={`/events/${slug}/register`}
+                        className="btn btn--primary btn--lg"
+                        id="event-detail-register-btn"
+                      >
+                        INITIALIZE REGISTRATION →
+                      </Link>
+                      <Link
+                        to="/lookup"
+                        className="btn btn--secondary btn--lg"
+                      >
+                        CHECK EXISTING TICKET
+                      </Link>
+                    </div>
+                  ) : regStatus === 'NOT_OPEN' ? (
+                    <div className="alert alert--info">
+                      Registration opens {event.registration_opens_at ? formatDateTime(event.registration_opens_at) : 'soon'}. Stay tuned!
+                    </div>
+                  ) : (
+                    <div className="alert alert--error">
+                      Registration is officially closed for this event.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Full Description */}
             {event.full_description && (
               <div className="event-detail__section">
-                <h2 className="event-detail__section-title">About This Event</h2>
+                <h2 className="event-detail__section-title">ABOUT THIS EVENT</h2>
                 <div className="event-detail__desc">{event.full_description}</div>
               </div>
             )}
 
+            {/* 3. Event Rules */}
             {event.rules && (
               <div className="event-detail__section">
-                <h2 className="event-detail__section-title">📋 Rules</h2>
+                <h2 className="event-detail__section-title">COMPETITION RULES</h2>
                 <div className="event-detail__rules">
                   {event.rules.split('\n').filter(Boolean).map((rule, i) => (
                     <div key={i} className="event-detail__rule">
-                      <span className="event-detail__rule-num">{i + 1}</span>
+                      <span className="event-detail__rule-num">{i < 9 ? `0${i + 1}` : i + 1}</span>
                       <span>{rule}</span>
                     </div>
                   ))}
@@ -150,9 +199,10 @@ export default function EventDetail() {
               </div>
             )}
 
+            {/* 4. Instructions */}
             {event.instructions && (
               <div className="event-detail__section">
-                <h2 className="event-detail__section-title">📝 Instructions</h2>
+                <h2 className="event-detail__section-title">GUIDELINES & INSTRUCTIONS</h2>
                 <div className="event-detail__desc">{event.instructions}</div>
               </div>
             )}
@@ -160,7 +210,7 @@ export default function EventDetail() {
 
           {/* Sidebar */}
           <aside className="event-detail__sidebar">
-            {/* Registration CTA */}
+            {/* Registration CTA Sidebar */}
             <div className="event-detail__reg-card card">
               <div className="card__body">
                 <div className={`badge ${regBadge.cls}`} style={{ marginBottom: 'var(--space-4)', display: 'block', textAlign: 'center' }}>
@@ -169,38 +219,29 @@ export default function EventDetail() {
 
                 {event.registration_closes_at && (
                   <div className="event-detail__reg-deadline">
-                    <span className="text-xs text-muted">Registration closes</span>
-                    <span className="text-sm fw-semibold text-primary">
+                    <span className="text-xs text-muted font-mono" style={{ textTransform: 'uppercase' }}>Registration Closes</span>
+                    <span className="text-sm fw-bold text-primary">
                       {formatDateTime(event.registration_closes_at)}
                     </span>
                   </div>
                 )}
 
-                {regStatus === 'OPEN' ? (
+                {regStatus === 'OPEN' && (
                   <Link
                     to={`/events/${slug}/register`}
                     className="btn btn--primary btn--full btn--lg"
                     style={{ marginTop: 'var(--space-4)' }}
-                    id="event-detail-register-btn"
                   >
-                    Register Now →
+                    REGISTER NOW →
                   </Link>
-                ) : regStatus === 'NOT_OPEN' ? (
-                  <div className="alert alert--info" style={{ marginTop: 'var(--space-4)' }}>
-                    Registration opens {event.registration_opens_at ? formatDateTime(event.registration_opens_at) : 'soon'}
-                  </div>
-                ) : (
-                  <div className="alert alert--error" style={{ marginTop: 'var(--space-4)' }}>
-                    Registration is closed for this event.
-                  </div>
                 )}
               </div>
             </div>
 
-            {/* Event info */}
+            {/* Key Event Details */}
             <div className="event-detail__info-card card">
               <div className="card__header">
-                <span className="text-sm fw-semibold text-secondary">Event Details</span>
+                <span className="section__label" style={{ marginBottom: 0 }}>SPECIFICATIONS</span>
               </div>
               <div className="card__body event-detail__info-list">
                 <div className="event-detail__info-item">
@@ -218,17 +259,17 @@ export default function EventDetail() {
                   <span className="event-detail__info-val">{event.venue || '—'}</span>
                 </div>
                 <div className="event-detail__info-item">
-                  <span className="event-detail__info-label">Participation</span>
+                  <span className="event-detail__info-label">Format</span>
                   <span className="event-detail__info-val">{participationType}</span>
                 </div>
               </div>
             </div>
 
-            {/* Contact */}
+            {/* Coordinator Contact */}
             {event.contact_info && (event.contact_info.email || event.contact_info.phone || event.contact_info.name) && (
               <div className="event-detail__info-card card">
                 <div className="card__header">
-                  <span className="text-sm fw-semibold text-secondary">Contact</span>
+                  <span className="section__label" style={{ marginBottom: 0 }}>EVENT COORDINATOR</span>
                 </div>
                 <div className="card__body event-detail__info-list">
                   {event.contact_info.name && (
