@@ -6,6 +6,23 @@ import { formatDateTime, timeAgo } from '../../utils/dateHelpers';
 import { QRCodeSVG } from 'qrcode.react';
 import './CheckIn.css';
 
+// Audio feedback helper (synthesized via Web Audio API)
+const playSuccessBeep = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 tone
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+  } catch {}
+};
+
 export default function CheckIn() {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
@@ -21,6 +38,8 @@ export default function CheckIn() {
 
   // 📷 Live Camera Scanner State
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameras, setCameras] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState('');
   const [cameraError, setCameraError] = useState('');
   const [scanningStatus, setScanningStatus] = useState('Standby');
   const html5QrCodeRef = useRef(null);
@@ -63,26 +82,54 @@ export default function CheckIn() {
   };
 
   // ─── 📷 Camera Scanner Lifecycle ───────────────────────────────
-  const startCamera = async () => {
+  const startCamera = async (deviceIdToUse = null) => {
     setCameraError('');
     setIsCameraActive(true);
-    setScanningStatus('Initializing camera hardware...');
+    setScanningStatus('Initializing camera...');
 
     try {
+      // Fetch available camera hardware
+      const availableDevices = await Html5Qrcode.getCameras();
+      setCameras(availableDevices || []);
+
+      let cameraConfig = { facingMode: 'environment' }; // Default to back camera on phones
+
+      if (deviceIdToUse) {
+        cameraConfig = { deviceId: { exact: deviceIdToUse } };
+      } else if (availableDevices && availableDevices.length > 0) {
+        // Look for rear/back camera if available
+        const backCamera = availableDevices.find((c) =>
+          c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear') || c.label.toLowerCase().includes('environment')
+        );
+        if (backCamera) {
+          cameraConfig = { deviceId: { exact: backCamera.id } };
+          setSelectedCameraId(backCamera.id);
+        } else {
+          setSelectedCameraId(availableDevices[0].id);
+        }
+      }
+
       // Small delay to ensure the DOM element #qr-reader is mounted
       setTimeout(async () => {
         try {
+          if (html5QrCodeRef.current) {
+            try {
+              await html5QrCodeRef.current.stop();
+              await html5QrCodeRef.current.clear();
+            } catch {}
+          }
+
           const qrCodeScanner = new Html5Qrcode('qr-reader');
           html5QrCodeRef.current = qrCodeScanner;
 
           const config = {
             fps: 15,
-            qrbox: { width: 250, height: 250 },
+            qrbox: { width: 260, height: 260 },
             aspectRatio: 1.0,
           };
 
           await qrCodeScanner.start(
-            { facingMode: 'environment' },
+            cameraConfig,
             config,
             (decodedText) => handleQrScanSuccess(decodedText),
             () => {} // silent on frame without QR
@@ -91,14 +138,20 @@ export default function CheckIn() {
           setScanningStatus('Active — Point participant QR code at camera');
         } catch (err) {
           console.error('Camera start error:', err);
-          setCameraError('Could not access camera. Please verify camera permissions in your browser.');
+          setCameraError('Could not access camera. Please allow camera permissions in your browser.');
           setIsCameraActive(false);
         }
-      }, 200);
+      }, 250);
     } catch (err) {
       setCameraError('Camera error: ' + err.message);
       setIsCameraActive(false);
     }
+  };
+
+  const switchCamera = async (deviceId) => {
+    setSelectedCameraId(deviceId);
+    await stopCamera();
+    startCamera(deviceId);
   };
 
   const stopCamera = async () => {
@@ -138,33 +191,35 @@ export default function CheckIn() {
 
       if (!reg) {
         setError(`Scanned QR is not associated with any active registration.`);
-        setScanningStatus('Ready — Awaiting next scan');
+        setScanningStatus('Ready — Point participant QR code at camera');
         setTimeout(() => { isProcessingScanRef.current = false; }, 2000);
         return;
       }
 
-      // Automatically Execute Instant Check-In if not already checked in
+      // Automatically Execute Instant Check-In
       if (!reg.checked_in) {
         await apiClient.put(`/admin/registrations/${reg.id}/checkin`);
         reg.checked_in = true;
         reg.checked_in_at = new Date().toISOString();
+        playSuccessBeep();
         setSuccessMsg(`🎉 CHECKED IN TO ARENA: ${reg.team_name || reg.registration_id} (Player 1 & Player 2)`);
       } else {
+        playSuccessBeep();
         setSuccessMsg(`ℹ️ Already Checked In: ${reg.team_name || reg.registration_id}`);
       }
 
       setResult(reg);
       loadLiveQueues();
-      setScanningStatus('✓ Success! Showing details below. Ready for next participant.');
+      setScanningStatus('✓ Success! Ready for next participant.');
 
-      // Brief debounce before allowing the next scan
+      // 2.5 second cooldown before accepting next scan
       setTimeout(() => {
         isProcessingScanRef.current = false;
       }, 2500);
     } catch (err) {
       console.error('Scan processing error:', err);
       setError('Check-in failed for scanned QR pass. Please verify details.');
-      setScanningStatus('Ready — Awaiting next scan');
+      setScanningStatus('Ready — Point participant QR code at camera');
       setTimeout(() => { isProcessingScanRef.current = false; }, 2000);
     }
   };
@@ -250,6 +305,7 @@ export default function CheckIn() {
         setResult(updated);
       }
 
+      playSuccessBeep();
       setSuccessMsg(`✅ Verified & Checked In: ${updated.team_name || updated.registration_id}`);
       loadLiveQueues();
     } catch (err) {
@@ -290,7 +346,7 @@ export default function CheckIn() {
       <div className="checkin__header">
         <div>
           <h1 className="dashboard__title">CHECK-IN CONSOLE</h1>
-          <p className="dashboard__subtitle">Scan participant QR codes via camera or search by ID for instant arena check-in</p>
+          <p className="dashboard__subtitle">Scan participant QR passes with your phone/laptop camera for instant arena check-in</p>
         </div>
         <div className="checkin__header-actions">
           <Link to="/leaderboard/codedebug" className="btn btn--secondary btn--sm" target="_blank">
@@ -304,16 +360,31 @@ export default function CheckIn() {
 
       {/* ─── 📷 1. LIVE CAMERA QR SCANNER SECTION ─────────────────── */}
       <div className="checkin__camera-card card mb-6">
-        <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+        <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
           <div>
             <span className="section__label" style={{ marginBottom: 0 }}>DESK TELEMETRY</span>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
               📷 LIVE CAMERA QR SCANNER
             </h2>
           </div>
-          <div>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+            {isCameraActive && cameras.length > 1 && (
+              <select
+                className="form-input form-select"
+                style={{ width: 'auto', padding: '6px 12px', fontSize: '0.8125rem' }}
+                value={selectedCameraId}
+                onChange={(e) => switchCamera(e.target.value)}
+              >
+                {cameras.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label || `Camera ${c.id.slice(0, 5)}`}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {!isCameraActive ? (
-              <button onClick={startCamera} className="btn btn--primary">
+              <button onClick={() => startCamera()} className="btn btn--primary">
                 📷 Start Camera Scanner
               </button>
             ) : (
@@ -336,7 +407,7 @@ export default function CheckIn() {
               <div id="qr-reader" className="camera-viewport"></div>
 
               <div className="camera-scanner-hint text-xs text-muted text-center mt-3">
-                Align the participant's digital pass QR code inside the viewfinder box. Check-in triggers automatically on detection.
+                Hold the participant's QR code in front of the camera. The system will automatically detect the pass, verify, and check them into the Live Arena immediately!
               </div>
             </div>
           </div>
