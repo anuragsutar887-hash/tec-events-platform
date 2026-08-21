@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './PublicHeader.css';
 
 export default function PublicHeader() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNavClick = (e, targetSectionId, fallbackRoute) => {
+    setMobileMenuOpen(false);
     if (location.pathname === '/') {
       e.preventDefault();
       if (targetSectionId === 'top') {
@@ -27,17 +30,27 @@ export default function PublicHeader() {
     <header className="pub-header">
       <div className="container">
         <div className="pub-header__inner">
-          {/* Logo only */}
+          {/* Mobile menu trigger */}
+          <button
+            className="pub-header__mobile-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            ☰
+          </button>
+
+          {/* Editorial Logo — CODEDEBUG / TEC */}
           <Link
             to="/"
             className="pub-header__logo"
-            title="Home"
+            title="CODEDEBUG Home"
             onClick={(e) => handleNavClick(e, 'top', '/')}
           >
-            <div className="pub-header__logo-icon">⚡</div>
+            <span className="pub-header__logo-brand">CODEDEBUG</span>
           </Link>
 
-          <nav className="pub-header__nav">
+          {/* Navigation Links */}
+          <nav className={`pub-header__nav ${mobileMenuOpen ? 'open' : ''}`}>
             <a
               href="/#top"
               className={`pub-header__link ${location.pathname === '/' && !location.hash ? 'active' : ''}`}
@@ -57,6 +70,7 @@ export default function PublicHeader() {
             <Link
               to="/lookup"
               className={`pub-header__link ${location.pathname === '/lookup' ? 'active' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
             >
               Lookup
             </Link>
@@ -64,14 +78,27 @@ export default function PublicHeader() {
             <Link
               to="/leaderboard"
               className={`pub-header__link ${location.pathname.startsWith('/leaderboard') ? 'active' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
             >
-              Leaderboard
+              Standings
             </Link>
 
-            <Link to="/admin/login" className="btn btn--secondary btn--sm">
-              Admin
+            <Link
+              to="/admin/login"
+              className="btn btn--secondary btn--sm pub-header__admin-btn"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Admin Portal
             </Link>
           </nav>
+
+          {/* User Icon Link to Admin */}
+          <Link to="/admin/login" className="pub-header__user-icon" title="Admin Portal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </Link>
         </div>
       </div>
     </header>

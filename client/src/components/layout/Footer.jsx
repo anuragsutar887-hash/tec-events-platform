@@ -5,40 +5,22 @@ export default function Footer() {
   return (
     <footer className="footer">
       <div className="container">
-        <div className="footer__inner">
-          <div className="footer__brand">
-            <div className="footer__logo">
-              <span className="footer__logo-icon">⚡</span>
-              <span className="footer__logo-name">TEC Events</span>
-            </div>
-            <p className="footer__tagline">
-              Official event portal of the Technical Committee.
-              Empowering students through technical excellence.
+        <div className="footer__editorial">
+          <div className="footer__logo-serif">CODEDEBUG</div>
+          <div className="footer__sub-org">INDIRA COLLEGE OF ENGINEERING AND MANAGEMENT • TECHNICAL EVENTS</div>
+
+          <div className="footer__links-row">
+            <Link to="/#events-section" className="footer__link">EVENTS</Link>
+            <Link to="/lookup" className="footer__link">LOOKUP</Link>
+            <Link to="/leaderboard" className="footer__link">STANDINGS</Link>
+            <Link to="/admin/login" className="footer__link">ADMIN ACCESS</Link>
+          </div>
+
+          <div className="footer__legal">
+            <p className="footer__copy">
+              © {new Date().getFullYear()} CODEDEBUG / TECHNICAL COMMITTEE. ALL RIGHTS RESERVED.
             </p>
           </div>
-
-          <div className="footer__links">
-            <div className="footer__col">
-              <h4 className="footer__col-title">Platform</h4>
-              <Link to="/" className="footer__link">Home</Link>
-              <Link to="/events" className="footer__link">Events</Link>
-              <Link to="/lookup" className="footer__link">Lookup Registration</Link>
-            </div>
-            <div className="footer__col">
-              <h4 className="footer__col-title">Admin</h4>
-              <Link to="/admin/login" className="footer__link">Admin Login</Link>
-              <Link to="/admin/" className="footer__link">Dashboard</Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="footer__bottom">
-          <p className="footer__copy">
-            © {new Date().getFullYear()} Technical Committee. All rights reserved.
-          </p>
-          <p className="footer__powered">
-            Built with TEC Events Platform v1.0
-          </p>
         </div>
       </div>
     </footer>

@@ -10,15 +10,32 @@ import './Home.css';
 export default function Home() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [topTeams, setTopTeams] = useState([]);
 
-  // ⚡ Hacker / Matrix Code Decrypt Animations for the 3 words
-  const word1 = useScrambleText('Compete.', { delay: 100, speed: 30, duration: 650 });
-  const word2 = useScrambleText('Learn.', { delay: 600, speed: 30, duration: 650 });
-  const word3 = useScrambleText('Innovate.', { delay: 1150, speed: 30, duration: 750 });
+  // ⚡ Hacker / Matrix Code Decrypt Animations
+  const word1 = useScrambleText('FIND THE BUG.', { delay: 100, speed: 25, duration: 600 });
+  const word2 = useScrambleText('FIX THE CODE.', { delay: 650, speed: 25, duration: 600 });
 
   useEffect(() => {
-    apiClient.get('/events').then(({ data }) => setEvents(data.events || [])).finally(() => setLoading(false));
+    loadHomeData();
   }, []);
+
+  const loadHomeData = async () => {
+    try {
+      const { data } = await apiClient.get('/events');
+      setEvents(data.events || []);
+
+      if (data.events && data.events.length > 0) {
+        const firstEvent = data.events[0];
+        const { data: lbData } = await apiClient.get(`/registrations/leaderboard/${firstEvent.id}`);
+        setTopTeams(lbData.teams?.slice(0, 3) || []);
+      }
+    } catch {
+      // safe fallback
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const upcoming = events.filter((e) => e.registration_status === 'OPEN' || e.registration_status === 'NOT_OPEN');
   const featured = upcoming[0] || events[0];
@@ -32,98 +49,205 @@ export default function Home() {
 
   return (
     <div className="home" id="top">
-      {/* ─── 1. HERO SECTION ────────────────────────────────────────── */}
+      {/* ─── 1. EDITORIAL HERO SECTION (Images 3, 4, 5) ───────────── */}
       <section className="home__hero">
-        <div className="home__hero-bg" />
         <div className="container">
           <div className="home__hero-content">
-            {/* Top Badge with College Name */}
-            <div className="home__hero-badge">
-              <span className="home__hero-badge-dot" />
-              <span className="home__hero-badge-text">
-                INDIRA COLLEGE OF ENGINEERING AND MANAGEMENT • TECHNICAL EVENTS
-              </span>
+            {/* Top Tag */}
+            <div className="home__hero-tag">
+              <span className="home__hero-tag-sys">[SYS.INIT] // COMPETITION_MODE: ENGAGED</span>
+              <span className="home__hero-tag-vol">VOL. 04 — THE ANNUAL SYNTHESIS</span>
             </div>
 
-            {/* Matrix / Code Decrypt Hero Title */}
+            {/* Main Editorial Serif Heading */}
             <h1 className="home__hero-title">
-              <span className="scramble-word word-1">
-                {word1.text || '░░░░░░░░'}
-              </span>{' '}
-              <span className="scramble-word word-2">
-                {word2.text || '░░░░░░'}
-              </span>
+              <span className="scramble-word">{word1.text || '░░░░░░░░░░░░'}</span>
               <br />
-              <span className="home__hero-accent scramble-word word-3">
-                {word3.text || '░░░░░░░░░'}
-              </span>
-              {!word3.isDone && <span className="hero-cursor">_</span>}
+              <span className="scramble-word">{word2.text || '░░░░░░░░░░░░'}</span>
+              <span className="hero-block-cursor">█</span>
             </h1>
 
+            {/* Subtitle */}
             <p className="home__hero-subtitle">
-              Register for cutting-edge technical events, challenges, and competitions
-              organized by the Technical Committee at Indira College of Engineering and Management.
+              A premium technical competition demanding intellectual clarity and flawless execution.
+              Compete against top developers and duo teams from Indira College of Engineering and Management.
             </p>
 
+            {/* CTA Buttons (High-Contrast Solid & Outline) */}
             <div className="home__hero-cta">
-              <button
-                onClick={() => scrollToSection('events-section')}
+              <Link
+                to={featured ? `/events/${featured.slug}/register` : '/events'}
                 className="btn btn--primary btn--lg"
               >
-                Browse Events ↓
-              </button>
-              <Link to="/lookup" className="btn btn--secondary btn--lg">
-                Check Registration
+                REGISTER NOW
               </Link>
+              <button
+                onClick={() => scrollToSection('events-section')}
+                className="btn btn--secondary btn--lg"
+              >
+                VIEW BRIEF
+              </button>
+            </div>
+
+            {/* Key Specifications Grid (As in Image 4) */}
+            <div className="home__specs-grid">
+              <div className="home__spec-card">
+                <span className="home__spec-label">DATE / SCHEDULE</span>
+                <span className="home__spec-val">{featured?.event_date ? new Date(featured.event_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'OCT 24 – 26'}</span>
+                <span className="home__spec-sub">Continuous Arena</span>
+              </div>
+
+              <div className="home__spec-card">
+                <span className="home__spec-label">VENUE / COORDINATES</span>
+                <span className="home__spec-val">{featured?.venue || 'Tech Hall A'}</span>
+                <span className="home__spec-sub">Hybrid Campus Access</span>
+              </div>
+
+              <div className="home__spec-card">
+                <span className="home__spec-label">MODE / FORMAT</span>
+                <span className="home__spec-val">Duo Team Matrix</span>
+                <span className="home__spec-sub">2 Engineers per Unit</span>
+              </div>
+
+              <div className="home__spec-card">
+                <span className="home__spec-label">STATUS</span>
+                <span className="home__spec-val home__spec-val--status">
+                  <span className="status-dot"></span>
+                  {featured?.registration_status === 'OPEN' ? 'OPEN' : 'ACTIVE'}
+                </span>
+                <span className="home__spec-sub">Live QR Validation</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── 2. FEATURED EVENT (Scroll Reveal) ────────────────────────── */}
-      {featured && (
-        <section className="section section--sm">
-          <div className="container">
-            <RevealOnScroll delay={100}>
-              <div className="section__header">
-                <div className="section__label">Featured Event</div>
-                <h2 className="section__title">Don't Miss This</h2>
+      {/* ─── 2. METHODOLOGY SECTION (Image 3) ─────────────────────────── */}
+      <section className="section home__methodology">
+        <div className="container">
+          <RevealOnScroll delay={50}>
+            <div className="home__methodology-header">
+              <span className="section__label">FRAMEWORK // DISCIPLINE</span>
+              <h2 className="section__title">METHODOLOGY</h2>
+              <p className="home__methodology-lead">
+                The competition format is designed to isolate true problem-solving capabilities from rote memorization.
+              </p>
+            </div>
+          </RevealOnScroll>
+
+          <div className="home__methodology-grid">
+            <RevealOnScroll delay={100} direction="up">
+              <div className="home__methodology-card card">
+                <div className="card__body">
+                  <span className="home__methodology-num">01</span>
+                  <h3 className="home__methodology-title">Algorithm Analysis</h3>
+                  <p className="home__methodology-desc">
+                    Identify logical flaws in complex, obfuscated algorithms provided in multiple languages under strict time limits.
+                  </p>
+                </div>
               </div>
-              <div className="home__featured card card--hover">
-                <div className="home__featured-body">
-                  <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginBottom: 'var(--space-3)' }}>
-                    <span className={`badge ${featured.registration_status === 'OPEN' ? 'badge--open' : featured.registration_status === 'NOT_OPEN' ? 'badge--upcoming' : 'badge--closed'}`}>
-                      {featured.registration_status === 'OPEN' ? '🟢 Registration Open' : featured.registration_status === 'NOT_OPEN' ? '🕐 Coming Soon' : '🔴 Closed'}
-                    </span>
-                  </div>
-                  <h3 className="home__featured-title">{featured.name}</h3>
-                  <p className="home__featured-desc">{featured.short_description || featured.full_description?.slice(0, 200)}</p>
-                  <div className="home__featured-meta">
-                    {featured.event_date && <span>📅 {new Date(featured.event_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>}
-                    {featured.venue && <span>📍 {featured.venue}</span>}
-                    {featured.allows_team && <span>👥 Team Event</span>}
-                  </div>
-                  <div className="home__featured-actions">
-                    <Link to={`/events/${featured.slug}`} className="btn btn--secondary">View Details</Link>
-                    {featured.registration_status === 'OPEN' && (
-                      <Link to={`/events/${featured.slug}/register`} className="btn btn--primary">Register Now →</Link>
-                    )}
-                  </div>
+            </RevealOnScroll>
+
+            <RevealOnScroll delay={200} direction="up">
+              <div className="home__methodology-card card">
+                <div className="card__body">
+                  <span className="home__methodology-num">02</span>
+                  <h3 className="home__methodology-title">Performance Optimization</h3>
+                  <p className="home__methodology-desc">
+                    Refactor working but inefficient code to meet strict time and space complexity constraints with zero regression.
+                  </p>
+                </div>
+              </div>
+            </RevealOnScroll>
+
+            <RevealOnScroll delay={300} direction="up">
+              <div className="home__methodology-card card">
+                <div className="card__body">
+                  <span className="home__methodology-num">03</span>
+                  <h3 className="home__methodology-title">System Architecture</h3>
+                  <p className="home__methodology-desc">
+                    Debug microservice communication and concurrency failures in simulated distributed environments.
+                  </p>
                 </div>
               </div>
             </RevealOnScroll>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {/* ─── 3. ALL EVENTS (Staggered 1-by-1 Scroll Reveal & Skeleton Loader) ─ */}
-      <section className="section" id="events-section">
+      {/* ─── 3. STANDINGS / LEADERBOARD PREVIEW (Images 4, 5) ───────────── */}
+      <section className="section home__standings-section">
         <div className="container">
           <RevealOnScroll delay={50}>
-            <div className="section__header">
-              <div className="section__label">All Events</div>
-              <h2 className="section__title">Upcoming Events</h2>
-              <p className="section__subtitle">Choose an event that matches your skills and interests.</p>
+            <div className="home__standings-header">
+              <div>
+                <span className="section__label">REAL-TIME TELEMETRY</span>
+                <h2 className="section__title">STANDINGS</h2>
+              </div>
+              <div className="home__standings-live">
+                <span className="live-sync-dot"></span>
+                <span>• LIVE SYNC</span>
+                <Link to="/leaderboard" className="btn btn--secondary btn--sm" style={{ marginLeft: 'var(--space-4)' }}>
+                  FULL STANDINGS →
+                </Link>
+              </div>
+            </div>
+          </RevealOnScroll>
+
+          <RevealOnScroll delay={100} direction="up">
+            <div className="table-wrapper home__standings-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>RANK</th>
+                    <th>ENTITY / DUO TEAM</th>
+                    <th>REGISTRATION ID</th>
+                    <th>STATUS / ARENA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topTeams.length > 0 ? (
+                    topTeams.map((team, idx) => (
+                      <tr key={team.id || idx}>
+                        <td className="font-mono fw-bold" style={{ fontSize: '1rem', color: '#000000' }}>
+                          {idx === 0 ? '🥇 01' : idx === 1 ? '🥈 02' : idx === 2 ? '🥉 03' : `0${idx + 1}`}
+                        </td>
+                        <td>
+                          <div className="fw-bold text-primary">{team.team_name || `${team.leader_name}'s Duo`}</div>
+                          <div className="text-xs text-muted">👑 {team.leader_name} ({team.leader_dept || 'Tech'})</div>
+                        </td>
+                        <td className="font-mono text-xs">{team.registration_id}</td>
+                        <td>
+                          <span className="badge badge--checked">✓ IN ARENA</span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+                        <div className="text-muted text-sm font-mono">
+                          Awaiting verified duo teams to check in at arena entrance.
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </RevealOnScroll>
+        </div>
+      </section>
+
+      {/* ─── 4. ALL EVENTS SECTION (Editorial Grid) ───────────────────── */}
+      <section className="section" id="events-section" style={{ background: '#fbfbfb', borderTop: '1px solid var(--border)' }}>
+        <div className="container">
+          <RevealOnScroll delay={50}>
+            <div className="section__header" style={{ textAlign: 'center' }}>
+              <span className="section__label">COMPETITIONS // ACTIVE</span>
+              <h2 className="section__title">EVENT SCHEDULE</h2>
+              <p className="section__subtitle" style={{ margin: '0 auto' }}>
+                Select a discipline to initialize your duo team registration.
+              </p>
             </div>
           </RevealOnScroll>
 
@@ -134,15 +258,13 @@ export default function Home() {
               ))}
             </div>
           ) : events.length === 0 ? (
-            <RevealOnScroll delay={100}>
-              <div className="empty-state card">
-                <div className="card__body">
-                  <div className="empty-state__icon">📅</div>
-                  <div className="empty-state__title">No events published yet</div>
-                  <p className="empty-state__text">Check back soon for upcoming technical events.</p>
-                </div>
+            <div className="empty-state card">
+              <div className="card__body">
+                <div className="empty-state__icon">📅</div>
+                <div className="empty-state__title">No events published yet</div>
+                <p className="empty-state__text">Check back soon for upcoming technical events.</p>
               </div>
-            </RevealOnScroll>
+            </div>
           ) : (
             <div className="home__events-grid">
               {events.map((ev, index) => (
@@ -152,86 +274,6 @@ export default function Home() {
               ))}
             </div>
           )}
-
-          {events.length > 0 && (
-            <RevealOnScroll delay={200}>
-              <div style={{ textAlign: 'center', marginTop: 'var(--space-8)' }}>
-                <Link to="/events" className="btn btn--secondary">View All Events Page →</Link>
-              </div>
-            </RevealOnScroll>
-          )}
-        </div>
-      </section>
-
-      {/* ─── 4. WHY PARTICIPATE (Fix Overlapping & Staggered Reveal) ───── */}
-      <section className="section home__why" id="why-section">
-        <div className="container">
-          <RevealOnScroll delay={50}>
-            <div className="section__header">
-              <div className="section__label">Why Join</div>
-              <h2 className="section__title">Why Participate?</h2>
-            </div>
-          </RevealOnScroll>
-
-          {/* Dedicated responsive non-overlapping 3-card grid */}
-          <div className="home__why-grid">
-            {[
-              {
-                icon: '🏆',
-                title: 'Win Recognition',
-                desc: 'Earn certificates, trophies, and recognition from faculty and industry leaders.',
-                badge: 'ACHIEVEMENT',
-                glowClass: 'glow-gold'
-              },
-              {
-                icon: '🤝',
-                title: 'Network & Collaborate',
-                desc: 'Meet talented peers from different departments and colleges across Maharashtra.',
-                badge: 'CONNECT',
-                glowClass: 'glow-cyan'
-              },
-              {
-                icon: '⚡',
-                title: 'Sharpen Your Skills',
-                desc: 'Real-world challenges designed to push your technical, problem-solving and coding limits.',
-                badge: 'MASTERY',
-                glowClass: 'glow-purple'
-              },
-            ].map((item, index) => (
-              <RevealOnScroll key={item.title} delay={index * 150} direction="up">
-                <div className={`home__why-card card ${item.glowClass}`}>
-                  <div className="card__body">
-                    <div className="home__why-top">
-                      <div className="home__why-icon-box">{item.icon}</div>
-                      <span className="home__why-badge">{item.badge}</span>
-                    </div>
-                    <h3 className="home__why-title">{item.title}</h3>
-                    <p className="home__why-desc">{item.desc}</p>
-                  </div>
-                </div>
-              </RevealOnScroll>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── 5. CTA SECTION (Scroll Reveal) ────────────────────────────── */}
-      <section className="section home__cta-section">
-        <div className="container">
-          <RevealOnScroll delay={100}>
-            <div className="home__cta card">
-              <div className="home__cta-body">
-                <h2 className="home__cta-title">Ready to Compete?</h2>
-                <p className="home__cta-sub">Browse events, form your team, and register today.</p>
-                <div className="home__cta-actions">
-                  <button onClick={() => scrollToSection('events-section')} className="btn btn--primary btn--lg">
-                    Browse Events ↓
-                  </button>
-                  <Link to="/lookup" className="btn btn--ghost btn--lg">Lookup My Registration</Link>
-                </div>
-              </div>
-            </div>
-          </RevealOnScroll>
         </div>
       </section>
     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { formatDateTime, timeAgo } from '../../utils/dateHelpers';
+import { QRCodeSVG } from 'qrcode.react';
 import RegistrationDetailModal from './RegistrationDetailModal';
 import './AdminRegistrations.css';
 
@@ -18,7 +19,8 @@ export default function AdminRegistrations() {
     participation_mode: '',
     checked_in: '',
   });
-  const [selectedRegId, setSelectedRegId] = useState(null);
+  const [expandedRegId, setExpandedRegId] = useState(null);
+  const [modalRegId, setModalRegId] = useState(null);
   const [page, setPage] = useState(1);
   const [checkinLoading, setCheckinLoading] = useState({});
 
@@ -63,6 +65,26 @@ export default function AdminRegistrations() {
     }
   };
 
+  const handleUndoCheckin = async (reg) => {
+    if (!window.confirm(`Undo check-in for team ${reg.team_name || reg.registration_id}?`)) return;
+    setCheckinLoading((p) => ({ ...p, [reg.id]: true }));
+    try {
+      await apiClient.put(`/admin/registrations/${reg.id}/undo-checkin`);
+      setRegistrations((prev) =>
+        prev.map((r) => r.id === reg.id ? { ...r, checked_in: false, checked_in_at: null } : r)
+      );
+    } catch {
+      alert('Failed to undo check-in');
+    } finally {
+      setCheckinLoading((p) => ({ ...p, [reg.id]: false }));
+    }
+  };
+
+  // Toggle inline expansion right beneath the team row
+  const toggleExpand = (id) => {
+    setExpandedRegId((prev) => (prev === id ? null : id));
+  };
+
   // 📊 Ultra-Professional Duo Team Excel Export
   const exportToExcel = () => {
     if (!registrations || registrations.length === 0) {
@@ -98,7 +120,6 @@ export default function AdminRegistrations() {
       const leader = participants.find((p) => p.is_leader) || participants[0] || {};
       const teammate = participants.find((p) => !p.is_leader) || (participants.length > 1 ? participants[1] : {});
 
-      // Text escape helper that prevents Excel scientific notation (e.g. 9.18E+11)
       const escText = (val) => {
         if (!val) return '""';
         const clean = String(val).replace(/"/g, '""');
@@ -150,7 +171,7 @@ export default function AdminRegistrations() {
     <div className="admin-registrations">
       <div className="admin-regs__header">
         <div>
-          <h1 className="dashboard__title">Registrations</h1>
+          <h1 className="dashboard__title">REGISTRATIONS MATRIX</h1>
           <p className="dashboard__subtitle">
             {pagination.total !== undefined ? `${pagination.total} registration(s) found` : 'Manage duo participants & attendance'}
           </p>
@@ -164,7 +185,7 @@ export default function AdminRegistrations() {
         </div>
       </div>
 
-      {/* Search & Filters Bar (Spacious 4-column layout) */}
+      {/* Search & Filters Bar */}
       <div className="admin-regs__search-bar card">
         <div className="card__body">
           <div className="admin-regs__search-row">
@@ -179,7 +200,7 @@ export default function AdminRegistrations() {
                 id="registrations-search"
               />
               <button className="btn btn--primary" onClick={handleSearch}>
-                🔍 Search
+                🔍 SEARCH
               </button>
             </div>
           </div>
@@ -246,73 +267,211 @@ export default function AdminRegistrations() {
           <table className="table">
             <thead>
               <tr>
-                <th>Reg ID</th>
-                <th>Duo Team / Leader</th>
-                <th>Event</th>
-                <th>Mode</th>
-                <th>Type</th>
-                <th>Members</th>
-                <th>Attendance</th>
-                <th>Registered</th>
-                <th>Actions</th>
+                <th>REG ID</th>
+                <th>DUO TEAM / LEADER</th>
+                <th>EVENT</th>
+                <th>MODE</th>
+                <th>TYPE</th>
+                <th>ATTENDANCE</th>
+                <th>REGISTERED</th>
+                <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {registrations.map((r) => {
                 const leader = r.participants?.find((p) => p.is_leader) || r.participants?.[0] || {};
                 const teammate = r.participants?.find((p) => !p.is_leader);
+                const isExpanded = expandedRegId === r.id;
 
                 return (
-                  <tr key={r.id}>
-                    <td>
-                      <span className="font-mono text-xs text-accent fw-bold">{r.registration_id}</span>
-                    </td>
-                    <td>
-                      <div className="fw-bold text-primary">{r.team_name || leader.full_name}</div>
-                      <div className="text-xs text-muted">
-                        👑 {leader.full_name || 'Leader'} {teammate ? `• 🤝 ${teammate.full_name}` : ''}
-                      </div>
-                    </td>
-                    <td className="text-secondary text-sm">{r.event_name}</td>
-                    <td>
-                      <span className={`badge ${r.participation_mode === 'SOLO' ? 'badge--solo' : 'badge--team'}`}>
-                        {r.participation_mode}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${r.registration_type === 'ONLINE' ? 'badge--online' : 'badge--onsite'}`}>
-                        {r.registration_type}
-                      </span>
-                    </td>
-                    <td className="text-center font-mono text-secondary">{r.participants?.length || 1}</td>
-                    <td>
-                      {r.checked_in ? (
-                        <span className="badge badge--checked">✓ In Arena</span>
-                      ) : (
-                        <span className="badge badge--unchecked">Pending</span>
-                      )}
-                    </td>
-                    <td className="text-xs text-muted">{timeAgo(r.created_at)}</td>
-                    <td>
-                      <div className="admin-regs__row-actions">
-                        <button
-                          className="btn btn--ghost btn--sm"
-                          onClick={() => setSelectedRegId(r.id)}
-                        >
-                          View
-                        </button>
-                        {!r.checked_in && (
-                          <button
-                            className={`btn btn--primary btn--sm ${checkinLoading[r.id] ? 'btn--loading' : ''}`}
-                            onClick={() => handleCheckin(r)}
-                            disabled={checkinLoading[r.id]}
-                          >
-                            {checkinLoading[r.id] ? '' : 'Check In'}
-                          </button>
+                  <>
+                    <tr
+                      key={r.id}
+                      className={`admin-regs__row ${isExpanded ? 'admin-regs__row--expanded' : ''}`}
+                      onClick={() => toggleExpand(r.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td>
+                        <span className="font-mono text-xs fw-bold" style={{ color: '#000000' }}>
+                          {r.registration_id}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="fw-bold text-primary" style={{ fontSize: '0.95rem' }}>
+                          {r.team_name || leader.full_name}
+                        </div>
+                        <div className="text-xs text-muted">
+                          👑 {leader.full_name || 'Leader'} {teammate ? `• 🤝 ${teammate.full_name}` : ''}
+                        </div>
+                      </td>
+                      <td className="text-secondary text-sm">{r.event_name}</td>
+                      <td>
+                        <span className={`badge ${r.participation_mode === 'SOLO' ? 'badge--solo' : 'badge--team'}`}>
+                          {r.participation_mode}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${r.registration_type === 'ONLINE' ? 'badge--online' : 'badge--onsite'}`}>
+                          {r.registration_type}
+                        </span>
+                      </td>
+                      <td>
+                        {r.checked_in ? (
+                          <span className="badge badge--checked">✓ IN ARENA</span>
+                        ) : (
+                          <span className="badge badge--unchecked">PENDING</span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="text-xs text-muted">{timeAgo(r.created_at)}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="admin-regs__row-actions">
+                          <button
+                            className="btn btn--secondary btn--sm"
+                            onClick={() => toggleExpand(r.id)}
+                            title="Expand details below team name in center"
+                          >
+                            {isExpanded ? '▲ Hide' : '▼ Details'}
+                          </button>
+                          {!r.checked_in ? (
+                            <button
+                              className={`btn btn--primary btn--sm ${checkinLoading[r.id] ? 'btn--loading' : ''}`}
+                              onClick={() => handleCheckin(r)}
+                              disabled={checkinLoading[r.id]}
+                            >
+                              {checkinLoading[r.id] ? '' : 'Check In'}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn--danger btn--sm"
+                              onClick={() => handleUndoCheckin(r)}
+                            >
+                              Undo
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* ⚡ Task 2: Inline Centered Detail View Below Clicked Team Name */}
+                    {isExpanded && (
+                      <tr key={`expand-${r.id}`} className="admin-regs__expansion-row">
+                        <td colSpan={8} className="admin-regs__expansion-cell">
+                          <div className="inline-detail-box card">
+                            <div className="inline-detail-box__inner">
+                              {/* Header & Badges */}
+                              <div className="inline-detail-box__header">
+                                <div>
+                                  <span className="section__label">TEAM REGISTRATION DETAILS</span>
+                                  <h3 className="inline-detail-box__title">{r.team_name || `${leader.full_name}'s Duo`}</h3>
+                                </div>
+                                <div className="inline-detail-box__badges">
+                                  <span className={`badge ${r.registration_type === 'ONLINE' ? 'badge--online' : 'badge--onsite'}`}>
+                                    {r.registration_type}
+                                  </span>
+                                  <span className={`badge ${r.participation_mode === 'SOLO' ? 'badge--solo' : 'badge--team'}`}>
+                                    {r.participation_mode}
+                                  </span>
+                                  <span className={`badge ${r.checked_in ? 'badge--checked' : 'badge--unchecked'}`}>
+                                    {r.checked_in ? '✓ Checked In (In Arena)' : 'Pending Check-In'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Centered 3-Column Balanced Layout */}
+                              <div className="inline-detail-box__grid">
+                                {/* Col 1: Registration Metadata */}
+                                <div className="inline-detail-box__col">
+                                  <div className="detail-field">
+                                    <span className="detail-field__label">REGISTRATION ID</span>
+                                    <span className="detail-field__val reg-id">{r.registration_id}</span>
+                                  </div>
+                                  <div className="detail-field">
+                                    <span className="detail-field__label">EVENT NAME</span>
+                                    <span className="detail-field__val text-primary">{r.event_name}</span>
+                                  </div>
+                                  <div className="detail-field">
+                                    <span className="detail-field__label">REGISTERED TIMESTAMP</span>
+                                    <span className="detail-field__val">{formatDateTime(r.created_at)}</span>
+                                  </div>
+                                  {r.checked_in && (
+                                    <div className="detail-field">
+                                      <span className="detail-field__label">ARENA CHECK-IN TIME</span>
+                                      <span className="detail-field__val text-success fw-bold">{formatDateTime(r.checked_in_at)}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Col 2: Duo Members */}
+                                <div className="inline-detail-box__col inline-detail-box__col--members">
+                                  <span className="detail-field__label">DUO TEAM MEMBERS ({r.participants?.length || 1})</span>
+                                  <div className="inline-members-list">
+                                    {r.participants?.map((p, pIdx) => (
+                                      <div key={pIdx} className="inline-member-pill">
+                                        <div className="inline-member-pill__top">
+                                          <span className="inline-member-pill__name">{p.full_name}</span>
+                                          {p.is_leader ? (
+                                            <span className="badge badge--team" style={{ fontSize: '0.65rem' }}>👑 Leader</span>
+                                          ) : (
+                                            <span className="badge badge--solo" style={{ fontSize: '0.65rem' }}>🤝 Teammate</span>
+                                          )}
+                                        </div>
+                                        <div className="inline-member-pill__meta">
+                                          <span>📧 {p.email}</span>
+                                          {p.phone && <span>📱 {p.phone}</span>}
+                                          <span>🏛️ {[p.department, p.year, p.college].filter(Boolean).join(' • ')}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Col 3: Centered QR Code Box */}
+                                <div className="inline-detail-box__col inline-detail-box__col--qr">
+                                  <div className="inline-qr-card">
+                                    <QRCodeSVG
+                                      value={`${window.location.origin}/lookup?token=${r.qr_token}`}
+                                      size={125}
+                                      level="M"
+                                      fgColor="#000000"
+                                    />
+                                    <span className="inline-qr-label">QR CODE CHECK-IN</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Footer Actions with Theme-Matching Cancel/Close Button */}
+                              <div className="inline-detail-box__footer">
+                                <div className="inline-detail-box__footer-left">
+                                  {!r.checked_in ? (
+                                    <button
+                                      className={`btn btn--primary btn--sm ${checkinLoading[r.id] ? 'btn--loading' : ''}`}
+                                      onClick={() => handleCheckin(r)}
+                                      disabled={checkinLoading[r.id]}
+                                    >
+                                      {checkinLoading[r.id] ? '' : '✓ Check-In to Arena'}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="btn btn--danger btn--sm"
+                                      onClick={() => handleUndoCheckin(r)}
+                                    >
+                                      Undo Check-in
+                                    </button>
+                                  )}
+                                </div>
+                                <button
+                                  className="btn btn--secondary btn--sm"
+                                  onClick={() => toggleExpand(r.id)}
+                                >
+                                  Close Details ✕
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })}
             </tbody>
@@ -328,10 +487,10 @@ export default function AdminRegistrations() {
         </div>
       )}
 
-      {selectedRegId && (
+      {modalRegId && (
         <RegistrationDetailModal
-          registrationId={selectedRegId}
-          onClose={() => setSelectedRegId(null)}
+          registrationId={modalRegId}
+          onClose={() => setModalRegId(null)}
           onCheckin={() => loadRegistrations()}
         />
       )}

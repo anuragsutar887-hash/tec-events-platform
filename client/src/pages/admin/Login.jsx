@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import './Login.css';
@@ -45,65 +45,83 @@ export default function AdminLogin() {
 
   return (
     <div className="login-page">
-      <div className="login-card">
-        <div className="login-card__logo">
-          <div className="login-card__logo-icon">⚡</div>
-          <div className="login-card__logo-text">
-            <div className="login-card__logo-name">TEC Admin</div>
-            <div className="login-card__logo-sub">Technical Events Committee</div>
-          </div>
-        </div>
-
-        <h1 className="login-card__title">Committee Login</h1>
-        <p className="login-card__subtitle">Sign in with your registered committee email</p>
-
-        {error && (
-          <div className="alert alert--error" role="alert">
-            <span>⚠️</span>
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="email" className="form-label">Committee Email</label>
-            <input
-              id="email"
-              type="email"
-              className="form-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="anuragsutar887@gmail.com"
-              autoComplete="email"
-              required
-            />
+      <div className="login-container">
+        {/* Editorial Top Branding */}
+        <div className="login-card">
+          <div className="login-card__header">
+            <div className="login-card__logo-serif">CODEDEBUG</div>
+            <span className="login-card__badge">[AUTHENTICATION // SECURE_PORTAL]</span>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password" className="form-label">Password</label>
-            <input
-              id="password"
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              required
-            />
+          <h1 className="login-card__title">COMMITTEE ACCESS</h1>
+          <p className="login-card__subtitle">
+            Sign in with authorized committee credentials to manage live event telemetry, arena check-in and scoring.
+          </p>
+
+          {error && (
+            <div className="alert alert--error mb-4" role="alert">
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">
+                Committee Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                className="form-input login-form__input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="anuragsutar887@gmail.com"
+                autoComplete="email"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                className="form-input login-form__input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+
+            {/* Submit Button with Buffer Spinner instead of text */}
+            <button
+              type="submit"
+              className={`btn btn--primary btn--full btn--lg login-form__submit ${loading ? 'btn--loading' : ''}`}
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="login-buffer">
+                  <div className="spinner spinner--white"></div>
+                </div>
+              ) : (
+                'INITIALIZE SESSION →'
+              )}
+            </button>
+          </form>
+
+          <div className="login-card__footer">
+            <div className="login-card__hint">
+              🔒 Access restricted to authorized committee members of Indira College of Engineering and Management.
+            </div>
+            <Link to="/" className="login-card__back-link">
+              ← Return to Public Site
+            </Link>
           </div>
-
-          <button
-            type="submit"
-            className={`btn btn--primary btn--full btn--lg ${loading ? 'btn--loading' : ''}`}
-            disabled={loading}
-          >
-            {loading ? 'Verifying with Firebase...' : 'Sign In'}
-          </button>
-        </form>
-
-        <div className="login-card__hint">
-          🔒 Access restricted to authorized committee accounts registered in Firebase.
         </div>
       </div>
     </div>
