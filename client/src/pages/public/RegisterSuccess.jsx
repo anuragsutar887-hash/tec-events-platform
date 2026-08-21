@@ -33,9 +33,6 @@ export default function RegisterSuccess() {
         <div className="success-header">
           <div className="success-header__icon">🎉</div>
           <h1 className="success-header__title">REGISTRATION CONFIRMED!</h1>
-          <p className="success-header__sub">
-            Your duo team is successfully registered. Save your Registration ID and QR pass for event check-in.
-          </p>
         </div>
 
         {/* Registration ID Pass Card */}
@@ -54,7 +51,6 @@ export default function RegisterSuccess() {
                 {event_name || 'Department Technical Event'}
               </h2>
             </div>
-            <span className="badge badge--team">DUO TEAM (2 PLAYERS)</span>
           </div>
 
           <div className="success-card__body card__body" style={{ padding: 'var(--space-6)' }}>

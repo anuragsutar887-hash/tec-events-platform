@@ -134,11 +134,11 @@ export default function Leaderboard({ isAdminView = false }) {
 
                     <div className="lb-duo-grid">
                       <div className="lb-duo-tag leader">
-                        👑 <strong>Leader:</strong> {leader.full_name} ({leader.department || 'Tech'})
+                        👤 <strong>Player 1:</strong> {leader.full_name}
                       </div>
                       {member && (
                         <div className="lb-duo-tag member">
-                          🤝 <strong>Teammate:</strong> {member.full_name} ({member.department || 'Tech'})
+                          👤 <strong>Player 2:</strong> {member.full_name}
                         </div>
                       )}
                     </div>

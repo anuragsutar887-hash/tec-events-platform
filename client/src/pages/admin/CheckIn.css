@@ -23,6 +23,48 @@
   flex-wrap: wrap;
 }
 
+/* ─── Camera Scanner ─────────────────────────────────────── */
+.camera-scanner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+.camera-scanner-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+  background: #ffffff;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+}
+
+.camera-viewport {
+  width: 100%;
+  max-width: 440px;
+  border: 2px solid #000000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000000;
+  box-shadow: var(--shadow-md);
+}
+
+.camera-viewport video {
+  width: 100% !important;
+  height: auto !important;
+  object-fit: cover !important;
+  border-radius: var(--radius-sm);
+}
+
 /* ─── Search Card ────────────────────────────────────────── */
 .checkin__search-card {
   background: #ffffff;
