@@ -12,6 +12,7 @@ export default function EventDetail() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     apiClient.get(`/events/${slug}`)
       .then(({ data }) => setEvent(data.event))
       .catch(() => setError('Event not found'))
@@ -22,15 +23,15 @@ export default function EventDetail() {
   if (loading) {
     return (
       <div className="event-detail">
-        <div className="event-detail__hero" style={{ padding: 'var(--space-12) 0' }}>
+        <div className="event-detail__hero">
           <div className="container">
-            <div className="skeleton" style={{ width: '120px', height: '18px', marginBottom: 'var(--space-4)' }} />
-            <div className="skeleton" style={{ width: '140px', height: '24px', borderRadius: 'var(--radius-full)', marginBottom: 'var(--space-3)' }} />
-            <div className="skeleton skeleton-title" style={{ width: '50%', height: '40px', marginBottom: 'var(--space-4)' }} />
-            <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
-              <div className="skeleton" style={{ width: '120px', height: '18px' }} />
-              <div className="skeleton" style={{ width: '140px', height: '18px' }} />
-              <div className="skeleton" style={{ width: '100px', height: '18px' }} />
+            <div className="skeleton" style={{ width: '140px', height: '20px', marginBottom: 'var(--space-4)' }} />
+            <div className="skeleton" style={{ width: '160px', height: '26px', marginBottom: 'var(--space-3)' }} />
+            <div className="skeleton skeleton-title" style={{ width: '60%', height: '48px', marginBottom: 'var(--space-4)' }} />
+            <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+              <div className="skeleton" style={{ width: '130px', height: '20px' }} />
+              <div className="skeleton" style={{ width: '150px', height: '20px' }} />
+              <div className="skeleton" style={{ width: '120px', height: '20px' }} />
             </div>
           </div>
         </div>
@@ -38,12 +39,12 @@ export default function EventDetail() {
         <div className="container section">
           <div className="event-detail__layout">
             <div className="event-detail__main">
-              <div className="card skeleton-card mb-6" style={{ height: '180px' }} />
-              <div className="card skeleton-card mb-6" style={{ height: '220px' }} />
+              <div className="card skeleton-card mb-6" style={{ height: '200px' }} />
+              <div className="card skeleton-card mb-6" style={{ height: '240px' }} />
             </div>
             <aside className="event-detail__sidebar">
-              <div className="card skeleton-card mb-4" style={{ height: '160px' }} />
-              <div className="card skeleton-card" style={{ height: '200px' }} />
+              <div className="card skeleton-card mb-4" style={{ height: '180px' }} />
+              <div className="card skeleton-card" style={{ height: '220px' }} />
             </aside>
           </div>
         </div>
@@ -79,32 +80,33 @@ export default function EventDetail() {
 
   return (
     <div className="event-detail">
-      {/* Banner */}
-      {event.banner_url && (
-        <div className="event-detail__banner">
-          <img src={event.banner_url} alt={event.name} />
-        </div>
-      )}
-
-      {/* Hero Header */}
+      {/* Hero Header Section */}
       <div className="event-detail__hero">
         <div className="container">
-          <Link to="/#events-section" className="event-detail__back">← Back to Department Events</Link>
+          <div className="event-detail__header-nav">
+            <Link to="/#events-section" className="event-detail__back">
+              ← Back to Department Events
+            </Link>
+          </div>
+
           <div className="event-detail__badges">
             <span className={`badge ${regBadge.cls}`}>{regBadge.label}</span>
-            <span className="badge badge--tag">DEPARTMENT EVENT</span>
+            <span className="badge badge--tag">IT DEPARTMENT EVENT</span>
           </div>
+
           <h1 className="event-detail__title">{event.name}</h1>
+
+          {/* Clean Meta Row */}
           <div className="event-detail__meta">
             {event.event_date && (
               <div className="event-detail__meta-item">
-                <span>📅</span>
+                <span className="event-detail__meta-icon">📅</span>
                 <span>{formatDate(event.event_date)}</span>
               </div>
             )}
             {(event.start_time || event.end_time) && (
               <div className="event-detail__meta-item">
-                <span>🕐</span>
+                <span className="event-detail__meta-icon">🕐</span>
                 <span>
                   {event.start_time ? formatTime(event.start_time) : ''}
                   {event.start_time && event.end_time ? ' – ' : ''}
@@ -114,55 +116,67 @@ export default function EventDetail() {
             )}
             {event.venue && (
               <div className="event-detail__meta-item">
-                <span>📍</span>
+                <span className="event-detail__meta-icon">📍</span>
                 <span>{event.venue}</span>
               </div>
             )}
             <div className="event-detail__meta-item">
-              <span>👥</span>
+              <span className="event-detail__meta-icon">👥</span>
               <span>{participationType}</span>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Main Container */}
       <div className="container">
+        {/* Sleek Event Banner Image (Contained & Proportional) */}
+        {event.banner_url && (
+          <div className="event-detail__banner-card">
+            <img
+              src={event.banner_url}
+              alt={event.name}
+              className="event-detail__banner-img"
+            />
+          </div>
+        )}
+
         <div className="event-detail__layout">
-          {/* Main content */}
+          {/* Main content column */}
           <div className="event-detail__main">
-            {/* 1. Short Info & Registration Options Card (Task 2) */}
+            {/* 1. Quick Registration & Brief Card */}
             <div className="card event-detail__quick-reg-card mb-6">
               <div className="card__header">
                 <div>
                   <span className="section__label" style={{ marginBottom: 0 }}>EVENT BRIEF & REGISTRATION MATRIX</span>
-                  <h3 className="text-lg fw-bold text-primary" style={{ fontFamily: 'var(--font-serif)', marginTop: '2px' }}>
+                  <h3 className="event-detail__brief-title">
                     {event.short_description || 'Department Technical Challenge'}
                   </h3>
                 </div>
               </div>
               <div className="card__body">
-                <p className="text-secondary text-sm mb-4" style={{ lineHeight: 1.6 }}>
-                  {event.short_description || 'Join this competitive technical symposium organized by the Department Technical Committee.'}
+                <p className="event-detail__brief-desc">
+                  {event.short_description || 'Join this competitive technical symposium organized by the IT Department Technical Committee.'}
                 </p>
 
-                {/* Direct Registration Options */}
-                <div className="event-detail__reg-actions">
+                {/* Clean, Non-overlapping Action Buttons */}
+                <div className="event-detail__action-buttons">
                   {regStatus === 'OPEN' ? (
-                    <div className="event-detail__reg-buttons-row">
+                    <>
                       <Link
                         to={`/events/${slug}/register`}
-                        className="btn btn--primary btn--lg"
+                        className="btn btn--primary btn--lg event-detail__main-reg-btn"
                         id="event-detail-register-btn"
                       >
                         INITIALIZE REGISTRATION →
                       </Link>
                       <Link
                         to="/lookup"
-                        className="btn btn--secondary btn--lg"
+                        className="btn btn--secondary btn--lg event-detail__ticket-btn"
                       >
                         CHECK EXISTING TICKET
                       </Link>
-                    </div>
+                    </>
                   ) : regStatus === 'NOT_OPEN' ? (
                     <div className="alert alert--info">
                       Registration opens {event.registration_opens_at ? formatDateTime(event.registration_opens_at) : 'soon'}. Stay tuned!
@@ -192,14 +206,14 @@ export default function EventDetail() {
                   {event.rules.split('\n').filter(Boolean).map((rule, i) => (
                     <div key={i} className="event-detail__rule">
                       <span className="event-detail__rule-num">{i < 9 ? `0${i + 1}` : i + 1}</span>
-                      <span>{rule}</span>
+                      <span className="event-detail__rule-text">{rule}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* 4. Instructions */}
+            {/* 4. Guidelines & Instructions */}
             {event.instructions && (
               <div className="event-detail__section">
                 <h2 className="event-detail__section-title">GUIDELINES & INSTRUCTIONS</h2>
@@ -210,36 +224,8 @@ export default function EventDetail() {
 
           {/* Sidebar */}
           <aside className="event-detail__sidebar">
-            {/* Registration CTA Sidebar */}
-            <div className="event-detail__reg-card card">
-              <div className="card__body">
-                <div className={`badge ${regBadge.cls}`} style={{ marginBottom: 'var(--space-4)', display: 'block', textAlign: 'center' }}>
-                  {regBadge.label}
-                </div>
-
-                {event.registration_closes_at && (
-                  <div className="event-detail__reg-deadline">
-                    <span className="text-xs text-muted font-mono" style={{ textTransform: 'uppercase' }}>Registration Closes</span>
-                    <span className="text-sm fw-bold text-primary">
-                      {formatDateTime(event.registration_closes_at)}
-                    </span>
-                  </div>
-                )}
-
-                {regStatus === 'OPEN' && (
-                  <Link
-                    to={`/events/${slug}/register`}
-                    className="btn btn--primary btn--full btn--lg"
-                    style={{ marginTop: 'var(--space-4)' }}
-                  >
-                    REGISTER NOW →
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {/* Key Event Details */}
-            <div className="event-detail__info-card card">
+            {/* Key Event Specifications */}
+            <div className="event-detail__info-card card mb-6">
               <div className="card__header">
                 <span className="section__label" style={{ marginBottom: 0 }}>SPECIFICATIONS</span>
               </div>
@@ -262,6 +248,14 @@ export default function EventDetail() {
                   <span className="event-detail__info-label">Format</span>
                   <span className="event-detail__info-val">{participationType}</span>
                 </div>
+                {event.registration_closes_at && (
+                  <div className="event-detail__info-item">
+                    <span className="event-detail__info-label">Closes</span>
+                    <span className="event-detail__info-val text-danger fw-bold">
+                      {formatDate(event.registration_closes_at)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

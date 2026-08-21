@@ -4,9 +4,9 @@ import './EventCard.css';
 
 function RegistrationBadge({ status }) {
   const map = {
-    OPEN: { label: 'Registration Open', cls: 'badge--open' },
-    NOT_OPEN: { label: 'Coming Soon', cls: 'badge--upcoming' },
-    CLOSED: { label: 'Registration Closed', cls: 'badge--closed' },
+    OPEN: { label: '• REGISTRATION OPEN', cls: 'badge--open' },
+    NOT_OPEN: { label: '• COMING SOON', cls: 'badge--upcoming' },
+    CLOSED: { label: '• CLOSED', cls: 'badge--closed' },
   };
   const { label, cls } = map[status] || { label: status, cls: '' };
   return <span className={`badge ${cls}`}>{label}</span>;
@@ -62,12 +62,12 @@ export default function EventCard({ event }) {
         </div>
       </div>
 
-      <div className="event-card__footer card__footer">
-        <Link to={`/events/${slug}`} className="btn btn--ghost btn--sm">
+      <div className="event-card__footer">
+        <Link to={`/events/${slug}`} className="btn btn--secondary btn--sm event-card__btn-view">
           View Details →
         </Link>
         {registration_status === 'OPEN' && (
-          <Link to={`/events/${slug}/register`} className="btn btn--primary btn--sm">
+          <Link to={`/events/${slug}/register`} className="btn btn--primary btn--sm event-card__btn-reg">
             Register Now
           </Link>
         )}

@@ -7,7 +7,7 @@
   height: 100%;
   background: #ffffff;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   transition: var(--transition);
 }
 
@@ -73,4 +73,14 @@
   padding: var(--space-4) var(--space-5);
   background: #fafafa;
   border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.event-card__btn-view,
+.event-card__btn-reg {
+  flex: 1;
+  text-align: center;
 }

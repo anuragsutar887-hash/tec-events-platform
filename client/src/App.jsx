@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 
 // Layout
 import PublicHeader from './components/layout/PublicHeader';
@@ -25,6 +26,17 @@ import CheckIn from './pages/admin/CheckIn';
 import OnsiteRegistration from './pages/admin/OnsiteRegistration';
 import Settings from './pages/admin/Settings';
 
+// Automatically scrolls to top on every route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function PublicLayout({ children }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -38,6 +50,7 @@ function PublicLayout({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* ── Public routes (Pure public site) ────────────────────────────── */}
         <Route path="/" element={
