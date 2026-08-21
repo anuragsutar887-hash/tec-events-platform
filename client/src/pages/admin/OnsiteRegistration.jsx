@@ -242,7 +242,7 @@ export default function OnsiteRegistration() {
             className={`btn btn--primary btn--lg ${loading ? 'btn--loading' : ''}`}
             disabled={loading}
           >
-            {loading ? '' : 'Register Duo On-site →'}
+            {loading ? '' : 'Register Duo On-site'}
           </button>
         </div>
       </form>

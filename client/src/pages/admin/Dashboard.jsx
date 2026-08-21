@@ -238,16 +238,16 @@ export default function Dashboard() {
           {selectedEventId && (
             <div className="dashboard__event-actions">
               <Link to={`/admin/registrations?event_id=${selectedEventId}`} className="btn btn--secondary btn--sm">
-                📋 View Registrations →
+                📋 View Registrations
               </Link>
               <Link to={`/admin/checkin?event_id=${selectedEventId}`} className="btn btn--primary btn--sm">
-                ✅ Check-in Console →
+                ✅ Check-in Console
               </Link>
               <Link to={`/admin/onsite?event_id=${selectedEventId}`} className="btn btn--secondary btn--sm">
-                ➕ Add On-site Reg →
+                ➕ Add On-site Reg
               </Link>
               <Link to={`/leaderboard/${selectedEvent?.slug || 'codedebug'}`} className="btn btn--ghost btn--sm">
-                ⚡ Live Arena Stream ↗
+                ⚡ Live Arena Stream
               </Link>
             </div>
           )}

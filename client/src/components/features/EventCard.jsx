@@ -59,11 +59,11 @@ export default function EventCard({ event }) {
 
       <div className="event-card__footer">
         <Link to={`/events/${slug}`} className="btn btn--secondary btn--sm event-card__btn-view">
-          View Details →
+          VIEW DETAILS
         </Link>
         {registration_status === 'OPEN' && (
           <Link to={`/events/${slug}/register`} className="btn btn--primary btn--sm event-card__btn-reg">
-            Register Now
+            REGISTER NOW
           </Link>
         )}
       </div>

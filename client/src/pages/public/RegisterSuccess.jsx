@@ -145,7 +145,7 @@ export default function RegisterSuccess() {
         {/* Actions */}
         <div className="success-actions" style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', marginTop: 'var(--space-6)' }}>
           <Link to="/lookup" className="btn btn--primary">
-            View My Ticket Pass →
+            VIEW MY TICKET PASS
           </Link>
           <Link to="/#events-section" className="btn btn--secondary">
             Browse More Events

@@ -289,7 +289,7 @@ export default function Register() {
                   className={`btn btn--primary btn--lg ${submitting ? 'btn--loading' : ''}`}
                   disabled={submitting}
                 >
-                  {submitting ? '' : 'Complete Registration →'}
+                  {submitting ? '' : 'COMPLETE REGISTRATION'}
                 </button>
               </div>
             </form>

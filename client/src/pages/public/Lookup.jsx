@@ -116,7 +116,7 @@ export default function Lookup() {
                       className={`btn btn--primary ${loading ? 'btn--loading' : ''}`}
                       disabled={loading || !query.trim()}
                     >
-                      {loading ? '' : 'Load My Pass →'}
+                      {loading ? '' : 'LOAD MY PASS'}
                     </button>
                   </div>
                   <span className="form-hint text-xs text-muted mt-2">

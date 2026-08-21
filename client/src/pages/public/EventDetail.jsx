@@ -164,7 +164,7 @@ export default function EventDetail() {
                         className="btn btn--primary btn--lg event-detail__main-reg-btn"
                         id="event-detail-register-btn"
                       >
-                        INITIALIZE REGISTRATION →
+                        INITIALIZE REGISTRATION
                       </Link>
                       <Link
                         to="/lookup"

@@ -62,7 +62,7 @@ export default function Home() {
                 onClick={() => scrollToSection('events-section')}
                 className="btn btn--primary btn--lg"
               >
-                EXPLORE EVENTS ↓
+                EXPLORE EVENTS
               </button>
             </div>
 
@@ -150,12 +150,8 @@ export default function Home() {
       <section className="section" id="events-section" style={{ background: '#fbfbfb', borderTop: '1px solid var(--border)' }}>
         <div className="container">
           <RevealOnScroll delay={50}>
-            <div className="section__header" style={{ textAlign: 'center' }}>
-              <span className="section__label">ACTIVE COMPETITIONS // IT DEPARTMENT SCHEDULE</span>
-              <h2 className="section__title">UPCOMING TECHNICAL EVENTS</h2>
-              <p className="section__subtitle" style={{ margin: '0 auto' }}>
-                Select an event below to view its brief, rules, and initialize your team registration.
-              </p>
+            <div className="section__header" style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
+              <h2 className="section__title" style={{ margin: 0 }}>TECHNICAL EVENTS</h2>
             </div>
           </RevealOnScroll>
 
