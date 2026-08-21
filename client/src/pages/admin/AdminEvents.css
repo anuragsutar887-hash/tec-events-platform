@@ -1,6 +1,12 @@
 /* ══════════════════════════════════════════════════════════
-   ADMIN EVENTS — Clean List Layout, No Overlapping Buttons
+   ADMIN EVENTS — Centered Editorial List Layout
    ══════════════════════════════════════════════════════════ */
+.admin-events {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-4) 0 var(--space-12);
+}
+
 .admin-events__header {
   display: flex;
   align-items: flex-start;
@@ -31,6 +37,15 @@
   gap: var(--space-4);
   padding: var(--space-5) var(--space-6);
   flex-wrap: wrap;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.event-row:hover {
+  border-color: #000000;
+  box-shadow: var(--shadow-sm);
 }
 
 .event-row__main {
@@ -47,10 +62,10 @@
 }
 
 .event-row__name {
-  font-family: var(--font-mono);
+  font-family: var(--font-serif);
   font-size: var(--text-lg);
-  font-weight: var(--fw-semibold);
-  color: var(--text-primary);
+  font-weight: 800;
+  color: #000000;
   margin-bottom: var(--space-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -67,7 +82,6 @@
   align-items: center;
 }
 
-/* Actions: always in a row, never stacked, never overlapping */
 .event-row__actions {
   display: flex;
   align-items: center;
@@ -80,26 +94,9 @@
   .event-row {
     padding: var(--space-4);
   }
-
   .event-row__actions {
     flex-wrap: wrap;
     width: 100%;
     justify-content: flex-start;
-  }
-
-  .event-row__name {
-    font-size: var(--text-base);
-  }
-}
-
-@media (max-width: 480px) {
-  .admin-events__header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .event-row__meta {
-    flex-direction: column;
-    gap: var(--space-1);
   }
 }

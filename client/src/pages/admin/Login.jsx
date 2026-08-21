@@ -49,7 +49,7 @@ export default function AdminLogin() {
         {/* Editorial Top Branding */}
         <div className="login-card">
           <div className="login-card__header">
-            <div className="login-card__logo-serif">CODEDEBUG</div>
+            <div className="login-card__logo-serif">TECH EVENTS</div>
             <span className="login-card__badge">[AUTHENTICATION // SECURE_PORTAL]</span>
           </div>
 

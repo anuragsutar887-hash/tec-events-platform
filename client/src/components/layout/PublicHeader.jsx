@@ -39,14 +39,14 @@ export default function PublicHeader() {
             ☰
           </button>
 
-          {/* Editorial Logo — CODEDEBUG / TEC */}
+          {/* Logo — TECH EVENTS */}
           <Link
             to="/"
             className="pub-header__logo"
-            title="CODEDEBUG Home"
+            title="Tech Events Home"
             onClick={(e) => handleNavClick(e, 'top', '/')}
           >
-            <span className="pub-header__logo-brand">CODEDEBUG</span>
+            <span className="pub-header__logo-brand">TECH EVENTS</span>
           </Link>
 
           {/* Navigation Links */}
@@ -82,19 +82,11 @@ export default function PublicHeader() {
             >
               Standings
             </Link>
-
-            <Link
-              to="/admin/login"
-              className="btn btn--secondary btn--sm pub-header__admin-btn"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Admin Portal
-            </Link>
           </nav>
 
-          {/* User Icon Link to Admin */}
-          <Link to="/admin/login" className="pub-header__user-icon" title="Admin Portal">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          {/* Admin User Icon Only (Single Entry Point for Admin) */}
+          <Link to="/admin/login" className="pub-header__user-icon" title="Admin Portal Login">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>

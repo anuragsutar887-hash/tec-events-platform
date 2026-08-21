@@ -1,9 +1,46 @@
+/* ══════════════════════════════════════════════════════════
+   SETTINGS PAGE — Editorial Swiss Centered Layout (Task 1)
+   ══════════════════════════════════════════════════════════ */
+.settings-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--space-4) 0 var(--space-12);
+}
+
+.settings-page__header {
+  margin-bottom: var(--space-6);
+}
+
+.settings-card {
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+}
+
 .settings-info-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
 }
-.settings-info-row:last-child { border-bottom: none; }
+
+.settings-info-row:last-child {
+  border-bottom: none;
+}
+
+.settings-info-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.settings-info-val {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
