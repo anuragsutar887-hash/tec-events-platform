@@ -383,7 +383,7 @@ export default function CheckIn() {
                         handleCheckin(r);
                       }}
                     >
-                      Check In →
+                      Check In
                     </button>
                   </div>
                 ))}

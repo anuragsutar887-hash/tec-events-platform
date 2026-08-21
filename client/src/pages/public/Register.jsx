@@ -128,7 +128,7 @@ export default function Register() {
       {/* Header */}
       <div className="register-page__header">
         <div className="container">
-          <Link to={`/events/${slug}`} className="event-detail__back">← Back to {event.name}</Link>
+          <Link to={`/events/${slug}`} className="event-detail__back">Back to {event.name}</Link>
           <h1 className="register-page__title">REGISTER FOR {event.name.toUpperCase()}</h1>
         </div>
       </div>

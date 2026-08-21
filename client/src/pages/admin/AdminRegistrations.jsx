@@ -459,9 +459,9 @@ export default function AdminRegistrations() {
 
       {pagination.pages > 1 && (
         <div className="admin-regs__pagination">
-          <button className="btn btn--secondary btn--sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>← Prev</button>
+          <button className="btn btn--secondary btn--sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
           <span className="text-sm text-muted font-mono">Page {page} of {pagination.pages}</span>
-          <button className="btn btn--secondary btn--sm" onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))} disabled={page === pagination.pages}>Next →</button>
+          <button className="btn btn--secondary btn--sm" onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))} disabled={page === pagination.pages}>Next</button>
         </div>
       )}
 

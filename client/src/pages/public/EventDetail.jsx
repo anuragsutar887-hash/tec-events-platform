@@ -81,7 +81,7 @@ export default function EventDetail() {
         <div className="container">
           <div className="event-detail__header-nav">
             <Link to="/#events-section" className="event-detail__back">
-              ← Back to Department Events
+              Back to Department Events
             </Link>
           </div>
 

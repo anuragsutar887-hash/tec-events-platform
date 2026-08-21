@@ -259,7 +259,7 @@ export default function Dashboard() {
         <div className="card__header">
           <h2 className="dashboard__section-title">Recent Activity Feed</h2>
           <Link to="/admin/registrations" className="btn btn--ghost btn--sm">
-            View All Registrations →
+            View All Registrations
           </Link>
         </div>
         

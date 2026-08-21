@@ -109,7 +109,7 @@ export default function AdminLogin() {
                   <div className="spinner spinner--white"></div>
                 </div>
               ) : (
-                'INITIALIZE SESSION →'
+                'INITIALIZE SESSION'
               )}
             </button>
           </form>
@@ -119,7 +119,7 @@ export default function AdminLogin() {
               🔒 Access restricted to authorized committee members of Indira College of Engineering and Management.
             </div>
             <Link to="/" className="login-card__back-link">
-              ← Return to Public Site
+              Return to Public Site
             </Link>
           </div>
         </div>

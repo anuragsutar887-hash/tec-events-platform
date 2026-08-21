@@ -146,7 +146,7 @@ export default function EventForm() {
           <p className="dashboard__subtitle">{isEdit ? `Editing: ${form.name}` : 'Configure and publish a new event'}</p>
         </div>
         <button className="btn btn--secondary" onClick={() => navigate('/admin/events')}>
-          ← Back
+          Back to Events
         </button>
       </div>
 

@@ -97,7 +97,7 @@ export default function AdminLayout({ children }) {
               ⚡ Live Arena
             </Link>
             <Link to="/" className="btn btn--ghost btn--sm" target="_blank">
-              ↗ Public Site
+              Public Site
             </Link>
           </div>
         </header>
