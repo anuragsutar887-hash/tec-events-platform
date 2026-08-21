@@ -21,11 +21,11 @@ const emptyForm = {
   venue: '',
   registration_opens_at: '',
   registration_closes_at: '',
-  status: 'DRAFT',
-  allows_solo: true,
-  allows_team: false,
+  status: 'PUBLISHED',
+  allows_solo: false,
+  allows_team: true,
   min_team_size: 2,
-  max_team_size: 4,
+  max_team_size: 2,
   rules: '',
   instructions: '',
   contact_info: { email: '', phone: '', name: '' },
@@ -64,11 +64,11 @@ export default function EventForm() {
           ? ev.registration_opens_at.slice(0, 16) : '',
         registration_closes_at: ev.registration_closes_at
           ? ev.registration_closes_at.slice(0, 16) : '',
-        status: ev.status || 'DRAFT',
-        allows_solo: Boolean(ev.allows_solo),
-        allows_team: Boolean(ev.allows_team),
+        status: ev.status || 'PUBLISHED',
+        allows_solo: false,
+        allows_team: true,
         min_team_size: ev.min_team_size || 2,
-        max_team_size: ev.max_team_size || 4,
+        max_team_size: ev.max_team_size || 2,
         rules: ev.rules || '',
         instructions: ev.instructions || '',
         contact_info: ev.contact_info || { email: '', phone: '', name: '' },
@@ -85,17 +85,12 @@ export default function EventForm() {
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
   const setContactInfo = (field, value) =>
     setForm((f) => ({ ...f, contact_info: { ...f.contact_info, [field]: value } }));
-  const setFeature = (key, value) =>
-    setForm((f) => ({ ...f, features: { ...f.features, [key]: value } }));
 
   const validate = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = 'Event name is required';
-    if (!form.allows_solo && !form.allows_team) errs.participation = 'Select at least one participation mode';
-    if (form.allows_team) {
-      if (!form.min_team_size || form.min_team_size < 2) errs.min_team_size = 'Min team size must be at least 2';
-      if (!form.max_team_size || form.max_team_size < form.min_team_size) errs.max_team_size = 'Max must be ≥ min';
-    }
+    if (!form.min_team_size || form.min_team_size < 2) errs.min_team_size = 'Min team size must be at least 2';
+    if (!form.max_team_size || form.max_team_size < form.min_team_size) errs.max_team_size = 'Max must be ≥ min';
     return errs;
   };
 
@@ -109,6 +104,9 @@ export default function EventForm() {
     try {
       const payload = {
         ...form,
+        status: 'PUBLISHED',
+        allows_solo: false,
+        allows_team: true,
         registration_opens_at: form.registration_opens_at || null,
         registration_closes_at: form.registration_closes_at || null,
         event_date: form.event_date || null,
@@ -165,15 +163,16 @@ export default function EventForm() {
             <div className="form-group">
               <label className="form-label form-label--required">Event Name</label>
               <input
-                id="event-name"
                 type="text"
                 className={`form-input ${errors.name ? 'form-input--error' : ''}`}
                 value={form.name}
                 onChange={(e) => set('name', e.target.value)}
-                placeholder="e.g. Technical Debugging Challenge 2026"
+                placeholder="e.g. codeDebug 2026"
+                required
               />
               {errors.name && <span className="form-error">{errors.name}</span>}
             </div>
+
             <div className="form-group">
               <label className="form-label">Short Description</label>
               <input
@@ -181,10 +180,11 @@ export default function EventForm() {
                 className="form-input"
                 value={form.short_description}
                 onChange={(e) => set('short_description', e.target.value)}
-                placeholder="One-line description shown on event cards"
-                maxLength={500}
+                placeholder="Brief one-line summary (shown on event cards)"
+                maxLength={200}
               />
             </div>
+
             <div className="form-group">
               <label className="form-label">Full Description</label>
               <textarea
@@ -192,9 +192,10 @@ export default function EventForm() {
                 rows={5}
                 value={form.full_description}
                 onChange={(e) => set('full_description', e.target.value)}
-                placeholder="Detailed event description..."
+                placeholder="Detailed event overview, problem statement, structure..."
               />
             </div>
+
             <div className="form-group">
               <label className="form-label">Banner Image URL</label>
               <input
@@ -264,56 +265,38 @@ export default function EventForm() {
           </div>
         </div>
 
-        {/* Participation */}
+        {/* Participation — Team Size Only */}
         <div className="event-form__section card">
           <div className="card__header">
-            <h2 className="event-form__section-title">👥 Participation</h2>
+            <h2 className="event-form__section-title">👥 Team Size</h2>
           </div>
           <div className="card__body form-section">
-            {errors.participation && <div className="alert alert--error">{errors.participation}</div>}
-            <div className="event-form__toggles">
-              <label className="event-form__toggle">
-                <input type="checkbox" checked={form.allows_solo}
-                  onChange={(e) => set('allows_solo', e.target.checked)} />
-                <div className="event-form__toggle-body">
-                  <span className="event-form__toggle-icon">👤</span>
-                  <div>
-                    <div className="event-form__toggle-title">Solo Registration</div>
-                    <div className="event-form__toggle-desc">Allow individual participants</div>
-                  </div>
-                </div>
-              </label>
-              <label className="event-form__toggle">
-                <input type="checkbox" checked={form.allows_team}
-                  onChange={(e) => set('allows_team', e.target.checked)} />
-                <div className="event-form__toggle-body">
-                  <span className="event-form__toggle-icon">👥</span>
-                  <div>
-                    <div className="event-form__toggle-title">Team Registration</div>
-                    <div className="event-form__toggle-desc">Allow team registrations</div>
-                  </div>
-                </div>
-              </label>
-            </div>
-
-            {form.allows_team && (
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label form-label--required">Min Team Size</label>
-                  <input type="number" min={2} max={20} className={`form-input ${errors.min_team_size ? 'form-input--error' : ''}`}
-                    value={form.min_team_size}
-                    onChange={(e) => set('min_team_size', parseInt(e.target.value))} />
-                  {errors.min_team_size && <span className="form-error">{errors.min_team_size}</span>}
-                </div>
-                <div className="form-group">
-                  <label className="form-label form-label--required">Max Team Size</label>
-                  <input type="number" min={2} max={20} className={`form-input ${errors.max_team_size ? 'form-input--error' : ''}`}
-                    value={form.max_team_size}
-                    onChange={(e) => set('max_team_size', parseInt(e.target.value))} />
-                  {errors.max_team_size && <span className="form-error">{errors.max_team_size}</span>}
-                </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label form-label--required">Min Team Size</label>
+                <input
+                  type="number"
+                  min={2}
+                  max={20}
+                  className={`form-input ${errors.min_team_size ? 'form-input--error' : ''}`}
+                  value={form.min_team_size}
+                  onChange={(e) => set('min_team_size', parseInt(e.target.value) || 2)}
+                />
+                {errors.min_team_size && <span className="form-error">{errors.min_team_size}</span>}
               </div>
-            )}
+              <div className="form-group">
+                <label className="form-label form-label--required">Max Team Size</label>
+                <input
+                  type="number"
+                  min={2}
+                  max={20}
+                  className={`form-input ${errors.max_team_size ? 'form-input--error' : ''}`}
+                  value={form.max_team_size}
+                  onChange={(e) => set('max_team_size', parseInt(e.target.value) || 2)}
+                />
+                {errors.max_team_size && <span className="form-error">{errors.max_team_size}</span>}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -363,50 +346,6 @@ export default function EventForm() {
                   onChange={(e) => setContactInfo('phone', e.target.value)}
                   placeholder="+91 98765 43210" />
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="event-form__section card">
-          <div className="card__header">
-            <h2 className="event-form__section-title">⚙️ Features</h2>
-          </div>
-          <div className="card__body">
-            <div className="event-form__features">
-              {Object.entries({
-                qr_checkin: 'QR Check-in',
-                attendance: 'Attendance Tracking',
-                scoring: 'Scoring (future)',
-                leaderboard: 'Leaderboard (future)',
-                submissions: 'Project Submission (future)',
-              }).map(([key, label]) => (
-                <label key={key} className="event-form__feature-toggle">
-                  <input type="checkbox" checked={form.features[key] || false}
-                    onChange={(e) => setFeature(key, e.target.checked)} />
-                  <span>{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Status & Submit */}
-        <div className="event-form__section card">
-          <div className="card__header">
-            <h2 className="event-form__section-title">🚀 Status</h2>
-          </div>
-          <div className="card__body form-section">
-            <div className="form-group">
-              <label className="form-label">Event Status</label>
-              <select className="form-input form-select" value={form.status}
-                onChange={(e) => set('status', e.target.value)}>
-                <option value="DRAFT">Draft — Not visible publicly</option>
-                <option value="PUBLISHED">Published — Visible on public site</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="ARCHIVED">Archived</option>
-              </select>
-              <span className="form-hint">Set to Published to make this event visible on the public site and open for registrations.</span>
             </div>
           </div>
         </div>

@@ -64,12 +64,6 @@ export default function Home() {
               >
                 EXPLORE EVENTS ↓
               </button>
-              <Link
-                to="/lookup"
-                className="btn btn--secondary btn--lg"
-              >
-                MY REGISTRATION →
-              </Link>
             </div>
 
             {/* 4 Feature Cards (Events, Learning, Community, Opportunity) */}
