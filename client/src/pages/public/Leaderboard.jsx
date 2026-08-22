@@ -57,7 +57,7 @@ export default function Leaderboard({ isAdminView = false }) {
       <div className="lb-header">
         <div className="lb-live-indicator">
           <span className="lb-pulse-dot"></span>
-          <span>LIVE ARENA STREAM · QR CHECK-IN</span>
+          <span>LIVE ARENA STREAM · REAL-TIME CHECK-IN</span>
         </div>
         <h1 className="lb-title">⚡ {event?.name || 'codeDebug'} Leaderboard</h1>
         <p className="lb-subtitle">
@@ -84,7 +84,7 @@ export default function Leaderboard({ isAdminView = false }) {
 
       {lastScannedTeam && (
         <div className="lb-toast-banner">
-          🎉 Team <strong>{lastScannedTeam}</strong> just scanned their QR code and joined the live arena!
+          🎉 Team <strong>{lastScannedTeam}</strong> just checked in and joined the live arena!
         </div>
       )}
 
@@ -100,14 +100,14 @@ export default function Leaderboard({ isAdminView = false }) {
             <div className="lb-empty-icon">⏳</div>
             <h2>Waiting for Duo Teams</h2>
             <p>
-              Teams will instantly appear here on the auditorium screen as soon as their QR code is scanned at the entrance.
+              Teams will instantly appear here on the auditorium screen as soon as they check in at the entrance desk.
             </p>
             <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link to={`/events/${eventSlug}/register`} className="btn btn--primary">
                 Register Your Duo Team
               </Link>
               <Link to="/admin/checkin" className="btn btn--secondary">
-                Organizer Scanner Console
+                Desk Check-In Console
               </Link>
             </div>
           </div>

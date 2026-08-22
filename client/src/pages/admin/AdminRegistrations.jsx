@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { formatDateTime, timeAgo } from '../../utils/dateHelpers';
-import { QRCodeSVG } from 'qrcode.react';
 import RegistrationDetailModal from './RegistrationDetailModal';
 import './AdminRegistrations.css';
 
@@ -400,19 +399,6 @@ export default function AdminRegistrations() {
                                         </div>
                                       </div>
                                     ))}
-                                  </div>
-                                </div>
-
-                                {/* Col 3: Centered QR Code Box */}
-                                <div className="inline-detail-box__col inline-detail-box__col--qr">
-                                  <div className="inline-qr-card">
-                                    <QRCodeSVG
-                                      value={`${window.location.origin}/lookup?token=${r.qr_token}`}
-                                      size={125}
-                                      level="M"
-                                      fgColor="#000000"
-                                    />
-                                    <span className="inline-qr-label">QR CODE CHECK-IN</span>
                                   </div>
                                 </div>
                               </div>

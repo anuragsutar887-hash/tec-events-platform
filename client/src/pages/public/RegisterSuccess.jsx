@@ -1,5 +1,4 @@
 import { useLocation, Link, useParams } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
 import './RegisterSuccess.css';
 
 export default function RegisterSuccess() {
@@ -21,7 +20,7 @@ export default function RegisterSuccess() {
     );
   }
 
-  const { registration_id, event_name, team_name, participants, qr_token } = registration;
+  const { registration_id, event_name, team_name, participants } = registration;
 
   const player1 = participants?.find((p) => p.is_leader) || participants?.[0];
   const player2 = participants?.find((p) => !p.is_leader) || participants?.[1];
@@ -35,7 +34,7 @@ export default function RegisterSuccess() {
           <h1 className="success-header__title">REGISTRATION CONFIRMED!</h1>
         </div>
 
-        {/* Registration ID Pass Card */}
+        {/* Official Ticket Pass Card */}
         <div className="success-card card" style={{ border: '1px solid #000000', overflow: 'hidden' }}>
           <div className="card__header" style={{
             background: '#fafafa',
@@ -51,10 +50,11 @@ export default function RegisterSuccess() {
                 {event_name || 'Department Technical Event'}
               </h2>
             </div>
+            <span className="badge badge--tag">CONFIRMED</span>
           </div>
 
           <div className="success-card__body card__body" style={{ padding: 'var(--space-6)' }}>
-            <div className="success-card__layout">
+            <div className="success-card__layout" style={{ gridTemplateColumns: '1fr' }}>
               <div className="success-card__info">
                 {team_name && (
                   <div style={{ marginBottom: 'var(--space-4)' }}>
@@ -65,24 +65,35 @@ export default function RegisterSuccess() {
                   </div>
                 )}
 
-                <div className="success-card__reg-id-section" style={{ marginBottom: 'var(--space-5)' }}>
+                <div className="success-card__reg-id-section" style={{
+                  marginBottom: 'var(--space-5)',
+                  padding: 'var(--space-4)',
+                  background: '#f8fafc',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)'
+                }}>
                   <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
-                    Registration ID
+                    Official Registration ID
                   </div>
-                  <div className="success-card__reg-id reg-id" style={{ fontSize: '1.5rem', color: '#000000', margin: '4px 0' }}>
+                  <div className="success-card__reg-id reg-id" style={{ fontSize: '1.75rem', color: '#000000', margin: '6px 0', letterSpacing: '0.05em' }}>
                     {registration_id}
                   </div>
-                  <button
-                    className="btn btn--secondary btn--sm success-card__copy"
-                    onClick={() => navigator.clipboard.writeText(registration_id)}
-                    title="Copy to clipboard"
-                  >
-                    📋 Copy ID
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <button
+                      className="btn btn--secondary btn--sm success-card__copy"
+                      onClick={() => navigator.clipboard.writeText(registration_id)}
+                      title="Copy to clipboard"
+                    >
+                      📋 Copy Registration ID
+                    </button>
+                    <span className="text-xs text-muted font-mono">
+                      (Show this ID at the desk for check-in)
+                    </span>
+                  </div>
                 </div>
 
                 {/* Player 1 & Player 2 Details */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
                   {player1 && (
                     <div style={{ padding: 'var(--space-3) var(--space-4)', background: '#fafafa', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
                       <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
@@ -102,37 +113,6 @@ export default function RegisterSuccess() {
                       <div className="text-muted text-xs">{player2.email}</div>
                     </div>
                   )}
-                </div>
-              </div>
-
-              {/* QR Code */}
-              <div className="success-card__qr" style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 'var(--space-4)',
-                background: '#fafafa',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)'
-              }}>
-                <div className="success-card__qr-box" style={{
-                  background: 'white',
-                  padding: 'var(--space-2)',
-                  border: '1px solid #000000',
-                  marginBottom: 'var(--space-2)'
-                }}>
-                  <QRCodeSVG
-                    value={`${window.location.origin}/lookup?token=${qr_token}`}
-                    size={160}
-                    level="L"
-                    includeMargin={true}
-                    fgColor="#000000"
-                    bgColor="#ffffff"
-                  />
-                </div>
-                <div className="success-card__qr-label text-xs font-mono fw-bold text-muted text-center" style={{ textTransform: 'uppercase' }}>
-                  SHOW AT DESK FOR CHECK-IN
                 </div>
               </div>
             </div>

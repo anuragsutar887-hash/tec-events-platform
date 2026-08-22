@@ -75,20 +75,7 @@ export const apiClient = {
       return { data: { event: parseEvent(data) } };
     }
 
-    // 5. Lookup by Token (QR Code Scan) - Public / Check-in
-    if (url.startsWith('/registrations/lookup-by-token/') || url.includes('/checkin/by-token/') || url.includes('/by-token/')) {
-      const parts = url.split('/by-token/');
-      const token = parts[parts.length - 1].split('?')[0];
-      const { data: reg, error } = await supabase
-        .from('registrations')
-        .select('*, events(*), participants(*)')
-        .eq('qr_token', token)
-        .single();
-      if (error) throw error;
-      return { data: { registration: formatRegistration(reg) } };
-    }
-
-    // 6. Lookup by Registration ID - Public
+    // 5. Lookup by Registration ID - Public
     if (url.startsWith('/registrations/lookup/')) {
       const query = url.replace('/registrations/lookup/', '').trim();
       const { data: reg, error } = await supabase
@@ -100,7 +87,7 @@ export const apiClient = {
       return { data: { registration: formatRegistration(reg) } };
     }
 
-    // 7. Single Registration by ID (Admin Modal / Checkin)
+    // 6. Single Registration by ID (Admin Modal / Checkin)
     if (url.match(/^\/admin\/registrations\/\d+$/)) {
       const id = url.split('/admin/registrations/')[1];
       const { data: reg, error } = await supabase
@@ -112,7 +99,7 @@ export const apiClient = {
       return { data: { registration: formatRegistration(reg) } };
     }
 
-    // 8. Admin Registrations List (with filters & search)
+    // 7. Admin Registrations List (with filters & search)
     if (url.startsWith('/admin/registrations')) {
       const queryParams = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
       const search = queryParams.get('search')?.toLowerCase().trim();
@@ -161,7 +148,7 @@ export const apiClient = {
       };
     }
 
-    // 9. Live Leaderboard by Event ID
+    // 8. Live Leaderboard by Event ID
     if (url.includes('/registrations/leaderboard/')) {
       const eventId = url.split('/leaderboard/')[1];
       const { data: teams, error } = await supabase
@@ -174,7 +161,7 @@ export const apiClient = {
       return { data: { teams: teams || [] } };
     }
 
-    // 10. Dashboard Stats
+    // 9. Dashboard Stats
     if (url.startsWith('/admin/dashboard/stats')) {
       const urlParams = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
       const selectedEventId = urlParams.get('event_id');
@@ -317,7 +304,6 @@ export const apiClient = {
             id: reg.id,
             registration_id: reg.registration_id,
             event_name: eventRecord.name,
-            qr_token: reg.qr_token,
             team_name: reg.team_name,
             participation_mode: 'TEAM',
             participants: [
@@ -361,7 +347,7 @@ export const apiClient = {
       return { data: { event: parseEvent(data) } };
     }
 
-    // 3. QR Check-In
+    // 3. Check-In
     if (url.includes('/admin/registrations/') && url.endsWith('/checkin')) {
       const regId = url.split('/admin/registrations/')[1].split('/')[0];
       const { data, error } = await supabase

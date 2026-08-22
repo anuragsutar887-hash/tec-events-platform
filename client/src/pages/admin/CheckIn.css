@@ -300,24 +300,6 @@
   font-weight: 700;
 }
 
-.checkin__result-qr-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  background: #fafafa;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-
-.checkin__qr-wrap {
-  background: white;
-  padding: var(--space-2);
-  border: 1px solid #000000;
-  border-radius: var(--radius-sm);
-}
-
 .checkin__result-footer {
   display: flex;
   align-items: center;

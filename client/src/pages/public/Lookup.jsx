@@ -1,46 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { formatDate, formatTime } from '../../utils/dateHelpers';
-import { QRCodeSVG } from 'qrcode.react';
+import { formatDate } from '../../utils/dateHelpers';
 import './Lookup.css';
 
 export default function Lookup() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialId = searchParams.get('id') || localStorage.getItem('my_ticket_id') || '';
-  const token = searchParams.get('token') || '';
-
-  const [query, setQuery] = useState(initialId);
+  const [query, setQuery] = useState('');
   const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(Boolean(initialId || token));
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showManualInput, setShowManualInput] = useState(!initialId && !token);
-
-  useEffect(() => {
-    if (token) {
-      handleTokenLookup(token);
-    } else if (initialId) {
-      fetchRegistration(initialId);
-    }
-  }, []);
-
-  const handleTokenLookup = async (tok) => {
-    setLoading(true);
-    setError('');
-    setResult(null);
-    try {
-      const { data } = await apiClient.get(`/registrations/lookup-by-token/${tok}`);
-      setResult(data.registration);
-      if (data.registration?.registration_id) {
-        localStorage.setItem('my_ticket_id', data.registration.registration_id);
-      }
-    } catch {
-      setError('Registration not found for this QR pass.');
-      setShowManualInput(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showManualInput, setShowManualInput] = useState(true);
 
   const fetchRegistration = async (idToFetch) => {
     const q = (idToFetch || query).trim();
@@ -51,7 +20,6 @@ export default function Lookup() {
     try {
       const { data } = await apiClient.get(`/registrations/lookup/${q}`);
       setResult(data.registration);
-      localStorage.setItem('my_ticket_id', data.registration.registration_id);
       setShowManualInput(false);
     } catch {
       setError(`No registration found for "${q}". Please check the ID and try again.`);
@@ -66,15 +34,6 @@ export default function Lookup() {
     fetchRegistration(query);
   };
 
-  const handleClearSaved = () => {
-    localStorage.removeItem('my_ticket_id');
-    setResult(null);
-    setQuery('');
-    setError('');
-    setShowManualInput(true);
-    setSearchParams({});
-  };
-
   return (
     <div className="lookup-page">
       {/* Header */}
@@ -83,20 +42,20 @@ export default function Lookup() {
           <div className="section__label">OFFICIAL PASS // DIGITAL TICKET</div>
           <h1 className="lookup-page__title">MY REGISTRATION</h1>
           <p className="lookup-page__subtitle">
-            Access your verified event ticket, duo team details, and QR desk check-in pass for IT Department events.
+            Enter your Registration Number to access your verified event ticket and duo team details for IT Department events.
           </p>
         </div>
       </div>
 
       <div className="section">
         <div className="container--narrow">
-          {/* Manual ID Input (Only shown if no saved ticket or if user clicks 'Switch Pass') */}
+          {/* Registration ID Input */}
           {showManualInput && (
             <form onSubmit={handleSearchSubmit} className="lookup-form card mb-6">
               <div className="card__body">
                 <div className="form-group">
                   <label htmlFor="lookup-input" className="form-label form-label--required">
-                    Enter Your Registration ID
+                    Enter Your Registration Number
                   </label>
                   <div className="lookup-form__row">
                     <input
@@ -180,25 +139,34 @@ export default function Lookup() {
 
                 {/* Main Pass Body */}
                 <div className="card__body" style={{ padding: 'var(--space-6)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 'var(--space-6)', alignItems: 'start' }}>
+                  <div>
                     {/* Left Details */}
                     <div>
-                      <div style={{ marginBottom: 'var(--space-4)' }}>
+                      <div style={{
+                        marginBottom: 'var(--space-4)',
+                        padding: 'var(--space-4)',
+                        background: '#f8fafc',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-sm)'
+                      }}>
                         <div className="text-xs text-muted font-mono fw-bold" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                          Registration ID
+                          Official Registration Number
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: '2px' }}>
-                          <span className="reg-id" style={{ fontSize: '1.4rem', color: '#000000' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: '4px' }}>
+                          <span className="reg-id" style={{ fontSize: '1.6rem', color: '#000000', letterSpacing: '0.05em' }}>
                             {result.registration_id}
                           </span>
                           <button
                             className="btn btn--secondary btn--sm"
-                            style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                            style={{ padding: '3px 10px', fontSize: '0.8rem' }}
                             onClick={() => navigator.clipboard.writeText(result.registration_id)}
-                            title="Copy ID"
+                            title="Copy Registration Number"
                           >
-                            📋 Copy
+                            📋 Copy ID
                           </button>
+                        </div>
+                        <div className="text-xs text-muted font-mono mt-1">
+                          Present this Registration Number at the event check-in desk
                         </div>
                       </div>
 
@@ -207,7 +175,7 @@ export default function Lookup() {
                           <div className="text-xs text-muted font-mono fw-bold" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                             Duo Team Name
                           </div>
-                          <div className="text-primary fw-bold text-lg">{result.team_name}</div>
+                          <div className="text-primary fw-bold text-xl">{result.team_name}</div>
                         </div>
                       )}
 
@@ -226,7 +194,7 @@ export default function Lookup() {
                         )}
                         <div>
                           <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Format</div>
-                          <div className="text-primary text-sm fw-semibold">{result.participation_mode}</div>
+                          <div className="text-primary text-sm fw-semibold">{result.participation_mode || 'Duo Team'}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Status</div>
@@ -235,55 +203,26 @@ export default function Lookup() {
                       </div>
 
                       {/* Duo Players (Player 1 & Player 2) */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                        <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
+                      <div>
+                        <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase', marginBottom: 'var(--space-2)' }}>
                           Duo Team Members (2 Players)
                         </div>
-                        {result.participants?.map((p, i) => (
-                          <div key={i} style={{
-                            padding: 'var(--space-3) var(--space-4)',
-                            background: '#fafafa',
-                            border: '1px solid var(--border)',
-                            borderRadius: 'var(--radius-sm)'
-                          }}>
-                            <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase', marginBottom: '2px' }}>
-                              PLAYER {i + 1}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                          {result.participants?.map((p, i) => (
+                            <div key={i} style={{
+                              padding: 'var(--space-3) var(--space-4)',
+                              background: '#fafafa',
+                              border: '1px solid var(--border)',
+                              borderRadius: 'var(--radius-sm)'
+                            }}>
+                              <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase', marginBottom: '2px' }}>
+                                PLAYER {i + 1}
+                              </div>
+                              <div className="text-primary fw-bold text-sm">{p.full_name}</div>
+                              <div className="text-secondary text-xs">{p.email}</div>
                             </div>
-                            <div className="text-primary fw-bold text-sm">{p.full_name}</div>
-                            <div className="text-secondary text-xs">{p.email}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Right QR Desk Pass */}
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      padding: 'var(--space-4)',
-                      background: '#fafafa',
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-sm)'
-                    }}>
-                      <div style={{
-                        padding: 'var(--space-2)',
-                        background: 'white',
-                        border: '1px solid #000000',
-                        display: 'inline-block',
-                        marginBottom: 'var(--space-2)',
-                      }}>
-                        <QRCodeSVG
-                          value={`${window.location.origin}/lookup?token=${result.qr_token}`}
-                          size={150}
-                          level="L"
-                          includeMargin={true}
-                          fgColor="#000000"
-                          bgColor="#ffffff"
-                        />
-                      </div>
-                      <div className="text-xs text-muted font-mono text-center" style={{ fontSize: '0.6875rem', fontWeight: 700 }}>
-                        SHOW AT ARENA DESK
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -303,21 +242,12 @@ export default function Lookup() {
                   <Link to="/#events-section" className="btn btn--ghost btn--sm">
                     ← Browse Events
                   </Link>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <button
-                      className="btn btn--secondary btn--sm"
-                      onClick={() => setShowManualInput(!showManualInput)}
-                    >
-                      {showManualInput ? 'Hide Search' : 'Enter Different ID'}
-                    </button>
-                    <button
-                      className="btn btn--ghost btn--sm text-danger"
-                      onClick={handleClearSaved}
-                      title="Clear saved pass from this device"
-                    >
-                      ✕ Clear Saved Pass
-                    </button>
-                  </div>
+                  <button
+                    className="btn btn--secondary btn--sm"
+                    onClick={() => setShowManualInput(!showManualInput)}
+                  >
+                    {showManualInput ? 'Hide Search' : 'Enter Different ID'}
+                  </button>
                 </div>
               </div>
             </div>

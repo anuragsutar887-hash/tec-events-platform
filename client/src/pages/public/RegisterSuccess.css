@@ -99,26 +99,6 @@
   gap: var(--space-1);
 }
 
-.success-card__qr {
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.success-card__qr-box {
-  background: white;
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
-  display: inline-block;
-  box-shadow: var(--shadow-md), 0 0 20px rgba(56, 189, 248, 0.1);
-  margin-bottom: var(--space-2);
-}
-
-.success-card__qr-label {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
 /* Participants */
 .success-participants {
   margin-bottom: var(--space-5);
@@ -192,10 +172,6 @@
 @media (max-width: 600px) {
   .success-card__layout {
     grid-template-columns: 1fr;
-  }
-
-  .success-card__qr {
-    justify-self: center;
   }
 
   .success-actions {

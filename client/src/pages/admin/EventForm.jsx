@@ -4,7 +4,6 @@ import apiClient from '../../api/client';
 import './EventForm.css';
 
 const defaultFeatures = {
-  qr_checkin: true,
   attendance: true,
   scoring: false,
   leaderboard: false,

@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import jsQR from 'jsqr';
 import apiClient from '../../api/client';
 import { formatDateTime, timeAgo } from '../../utils/dateHelpers';
-import { QRCodeSVG } from 'qrcode.react';
 import './CheckIn.css';
 
-// 🔊 Audio synthesizer for instant scan feedback (Zero external assets needed)
+// 🔊 Audio synthesizer for instant check-in feedback (Zero external assets needed)
 const playSuccessBeep = () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -37,19 +34,6 @@ export default function CheckIn() {
   const [events, setEvents] = useState([]);
   const [selectedEventId, setSelectedEventId] = useState(searchParams.get('event_id') || '');
 
-  // 📷 High-Speed Camera Scanner State
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [cameras, setCameras] = useState([]);
-  const [selectedCameraId, setSelectedCameraId] = useState('');
-  const [cameraError, setCameraError] = useState('');
-  const [scanningStatus, setScanningStatus] = useState('Standby');
-  const [scanSuccessFlash, setScanSuccessFlash] = useState(false);
-
-  const videoRef = useRef(null);
-  const zxingControlsRef = useRef(null);
-  const zxingReaderRef = useRef(null);
-  const fallbackLoopRef = useRef(null);
-  const isProcessingScanRef = useRef(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -57,13 +41,6 @@ export default function CheckIn() {
     loadLiveQueues();
     inputRef.current?.focus();
   }, [selectedEventId]);
-
-  // Clean up camera on unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
 
   const loadEvents = async () => {
     try {
@@ -82,245 +59,15 @@ export default function CheckIn() {
       const { data } = await apiClient.get(`/admin/registrations?${params}`);
       const regs = data.registrations || [];
 
-      setRecentCheckins(regs.filter((r) => r.checked_in).slice(0, 8));
-      setPendingCheckins(regs.filter((r) => !r.checked_in).slice(0, 8));
+      setRecentCheckins(regs.filter((r) => r.checked_in).slice(0, 10));
+      setPendingCheckins(regs.filter((r) => !r.checked_in).slice(0, 10));
     } catch {}
   };
 
-  // ─── 📷 ZXing Industrial-Grade Camera Scanner Engine ──────────────
-  const startCamera = async (deviceIdToUse = null) => {
-    setCameraError('');
-    setIsCameraActive(true);
-    setScanningStatus('Accessing camera hardware...');
-
-    try {
-      // 1. Enumerate available video inputs
-      let devices = [];
-      try {
-        const allDevices = await navigator.mediaDevices.enumerateDevices();
-        devices = allDevices.filter((d) => d.kind === 'videoinput');
-        setCameras(devices);
-      } catch {}
-
-      // 2. Select camera device ID
-      let targetDeviceId = deviceIdToUse;
-      if (!targetDeviceId && devices.length > 0) {
-        const rearCam = devices.find((d) =>
-          d.label.toLowerCase().includes('back') ||
-          d.label.toLowerCase().includes('rear') ||
-          d.label.toLowerCase().includes('environment')
-        );
-        targetDeviceId = rearCam ? rearCam.deviceId : devices[0].deviceId;
-      }
-      setSelectedCameraId(targetDeviceId || '');
-
-      // 3. Initialize ZXing MultiFormat Reader with hints
-      const codeReader = new BrowserMultiFormatReader();
-      zxingReaderRef.current = codeReader;
-
-      setScanningStatus('Active — Point QR code at camera');
-
-      // 4. Start continuous decoding from video element
-      if (videoRef.current) {
-        const controls = await codeReader.decodeFromVideoDevice(
-          targetDeviceId || undefined,
-          videoRef.current,
-          (scanResult, scanErr) => {
-            if (scanResult && scanResult.getText()) {
-              handleQrScanSuccess(scanResult.getText());
-            }
-          }
-        );
-        zxingControlsRef.current = controls;
-
-        // 5. Run Secondary High-Speed Native BarcodeDetector / jsQR Scanner in parallel
-        startFallbackScanLoop();
-      }
-    } catch (err) {
-      console.error('Camera start error:', err);
-      setCameraError('Camera access denied or unavailable. Please verify browser camera permissions.');
-      setIsCameraActive(false);
-    }
-  };
-
-  const switchCamera = async (deviceId) => {
-    stopCamera();
-    startCamera(deviceId);
-  };
-
-  const stopCamera = () => {
-    if (zxingControlsRef.current) {
-      try {
-        zxingControlsRef.current.stop();
-      } catch {}
-      zxingControlsRef.current = null;
-    }
-
-    if (fallbackLoopRef.current) {
-      cancelAnimationFrame(fallbackLoopRef.current);
-      fallbackLoopRef.current = null;
-    }
-
-    if (videoRef.current && videoRef.current.srcObject) {
-      try {
-        const stream = videoRef.current.srcObject;
-        stream.getTracks().forEach((track) => track.stop());
-        videoRef.current.srcObject = null;
-      } catch {}
-    }
-
-    setIsCameraActive(false);
-    setScanningStatus('Standby');
-    isProcessingScanRef.current = false;
-  };
-
-  // Secondary high-speed canvas decoder running alongside ZXing for 100% detection coverage
-  const startFallbackScanLoop = () => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-    let barcodeDetector = null;
-    if ('BarcodeDetector' in window) {
-      try {
-        barcodeDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
-      } catch {}
-    }
-
-    const loop = async () => {
-      if (!videoRef.current || videoRef.current.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        fallbackLoopRef.current = requestAnimationFrame(loop);
-        return;
-      }
-
-      if (!isProcessingScanRef.current) {
-        const video = videoRef.current;
-
-        // Native BarcodeDetector (instant GPU decode)
-        if (barcodeDetector) {
-          try {
-            const barcodes = await barcodeDetector.detect(video);
-            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-              handleQrScanSuccess(barcodes[0].rawValue);
-            }
-          } catch {}
-        }
-
-        // jsQR full-frame processor
-        if (!isProcessingScanRef.current && video.videoWidth > 0) {
-          try {
-            if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-            }
-            ctx.drawImage(video, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'attemptBoth',
-            });
-            if (code && code.data) {
-              handleQrScanSuccess(code.data);
-            }
-          } catch {}
-        }
-      }
-
-      fallbackLoopRef.current = requestAnimationFrame(loop);
-    };
-
-    fallbackLoopRef.current = requestAnimationFrame(loop);
-  };
-
-  // ─── ⚡ Instant Auto Check-In Handler ───────────────────────────
-  const handleQrScanSuccess = async (decodedText) => {
-    if (isProcessingScanRef.current) return;
-    isProcessingScanRef.current = true;
-
-    // Visual & Audio triggers
-    setScanSuccessFlash(true);
-    playSuccessBeep();
-    setScanningStatus('⚡ QR Detected! Verifying and checking in...');
-
-    setTimeout(() => setScanSuccessFlash(false), 800);
-
-    try {
-      const queryObj = parseSearchQuery(decodedText);
-      let reg = null;
-
-      if (queryObj.type === 'token') {
-        const { data } = await apiClient.get(`/registrations/lookup-by-token/${queryObj.value}`);
-        reg = data.registration;
-      } else {
-        const { data } = await apiClient.get(`/registrations/lookup/${queryObj.value}`);
-        reg = data.registration;
-      }
-
-      if (!reg) {
-        setError(`Scanned QR code is not associated with any active registration.`);
-        setScanningStatus('Active — Point participant QR code at camera');
-        setTimeout(() => {
-          isProcessingScanRef.current = false;
-        }, 1500);
-        return;
-      }
-
-      // Automatically Execute Instant Check-In in Supabase
-      if (!reg.checked_in) {
-        await apiClient.put(`/admin/registrations/${reg.id}/checkin`);
-        reg.checked_in = true;
-        reg.checked_in_at = new Date().toISOString();
-        setSuccessMsg(`🎉 CHECKED IN TO ARENA: ${reg.team_name || reg.registration_id} (Player 1 & Player 2)`);
-      } else {
-        setSuccessMsg(`ℹ️ Already Checked In: ${reg.team_name || reg.registration_id}`);
-      }
-
-      setResult(reg);
-      loadLiveQueues();
-      setScanningStatus('✓ Success! Ready for next participant.');
-
-      // 2-second cooldown to let the admin comfortably transition to next student
-      setTimeout(() => {
-        isProcessingScanRef.current = false;
-        setScanningStatus('Active — Point participant QR code at camera');
-      }, 2000);
-    } catch (err) {
-      console.error('Scan processing error:', err);
-      setError('Check-in failed for scanned QR pass. Please verify details.');
-      setScanningStatus('Active — Point participant QR code at camera');
-      setTimeout(() => {
-        isProcessingScanRef.current = false;
-      }, 1500);
-    }
-  };
-
-  const parseSearchQuery = (raw) => {
-    let q = (raw || '').trim();
-    if (!q) return { type: 'query', value: '' };
-
-    // 1. Extract from URL parameter e.g. https://domain.com/lookup?token=UUID
-    if (q.includes('token=')) {
-      const match = q.match(/token=([0-9a-fA-F-]+)/i);
-      if (match) return { type: 'token', value: match[1] };
-    }
-
-    // 2. Direct UUID match e.g. 3f8373e2-8ea5-4bb6-b8db-0d4181ea8b39
-    const uuidMatch = q.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/i);
-    if (uuidMatch) {
-      return { type: 'token', value: uuidMatch[0] };
-    }
-
-    // 3. Direct Registration ID match e.g. TEC-2026-4784
-    const regMatch = q.match(/TEC-\d{4}-\d{4}/i);
-    if (regMatch) {
-      return { type: 'query', value: regMatch[0].toUpperCase() };
-    }
-
-    return { type: 'query', value: q };
-  };
-
-  const handleManualSearch = async (e) => {
+  const handleSearch = async (e) => {
     if (e) e.preventDefault();
-    const queryObj = parseSearchQuery(search);
-    if (!queryObj || !queryObj.value) return;
+    const query = search.trim();
+    if (!query) return;
 
     setLoading(true);
     setError('');
@@ -330,40 +77,37 @@ export default function CheckIn() {
     try {
       let reg = null;
 
-      if (queryObj.type === 'token') {
-        const { data } = await apiClient.get(`/registrations/lookup-by-token/${queryObj.value}`);
-        reg = data.registration;
+      // 1. Direct Search by Registration ID or Name/Email
+      const params = new URLSearchParams({ search: query });
+      if (selectedEventId) params.append('event_id', selectedEventId);
+
+      const { data } = await apiClient.get(`/admin/registrations?${params}`);
+      reg = data.registrations?.[0];
+
+      if (reg) {
+        const detail = await apiClient.get(`/admin/registrations/${reg.id}`);
+        reg = detail.data.registration;
       } else {
-        const params = new URLSearchParams({ search: queryObj.value });
-        if (selectedEventId) params.append('event_id', selectedEventId);
-
-        const { data } = await apiClient.get(`/admin/registrations?${params}`);
-        reg = data.registrations?.[0];
-
-        if (reg) {
-          const detail = await apiClient.get(`/admin/registrations/${reg.id}`);
-          reg = detail.data.registration;
-        } else {
-          try {
-            const { data: directData } = await apiClient.get(`/registrations/lookup/${queryObj.value}`);
-            reg = directData.registration;
-          } catch {}
-        }
+        // Fallback direct lookup
+        try {
+          const { data: directData } = await apiClient.get(`/registrations/lookup/${encodeURIComponent(query)}`);
+          reg = directData.registration;
+        } catch {}
       }
 
       if (!reg) {
-        setError(`No registration found matching "${search.trim()}". Verify the ID or QR code.`);
+        setError(`No registration found matching "${query}". Please verify the Registration ID or Team Name.`);
       } else {
         setResult(reg);
       }
     } catch {
-      setError('Registration not found. Please try again.');
+      setError('Registration not found. Please verify details and try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleManualCheckin = async (targetReg = null) => {
+  const handleCheckin = async (targetReg = null) => {
     const toCheckin = targetReg || result;
     if (!toCheckin) return;
 
@@ -378,7 +122,7 @@ export default function CheckIn() {
       }
 
       playSuccessBeep();
-      setSuccessMsg(`✅ Verified & Checked In: ${updated.team_name || updated.registration_id}`);
+      setSuccessMsg(`🎉 Successfully Checked In: ${updated.team_name || updated.registration_id} (Player 1 & Player 2)`);
       loadLiveQueues();
     } catch (err) {
       setError(err.response?.data?.error || 'Check-in failed. Please try again.');
@@ -418,7 +162,7 @@ export default function CheckIn() {
       <div className="checkin__header">
         <div>
           <h1 className="dashboard__title">CHECK-IN CONSOLE</h1>
-          <p className="dashboard__subtitle">Sub-second QR pass scanner for instant participant verification & live leaderboard sync</p>
+          <p className="dashboard__subtitle">Event desk participant verification & live auditorium leaderboard stream</p>
         </div>
         <div className="checkin__header-actions">
           <Link to="/leaderboard/codedebug" className="btn btn--secondary btn--sm" target="_blank">
@@ -430,82 +174,10 @@ export default function CheckIn() {
         </div>
       </div>
 
-      {/* ─── 📷 1. HIGH-SPEED LIVE CAMERA QR SCANNER SECTION ──────── */}
-      <div className="checkin__camera-card card mb-6">
-        <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div>
-            <span className="section__label" style={{ marginBottom: 0 }}>HARDWARE TELEMETRY</span>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
-              📷 INSTANT CAMERA QR SCANNER
-            </h2>
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-            {isCameraActive && cameras.length > 1 && (
-              <select
-                className="form-input form-select"
-                style={{ width: 'auto', padding: '6px 12px', fontSize: '0.8125rem' }}
-                value={selectedCameraId}
-                onChange={(e) => switchCamera(e.target.value)}
-              >
-                {cameras.map((c) => (
-                  <option key={c.deviceId} value={c.deviceId}>
-                    {c.label || `Camera (${c.deviceId.slice(0, 5)}...)`}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {!isCameraActive ? (
-              <button onClick={() => startCamera()} className="btn btn--primary">
-                📷 Start Camera Scanner
-              </button>
-            ) : (
-              <button onClick={stopCamera} className="btn btn--danger">
-                🛑 Stop Camera
-              </button>
-            )}
-          </div>
-        </div>
-
-        {isCameraActive && (
-          <div className="card__body" style={{ background: '#fafafa', borderTop: '1px solid var(--border)', padding: 'var(--space-6)' }}>
-            <div className="camera-scanner-container">
-              <div className="camera-scanner-status">
-                <span className={`status-dot ${scanSuccessFlash ? 'status-dot--success' : ''}`}></span>
-                <span>{scanningStatus}</span>
-              </div>
-
-              {/* Hardware Video Stream Viewport */}
-              <div className={`camera-viewport ${scanSuccessFlash ? 'camera-viewport--flash' : ''}`}>
-                <video ref={videoRef} className="camera-video-element" autoPlay playsInline muted />
-                <div className="camera-viewfinder-overlay">
-                  <div className="viewfinder-corner top-left"></div>
-                  <div className="viewfinder-corner top-right"></div>
-                  <div className="viewfinder-corner bottom-left"></div>
-                  <div className="viewfinder-corner bottom-right"></div>
-                  <div className="viewfinder-laser"></div>
-                </div>
-              </div>
-
-              <div className="camera-scanner-hint text-xs text-muted text-center mt-3">
-                Hold the participant's QR pass in front of the lens. The dual-engine decoder will verify and check them into the Live Arena in under 1 second!
-              </div>
-            </div>
-          </div>
-        )}
-
-        {cameraError && (
-          <div className="alert alert--error m-4">
-            <span>⚠️</span>
-            <span>{cameraError}</span>
-          </div>
-        )}
-      </div>
-
-      {/* ─── 2. MANUAL REGISTRATION ID SEARCH ────────────────────── */}
+      {/* ─── 1. DESK SEARCH BY REGISTRATION ID ───────────────────── */}
       <div className="checkin__search-card card mb-6">
         <div className="card__body">
-          <form onSubmit={handleManualSearch} className="checkin__form">
+          <form onSubmit={handleSearch} className="checkin__form">
             <div className="checkin__event-field">
               <label htmlFor="event-filter" className="form-label">Event</label>
               <select
@@ -521,25 +193,28 @@ export default function CheckIn() {
             </div>
 
             <div className="checkin__search-field">
-              <label htmlFor="checkin-search-input" className="form-label">Manual Search / Paste Token</label>
+              <label htmlFor="checkin-search-input" className="form-label">
+                Enter Registration ID / Team Name / Player Name / Email
+              </label>
               <div className="checkin__input-group">
                 <input
                   ref={inputRef}
                   id="checkin-search-input"
                   type="text"
                   className="form-input checkin__input"
-                  placeholder="Enter Reg ID (e.g. TEC-2026-4784) or Team Name..."
+                  placeholder="e.g. TEC-2026-4784, Binary Beasts, or student email..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   autoComplete="off"
+                  autoFocus
                 />
                 <button
                   type="submit"
                   id="checkin-submit-btn"
-                  className={`btn btn--secondary checkin__submit-btn ${loading ? 'btn--loading' : ''}`}
+                  className={`btn btn--primary checkin__submit-btn ${loading ? 'btn--loading' : ''}`}
                   disabled={loading || !search.trim()}
                 >
-                  {loading ? '' : 'Search'}
+                  {loading ? '' : 'Search & Verify'}
                 </button>
               </div>
             </div>
@@ -561,7 +236,7 @@ export default function CheckIn() {
         </div>
       )}
 
-      {/* ─── 3. VERIFIED PARTICIPANT RESULT CARD ──────────────────── */}
+      {/* ─── 2. VERIFIED PARTICIPANT RESULT CARD ──────────────────── */}
       {result && (
         <div className={`checkin__result card mb-6 ${result.checked_in ? 'checkin__result--checked' : ''}`}>
           <div className="card__header" style={{
@@ -588,7 +263,7 @@ export default function CheckIn() {
           </div>
 
           <div className="card__body" style={{ padding: 'var(--space-6)' }}>
-            <div className="checkin__result-grid">
+            <div className="checkin__result-grid" style={{ gridTemplateColumns: '1fr' }}>
               <div className="checkin__result-info">
                 <h2 className="checkin__team-title">{result.team_name || result.leader_name}</h2>
                 <div className="text-secondary text-sm mb-4">
@@ -598,7 +273,7 @@ export default function CheckIn() {
                 {/* Player 1 & Player 2 Details */}
                 <div className="checkin__participants-box">
                   <span className="section__label">DUO TEAM MEMBERS (2 PLAYERS)</span>
-                  <div className="checkin__participants-list">
+                  <div className="checkin__participants-list" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
                     {result.participants?.map((p, i) => (
                       <div key={i} className="checkin__participant-row">
                         <div className="checkin__participant-left">
@@ -620,25 +295,10 @@ export default function CheckIn() {
                 </div>
 
                 {result.checked_in && result.checked_in_at && (
-                  <div className="checkin__timestamp-badge">
+                  <div className="checkin__timestamp-badge" style={{ marginTop: 'var(--space-4)' }}>
                     ✓ Checked into Arena on {formatDateTime(result.checked_in_at)}
                   </div>
                 )}
-              </div>
-
-              {/* QR Token */}
-              <div className="checkin__result-qr-panel">
-                <div className="checkin__qr-wrap">
-                  <QRCodeSVG
-                    value={`${window.location.origin}/lookup?token=${result.qr_token}`}
-                    size={140}
-                    level="L"
-                    includeMargin={true}
-                    fgColor="#000000"
-                    bgColor="#ffffff"
-                  />
-                </div>
-                <span className="font-mono text-xs text-muted mt-2">QR DESK PASS</span>
               </div>
             </div>
           </div>
@@ -660,10 +320,10 @@ export default function CheckIn() {
               ) : (
                 <button
                   className={`btn btn--primary btn--lg ${checkinLoading ? 'btn--loading' : ''}`}
-                  onClick={() => handleManualCheckin()}
+                  onClick={() => handleCheckin()}
                   disabled={checkinLoading}
                 >
-                  {checkinLoading ? '' : 'Check In'}
+                  {checkinLoading ? '' : 'Check In to Arena'}
                 </button>
               )}
             </div>
@@ -675,7 +335,7 @@ export default function CheckIn() {
         </div>
       )}
 
-      {/* ─── 4. LIVE QUEUES (INSIDE ARENA & PENDING) ──────────────── */}
+      {/* ─── 3. LIVE QUEUES (INSIDE ARENA & PENDING) ──────────────── */}
       <div className="checkin__queues-grid">
         {/* Pending Check-Ins Queue */}
         <div className="checkin__queue-card card">
@@ -702,10 +362,10 @@ export default function CheckIn() {
                       </div>
                     </div>
                     <button
-                      className="btn btn--secondary btn--sm"
+                      className="btn btn--primary btn--sm"
                       onClick={() => {
                         setResult(r);
-                        handleManualCheckin(r);
+                        handleCheckin(r);
                       }}
                     >
                       Check In

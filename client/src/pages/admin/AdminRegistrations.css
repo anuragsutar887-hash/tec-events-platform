@@ -126,10 +126,10 @@
   align-items: center;
 }
 
-/* ─── 3-Col Grid Inside Expansion ─────────────────────── */
+/* ─── 2-Col Grid Inside Expansion ─────────────────────── */
 .inline-detail-box__grid {
   display: grid;
-  grid-template-columns: 1fr 1.2fr auto;
+  grid-template-columns: 1fr 1.2fr;
   gap: var(--space-6);
   align-items: start;
 }
@@ -199,31 +199,6 @@
   color: var(--text-muted);
 }
 
-/* ─── QR Code Column ──────────────────────────────────── */
-.inline-detail-box__col--qr {
-  align-items: center;
-}
-
-.inline-qr-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  background: #ffffff;
-  border: 1px solid #000000;
-  border-radius: var(--radius-sm);
-}
-
-.inline-qr-label {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
 /* ─── Footer Actions ──────────────────────────────────── */
 .inline-detail-box__footer {
   display: flex;
@@ -257,11 +232,6 @@
   }
   .inline-detail-box__grid {
     grid-template-columns: 1fr 1fr;
-  }
-  .inline-detail-box__col--qr {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    justify-content: center;
   }
 }
 

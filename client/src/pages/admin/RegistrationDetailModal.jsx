@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../../api/client';
 import { formatDateTime } from '../../utils/dateHelpers';
-import { QRCodeSVG } from 'qrcode.react';
 
 export default function RegistrationDetailModal({ registrationId, onClose, onCheckin }) {
   const [reg, setReg] = useState(null);
@@ -95,7 +94,7 @@ export default function RegistrationDetailModal({ registrationId, onClose, onChe
         ) : (
           <>
             <div className="modal__body" style={{ padding: 'var(--space-6)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 'var(--space-6)', alignItems: 'start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
                 <div>
                   {/* Status Badges */}
                   <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
@@ -161,33 +160,6 @@ export default function RegistrationDetailModal({ registrationId, onClose, onChe
                       ))}
                     </div>
                   </div>
-                </div>
-
-                {/* QR Code */}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: 'var(--space-4)',
-                  background: '#fafafa',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)'
-                }}>
-                  <div style={{
-                    padding: 'var(--space-2)',
-                    background: 'white',
-                    border: '1px solid #000000',
-                    display: 'inline-block',
-                    marginBottom: 'var(--space-2)',
-                  }}>
-                    <QRCodeSVG
-                      value={`${window.location.origin}/lookup?token=${reg.qr_token}`}
-                      size={130}
-                      level="M"
-                      fgColor="#000000"
-                    />
-                  </div>
-                  <div className="text-xs text-muted font-mono" style={{ fontSize: '0.7rem' }}>SCAN TO VERIFY</div>
                 </div>
               </div>
             </div>

@@ -91,7 +91,7 @@ technical/
 
 ### Tables
 - `events` — Event config, dates, registration windows, team size
-- `registrations` — Team registrations with QR token and check-in status
+- `registrations` — Team registrations with check-in status
 - `participants` — Individual participant records (Leader + Teammate)
 
 See [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md) for full schema.
