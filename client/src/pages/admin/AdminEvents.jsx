@@ -16,6 +16,7 @@ export default function AdminEvents() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [filter, setFilter] = useState('');
 
   useEffect(() => { loadEvents(); }, []);
@@ -40,6 +41,22 @@ export default function AdminEvents() {
     }
   };
 
+  const handleDeleteEvent = async (id, name) => {
+    const confirmed = window.confirm(`Are you sure you want to delete the event "${name}"?\n\nThis will permanently delete the event and its associated registrations.`);
+    if (!confirmed) return;
+
+    setError('');
+    setSuccess('');
+    try {
+      await apiClient.delete(`/admin/events/${id}`);
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+      setSuccess(`Event "${name}" deleted successfully.`);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete event. Please try again.');
+    }
+  };
+
   const filtered = filter ? events.filter((e) => e.status === filter) : events;
 
   return (
@@ -54,7 +71,8 @@ export default function AdminEvents() {
         <Link to="/admin/events/new" className="btn btn--primary">+ Create Event</Link>
       </div>
 
-      {error && <div className="alert alert--error mb-4">{error}</div>}
+      {error && <div className="alert alert--error mb-4">⚠️ {error}</div>}
+      {success && <div className="alert alert--success mb-4">✅ {success}</div>}
 
       <div className="admin-events__filters">
         {['', 'DRAFT', 'PUBLISHED', 'COMPLETED', 'ARCHIVED'].map((s) => (
@@ -133,6 +151,13 @@ export default function AdminEvents() {
                       Archive
                     </button>
                   )}
+                  <button
+                    className="btn btn--ghost btn--sm text-danger"
+                    onClick={() => handleDeleteEvent(event.id, event.name)}
+                    title="Delete event permanently"
+                  >
+                    🗑️ Delete
+                  </button>
                 </div>
               </div>
             );

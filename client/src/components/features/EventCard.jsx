@@ -26,7 +26,6 @@ export default function EventCard({ event }) {
     <div className="event-card card card--hover">
       <div className="event-card__header">
         <RegistrationBadge status={registration_status} />
-        <span className="badge badge--team">👥 Duo Team (2 Players)</span>
       </div>
 
       <div className="event-card__body">

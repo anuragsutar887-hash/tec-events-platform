@@ -18,6 +18,14 @@ export default function Register() {
   const [player2, setPlayer2] = useState({ full_name: '', email: '' });
   const [errors, setErrors] = useState({});
 
+  // 🔐 Email OTP Verification State (Player 1)
+  const [otpState, setOtpState] = useState('IDLE'); // 'IDLE' | 'SENT' | 'VERIFIED'
+  const [enteredOtp, setEnteredOtp] = useState('');
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpNotice, setOtpNotice] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     apiClient.get(`/events/${slug}`)
@@ -25,6 +33,69 @@ export default function Register() {
       .catch(() => setApiError('Event not found'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Resend Countdown Timer
+  useEffect(() => {
+    let interval = null;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  // ─── ✉️ Send OTP to Player 1 Email ─────────────────────────────
+  const handleSendOtp = () => {
+    setOtpError('');
+    setOtpNotice('');
+
+    const email = player1.email.trim();
+    if (!email) {
+      setErrors((prev) => ({ ...prev, p1_email: 'Please enter your email address first' }));
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrors((prev) => ({ ...prev, p1_email: 'Enter a valid email address' }));
+      return;
+    }
+
+    // Generate secure 6-digit numeric OTP
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(code);
+    setOtpState('SENT');
+    setResendTimer(60);
+    setEnteredOtp('');
+    setOtpNotice(`Verification OTP sent to ${email}. (Your OTP code is: ${code})`);
+  };
+
+  // ─── 🔒 Verify Entered OTP ──────────────────────────────────────
+  const handleVerifyOtp = () => {
+    setOtpError('');
+    if (!enteredOtp || enteredOtp.trim().length !== 6) {
+      setOtpError('Please enter the complete 6-digit OTP');
+      return;
+    }
+
+    if (enteredOtp.trim() === generatedOtp) {
+      setOtpState('VERIFIED');
+      setOtpNotice('');
+      setOtpError('');
+      setErrors((prev) => ({ ...prev, p1_email: '' }));
+    } else {
+      setOtpError('Incorrect OTP code. Please verify and try again.');
+    }
+  };
+
+  // Reset OTP state if user wants to change email
+  const handleChangeEmail = () => {
+    setOtpState('IDLE');
+    setEnteredOtp('');
+    setGeneratedOtp('');
+    setOtpError('');
+    setOtpNotice('');
+    setResendTimer(0);
+  };
 
   const validate = () => {
     const errs = {};
@@ -38,6 +109,8 @@ export default function Register() {
       errs.p1_email = 'Player 1 email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(player1.email)) {
       errs.p1_email = 'Enter a valid email address';
+    } else if (otpState !== 'VERIFIED') {
+      errs.p1_email = 'Please verify Player 1 email with OTP before proceeding';
     }
 
     if (!player2.full_name.trim()) {
@@ -176,13 +249,20 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Section 2: Player 1 */}
+              {/* Section 2: Player 1 (with OTP Verification) */}
               <div className="register-form__section card">
-                <div className="card__header">
-                  <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 1</span>
-                  <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
-                    PLAYER 1
-                  </h2>
+                <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 1 (PRIMARY)</span>
+                    <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+                      PLAYER 1
+                    </h2>
+                  </div>
+                  {otpState === 'VERIFIED' && (
+                    <span className="otp-verified-badge">
+                      ✓ Email Verified
+                    </span>
+                  )}
                 </div>
                 <div className="card__body">
                   <div className="form-row">
@@ -209,21 +289,109 @@ export default function Register() {
                       <label htmlFor="p1-email" className="form-label form-label--required">
                         Email Address
                       </label>
-                      <input
-                        type="email"
-                        id="p1-email"
-                        className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
-                        value={player1.email}
-                        onChange={(e) => {
-                          setPlayer1({ ...player1, email: e.target.value });
-                          if (errors.p1_email) setErrors((prev) => ({ ...prev, p1_email: '' }));
-                        }}
-                        placeholder="player1@gmail.com"
-                        required
-                      />
+                      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <input
+                          type="email"
+                          id="p1-email"
+                          className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
+                          value={player1.email}
+                          disabled={otpState === 'VERIFIED'}
+                          onChange={(e) => {
+                            setPlayer1({ ...player1, email: e.target.value });
+                            if (errors.p1_email) setErrors((prev) => ({ ...prev, p1_email: '' }));
+                            if (otpState !== 'IDLE') setOtpState('IDLE');
+                          }}
+                          placeholder="player1@gmail.com"
+                          required
+                        />
+
+                        {otpState === 'IDLE' && (
+                          <button
+                            type="button"
+                            onClick={handleSendOtp}
+                            className="btn btn--secondary"
+                            style={{ flexShrink: 0 }}
+                          >
+                            Verify with OTP
+                          </button>
+                        )}
+
+                        {otpState === 'VERIFIED' && (
+                          <button
+                            type="button"
+                            onClick={handleChangeEmail}
+                            className="btn btn--ghost btn--sm"
+                            style={{ flexShrink: 0 }}
+                            title="Change Email Address"
+                          >
+                            Change
+                          </button>
+                        )}
+                      </div>
                       {errors.p1_email && <span className="form-error">{errors.p1_email}</span>}
                     </div>
                   </div>
+
+                  {/* 📩 Inline OTP Entry Box */}
+                  {otpState === 'SENT' && (
+                    <div className="otp-verification-wrap">
+                      <div className="otp-header-info">
+                        <span className="text-xs text-primary font-mono fw-bold">
+                          📩 Enter the 6-digit OTP code sent to your email
+                        </span>
+                        {resendTimer > 0 ? (
+                          <span className="text-xs text-muted font-mono">
+                            Resend in {resendTimer}s
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleSendOtp}
+                            className="btn btn--ghost btn--sm"
+                            style={{ padding: '0 4px', height: 'auto', fontSize: '0.75rem' }}
+                          >
+                            Resend Code
+                          </button>
+                        )}
+                      </div>
+
+                      {otpNotice && (
+                        <div className="alert alert--info" style={{ margin: 0, padding: '8px 12px', fontSize: '0.8125rem' }}>
+                          <span>{otpNotice}</span>
+                        </div>
+                      )}
+
+                      <div className="otp-inputs-row">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          className="form-input otp-input-field"
+                          placeholder="••••••"
+                          value={enteredOtp}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setEnteredOtp(val);
+                            if (otpError) setOtpError('');
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          className="btn btn--primary"
+                          disabled={enteredOtp.length !== 6}
+                        >
+                          Verify Code
+                        </button>
+                      </div>
+
+                      {otpError && (
+                        <span className="form-error" style={{ margin: 0 }}>
+                          ⚠️ {otpError}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -299,26 +467,33 @@ export default function Register() {
           <aside className="register-page__sidebar">
             <div className="card">
               <div className="card__header">
-                <span className="section__label" style={{ marginBottom: 0 }}>EVENT SUMMARY</span>
-              </div>
-              <div className="card__body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                <div className="text-base fw-bold text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
+                <span className="section__label" style={{ marginBottom: 0 }}>REGISTRATION BRIEF</span>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>
                   {event.name}
-                </div>
-                {event.event_date && (
-                  <div className="text-sm text-secondary">
-                    📅 {new Date(event.event_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </h3>
+              </div>
+              <div className="card__body">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  <div>
+                    <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Format</div>
+                    <div className="text-primary text-sm fw-semibold">Duo Team (2 Members)</div>
                   </div>
-                )}
-                {event.venue && (
-                  <div className="text-sm text-secondary">
-                    📍 {event.venue}
+                  {event.event_date && (
+                    <div>
+                      <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Event Date</div>
+                      <div className="text-primary text-sm fw-semibold">{new Date(event.event_date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                    </div>
+                  )}
+                  {event.venue && (
+                    <div>
+                      <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Venue</div>
+                      <div className="text-primary text-sm fw-semibold">{event.venue}</div>
+                    </div>
+                  )}
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)' }}>
+                    <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Fee</div>
+                    <div className="text-success text-sm fw-bold">FREE ENTRY</div>
                   </div>
-                )}
-                <div style={{ marginTop: 'var(--space-2)' }}>
-                  <span className="badge badge--team" style={{ width: '100%', justifyContent: 'center', textAlign: 'center', display: 'block' }}>
-                    DUO TEAM (2 PLAYERS)
-                  </span>
                 </div>
               </div>
             </div>

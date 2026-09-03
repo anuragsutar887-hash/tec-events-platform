@@ -228,6 +228,13 @@
   letter-spacing: 0.02em;
 }
 
+.admin-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
 /* ─── Content ───────────────────────────────────────────── */
 .admin-content {
   flex: 1;

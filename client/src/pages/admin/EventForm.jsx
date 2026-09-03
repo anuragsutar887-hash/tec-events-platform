@@ -68,7 +68,7 @@ export default function EventForm() {
         allows_team: true,
         min_team_size: ev.min_team_size || 2,
         max_team_size: ev.max_team_size || 2,
-        rules: ev.rules || '',
+        rules: typeof ev.rules === 'string' ? ev.rules : (Array.isArray(ev.rules) ? ev.rules.join('\n') : ''),
         instructions: ev.instructions || '',
         contact_info: ev.contact_info || { email: '', phone: '', name: '' },
         banner_url: ev.banner_url || '',
@@ -93,6 +93,20 @@ export default function EventForm() {
     return errs;
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete "${form.name}"?\n\nThis will permanently delete the event and its associated registrations.`)) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await apiClient.delete(`/admin/events/${id}`);
+      navigate('/admin/events');
+    } catch (err) {
+      setErrors({ submit: err.response?.data?.error || 'Failed to delete event' });
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
@@ -101,9 +115,11 @@ export default function EventForm() {
     setLoading(true);
     setSuccess('');
     try {
+      const generatedSlug = form.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `event-${Date.now()}`;
       const payload = {
         ...form,
-        status: 'PUBLISHED',
+        slug: form.slug || generatedSlug,
+        status: form.status || 'PUBLISHED',
         allows_solo: false,
         allows_team: true,
         registration_opens_at: form.registration_opens_at || null,
@@ -117,8 +133,8 @@ export default function EventForm() {
         setSuccess('Event updated successfully!');
       } else {
         const { data } = await apiClient.post('/admin/events', payload);
-        setSuccess('Event created! Redirecting...');
-        setTimeout(() => navigate(`/admin/events/${data.event.id}/edit`), 1200);
+        setSuccess('Event created! Redirecting to events list...');
+        setTimeout(() => navigate('/admin/events'), 1200);
       }
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Save failed' });
@@ -144,9 +160,16 @@ export default function EventForm() {
           <h1 className="dashboard__title">{isEdit ? 'Edit Event' : 'Create Event'}</h1>
           <p className="dashboard__subtitle">{isEdit ? `Editing: ${form.name}` : 'Configure and publish a new event'}</p>
         </div>
-        <button className="btn btn--secondary" onClick={() => navigate('/admin/events')}>
-          Back to Events
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          {isEdit && (
+            <button type="button" className="btn btn--danger" onClick={handleDelete} disabled={loading}>
+              🗑️ Delete Event
+            </button>
+          )}
+          <button className="btn btn--secondary" onClick={() => navigate('/admin/events')}>
+            Back to Events
+          </button>
+        </div>
       </div>
 
       {errors.submit && <div className="alert alert--error mb-4">⚠️ {errors.submit}</div>}
@@ -170,6 +193,20 @@ export default function EventForm() {
                 required
               />
               {errors.name && <span className="form-error">{errors.name}</span>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Event Status</label>
+              <select
+                className="form-input form-select"
+                value={form.status}
+                onChange={(e) => set('status', e.target.value)}
+              >
+                <option value="PUBLISHED">Published (Visible to public & Open for registrations)</option>
+                <option value="DRAFT">Draft (Hidden from public site)</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
             </div>
 
             <div className="form-group">
@@ -337,30 +374,39 @@ export default function EventForm() {
                 <label className="form-label">Contact Email</label>
                 <input type="email" className="form-input" value={form.contact_info.email}
                   onChange={(e) => setContactInfo('email', e.target.value)}
-                  placeholder="contact@college.edu" />
+                  placeholder="omchaudhari289@gmail.com" />
               </div>
               <div className="form-group">
                 <label className="form-label">Contact Phone</label>
                 <input type="tel" className="form-input" value={form.contact_info.phone}
                   onChange={(e) => setContactInfo('phone', e.target.value)}
-                  placeholder="+91 98765 43210" />
+                  placeholder="89751 09341" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="event-form__footer">
-          <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/events')}>
-            Cancel
-          </button>
-          <button
-            type="submit"
-            id="event-form-submit"
-            className={`btn btn--primary btn--lg ${loading ? 'btn--loading' : ''}`}
-            disabled={loading}
-          >
-            {loading ? '' : isEdit ? 'Save Changes' : 'Create Event'}
-          </button>
+        <div className="event-form__footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            {isEdit && (
+              <button type="button" className="btn btn--danger" onClick={handleDelete} disabled={loading}>
+                🗑️ Delete Event
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/events')}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              id="event-form-submit"
+              className={`btn btn--primary btn--lg ${loading ? 'btn--loading' : ''}`}
+              disabled={loading}
+            >
+              {loading ? '' : isEdit ? 'Save Changes' : 'Create Event'}
+            </button>
+          </div>
         </div>
       </form>
     </div>

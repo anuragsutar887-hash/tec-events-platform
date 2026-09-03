@@ -14,7 +14,7 @@ export default function Footer() {
             DEPARTMENT OF INFORMATION TECHNOLOGY • TECHNICAL COMMITTEE
           </div>
 
-          {/* Clean Direct Contact Us Information Block (No Buttons) */}
+          {/* Clean Direct Contact Us Information Block */}
           <div className="footer__contact-section">
             <div className="footer__contact-heading">CONTACT US</div>
             <div className="footer__contact-grid">
@@ -30,15 +30,15 @@ export default function Footer() {
                 <span className="footer__contact-icon">✉️</span>
                 <div className="footer__contact-text">
                   <span className="footer__contact-label">Email Support</span>
-                  <a href="mailto:events@indiraicem.ac.in">events@indiraicem.ac.in</a>
+                  <a href="mailto:omchaudhari289@gmail.com">omchaudhari289@gmail.com</a>
                 </div>
               </div>
 
               <div className="footer__contact-item">
                 <span className="footer__contact-icon">📞</span>
                 <div className="footer__contact-text">
-                  <span className="footer__contact-label">Helpline / Phone</span>
-                  <a href="tel:+912114661500">+91 (02114) 661500 / 661600</a>
+                  <span className="footer__contact-label">Phone</span>
+                  <a href="tel:+918975109341">89751 09341</a>
                 </div>
               </div>
             </div>

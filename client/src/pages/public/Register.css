@@ -145,6 +145,56 @@
   flex-wrap: wrap;
 }
 
+/* ─── Email OTP Verification Box ────────────────────────── */
+.otp-verification-wrap {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: fadeIn 0.25s ease;
+}
+
+.otp-header-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.otp-inputs-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.otp-input-field {
+  max-width: 180px;
+  font-family: var(--font-mono) !important;
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2em !important;
+  text-align: center;
+}
+
+.otp-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
 @media (max-width: 860px) {
   .register-page__layout {
     grid-template-columns: 1fr;
