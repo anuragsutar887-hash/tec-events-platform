@@ -66,15 +66,15 @@ export default function EventForm() {
         status: ev.status || 'PUBLISHED',
         allows_solo: false,
         allows_team: true,
-        min_team_size: ev.min_team_size || 2,
-        max_team_size: ev.max_team_size || 2,
+        min_team_size: 2,
+        max_team_size: 2,
         rules: typeof ev.rules === 'string' ? ev.rules : (Array.isArray(ev.rules) ? ev.rules.join('\n') : ''),
         instructions: ev.instructions || '',
         contact_info: ev.contact_info || { email: '', phone: '', name: '' },
         banner_url: ev.banner_url || '',
         features: ev.features || defaultFeatures,
       });
-    } catch {
+    } catch (err) {
       alert('Failed to load event');
     } finally {
       setFetchLoading(false);
@@ -88,8 +88,6 @@ export default function EventForm() {
   const validate = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = 'Event name is required';
-    if (!form.min_team_size || form.min_team_size < 2) errs.min_team_size = 'Min team size must be at least 2';
-    if (!form.max_team_size || form.max_team_size < form.min_team_size) errs.max_team_size = 'Max must be ≥ min';
     return errs;
   };
 
@@ -102,7 +100,7 @@ export default function EventForm() {
       await apiClient.delete(`/admin/events/${id}`);
       navigate('/admin/events');
     } catch (err) {
-      setErrors({ submit: err.response?.data?.error || 'Failed to delete event' });
+      setErrors({ submit: err.response?.data?.error || err.message || 'Failed to delete event' });
       setLoading(false);
     }
   };
@@ -122,6 +120,8 @@ export default function EventForm() {
         status: form.status || 'PUBLISHED',
         allows_solo: false,
         allows_team: true,
+        min_team_size: 2,
+        max_team_size: 2,
         registration_opens_at: form.registration_opens_at || null,
         registration_closes_at: form.registration_closes_at || null,
         event_date: form.event_date || null,
@@ -132,12 +132,13 @@ export default function EventForm() {
         await apiClient.put(`/admin/events/${id}`, payload);
         setSuccess('Event updated successfully!');
       } else {
-        const { data } = await apiClient.post('/admin/events', payload);
-        setSuccess('Event created! Redirecting to events list...');
+        await apiClient.post('/admin/events', payload);
+        setSuccess('Event created successfully! Redirecting...');
         setTimeout(() => navigate('/admin/events'), 1200);
       }
     } catch (err) {
-      setErrors({ submit: err.response?.data?.error || 'Save failed' });
+      const msg = err.response?.data?.error || err.message || 'Save failed. Please check the fields and try again.';
+      setErrors({ submit: msg });
     } finally {
       setLoading(false);
     }
@@ -301,41 +302,6 @@ export default function EventForm() {
           </div>
         </div>
 
-        {/* Participation — Team Size Only */}
-        <div className="event-form__section card">
-          <div className="card__header">
-            <h2 className="event-form__section-title">👥 Team Size</h2>
-          </div>
-          <div className="card__body form-section">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label form-label--required">Min Team Size</label>
-                <input
-                  type="number"
-                  min={2}
-                  max={20}
-                  className={`form-input ${errors.min_team_size ? 'form-input--error' : ''}`}
-                  value={form.min_team_size}
-                  onChange={(e) => set('min_team_size', parseInt(e.target.value) || 2)}
-                />
-                {errors.min_team_size && <span className="form-error">{errors.min_team_size}</span>}
-              </div>
-              <div className="form-group">
-                <label className="form-label form-label--required">Max Team Size</label>
-                <input
-                  type="number"
-                  min={2}
-                  max={20}
-                  className={`form-input ${errors.max_team_size ? 'form-input--error' : ''}`}
-                  value={form.max_team_size}
-                  onChange={(e) => set('max_team_size', parseInt(e.target.value) || 2)}
-                />
-                {errors.max_team_size && <span className="form-error">{errors.max_team_size}</span>}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Rules & Instructions */}
         <div className="event-form__section card">
           <div className="card__header">
@@ -357,7 +323,7 @@ export default function EventForm() {
           </div>
         </div>
 
-        {/* Contact Info */}
+        {/* Contact Info (Clean generic placeholders, no hardcoded values) */}
         <div className="event-form__section card">
           <div className="card__header">
             <h2 className="event-form__section-title">📞 Contact Information</h2>
@@ -366,21 +332,33 @@ export default function EventForm() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Contact Name</label>
-                <input type="text" className="form-input" value={form.contact_info.name}
+                <input
+                  type="text"
+                  className="form-input"
+                  value={form.contact_info.name}
                   onChange={(e) => setContactInfo('name', e.target.value)}
-                  placeholder="Coordinator name" />
+                  placeholder="Coordinator name"
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Contact Email</label>
-                <input type="email" className="form-input" value={form.contact_info.email}
+                <input
+                  type="email"
+                  className="form-input"
+                  value={form.contact_info.email}
                   onChange={(e) => setContactInfo('email', e.target.value)}
-                  placeholder="omchaudhari289@gmail.com" />
+                  placeholder="e.g. coordinator@college.edu"
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Contact Phone</label>
-                <input type="tel" className="form-input" value={form.contact_info.phone}
+                <input
+                  type="tel"
+                  className="form-input"
+                  value={form.contact_info.phone}
                   onChange={(e) => setContactInfo('phone', e.target.value)}
-                  placeholder="89751 09341" />
+                  placeholder="e.g. +91 98765 43210"
+                />
               </div>
             </div>
           </div>

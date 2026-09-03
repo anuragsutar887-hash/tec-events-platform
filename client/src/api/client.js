@@ -5,11 +5,9 @@ const parseEvent = (ev) => {
   if (!ev) return null;
   return {
     ...ev,
-    rules: Array.isArray(ev.rules) ? ev.rules : (typeof ev.rules === 'string' ? JSON.parse(ev.rules) : []),
-    prizes: Array.isArray(ev.prizes) ? ev.prizes : (typeof ev.prizes === 'string' ? JSON.parse(ev.prizes) : []),
-    timeline: Array.isArray(ev.timeline) ? ev.timeline : (typeof ev.timeline === 'string' ? JSON.parse(ev.timeline) : []),
-    contact_info: typeof ev.contact_info === 'string' ? JSON.parse(ev.contact_info) : (ev.contact_info || {}),
-    evaluation_criteria: Array.isArray(ev.evaluation_criteria) ? ev.evaluation_criteria : (typeof ev.evaluation_criteria === 'string' ? JSON.parse(ev.evaluation_criteria) : []),
+    rules: ev.rules || '',
+    contact_info: typeof ev.contact_info === 'string' ? JSON.parse(ev.contact_info || '{}') : (ev.contact_info || {}),
+    features: typeof ev.features === 'string' ? JSON.parse(ev.features || '{}') : (ev.features || {}),
   };
 };
 
@@ -257,22 +255,44 @@ export const apiClient = {
       throw err;
     }
 
-    // 2. Create Event
+    // 2. Create Event (Sanitized with actual database columns)
     if (url === '/admin/events') {
-      const slug = payload.slug || payload.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `event-${Date.now()}`;
+      let slug = payload.slug || payload.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `event-${Date.now()}`;
+      
+      // Auto-handle slug conflicts so unique constraints never fail
+      const { data: existing } = await supabase.from('events').select('id').eq('slug', slug).maybeSingle();
+      if (existing) {
+        slug = `${slug}-${Date.now().toString().slice(-4)}`;
+      }
+
+      const insertData = {
+        name: payload.name?.trim(),
+        slug,
+        short_description: payload.short_description || '',
+        full_description: payload.full_description || '',
+        event_date: payload.event_date || null,
+        start_time: payload.start_time || null,
+        end_time: payload.end_time || null,
+        venue: payload.venue || '',
+        registration_opens_at: payload.registration_opens_at || null,
+        registration_closes_at: payload.registration_closes_at || null,
+        status: payload.status || 'PUBLISHED',
+        allows_solo: Boolean(payload.allows_solo),
+        allows_team: Boolean(payload.allows_team ?? true),
+        min_team_size: payload.min_team_size || 2,
+        max_team_size: payload.max_team_size || 2,
+        rules: typeof payload.rules === 'string' ? payload.rules : (Array.isArray(payload.rules) ? payload.rules.join('\n') : ''),
+        instructions: payload.instructions || '',
+        contact_info: typeof payload.contact_info === 'string' ? payload.contact_info : JSON.stringify(payload.contact_info || {}),
+        banner_url: payload.banner_url || '',
+        features: typeof payload.features === 'string' ? payload.features : JSON.stringify(payload.features || {}),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('events')
-        .insert({
-          ...payload,
-          slug,
-          rules: JSON.stringify(payload.rules || []),
-          prizes: JSON.stringify(payload.prizes || []),
-          timeline: JSON.stringify(payload.timeline || []),
-          contact_info: JSON.stringify(payload.contact_info || {}),
-          evaluation_criteria: JSON.stringify(payload.evaluation_criteria || []),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .insert(insertData)
         .select()
         .single();
       if (error) throw error;
@@ -382,16 +402,29 @@ export const apiClient = {
       return { data: { event: parseEvent(data) } };
     }
 
-    // 2. Edit Event Details / Status
+    // 2. Edit Event Details / Status (Sanitized with actual database columns)
     if (url.match(/^\/admin\/events\/\d+$/)) {
       const id = url.split('/admin/events/')[1];
       const updateData = { 
-        ...payload, 
-        rules: typeof payload.rules === 'string' ? payload.rules : JSON.stringify(payload.rules || []),
-        prizes: typeof payload.prizes === 'string' ? payload.prizes : JSON.stringify(payload.prizes || []),
-        timeline: typeof payload.timeline === 'string' ? payload.timeline : JSON.stringify(payload.timeline || []),
+        name: payload.name?.trim(),
+        short_description: payload.short_description || '',
+        full_description: payload.full_description || '',
+        event_date: payload.event_date || null,
+        start_time: payload.start_time || null,
+        end_time: payload.end_time || null,
+        venue: payload.venue || '',
+        registration_opens_at: payload.registration_opens_at || null,
+        registration_closes_at: payload.registration_closes_at || null,
+        status: payload.status || 'PUBLISHED',
+        allows_solo: Boolean(payload.allows_solo),
+        allows_team: Boolean(payload.allows_team ?? true),
+        min_team_size: payload.min_team_size || 2,
+        max_team_size: payload.max_team_size || 2,
+        rules: typeof payload.rules === 'string' ? payload.rules : (Array.isArray(payload.rules) ? payload.rules.join('\n') : ''),
+        instructions: payload.instructions || '',
         contact_info: typeof payload.contact_info === 'string' ? payload.contact_info : JSON.stringify(payload.contact_info || {}),
-        evaluation_criteria: typeof payload.evaluation_criteria === 'string' ? payload.evaluation_criteria : JSON.stringify(payload.evaluation_criteria || []),
+        banner_url: payload.banner_url || '',
+        features: typeof payload.features === 'string' ? payload.features : JSON.stringify(payload.features || {}),
         updated_at: new Date().toISOString() 
       };
       const { data, error } = await supabase
