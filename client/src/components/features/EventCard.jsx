@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useStudent } from '../../context/StudentAuthContext';
 import { formatDate, formatTime } from '../../utils/dateHelpers';
 import './EventCard.css';
 
@@ -13,6 +14,7 @@ function RegistrationBadge({ status }) {
 }
 
 export default function EventCard({ event }) {
+  const { isAuthenticated } = useStudent();
   const { slug, name, short_description, event_date, start_time, venue,
     registration_status, allows_solo, allows_team, min_team_size, max_team_size } = event;
 
@@ -61,7 +63,10 @@ export default function EventCard({ event }) {
           VIEW DETAILS
         </Link>
         {registration_status === 'OPEN' && (
-          <Link to={`/events/${slug}/register`} className="btn btn--primary btn--sm event-card__btn-reg">
+          <Link
+            to={isAuthenticated ? `/events/${slug}/register` : `/login?redirect=/events/${slug}/register`}
+            className="btn btn--primary btn--sm event-card__btn-reg"
+          >
             REGISTER NOW
           </Link>
         )}

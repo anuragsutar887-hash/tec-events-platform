@@ -19,7 +19,7 @@ export default function StudentLogin() {
     <div className="container section" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <StudentLoginModal
         isOpen={true}
-        onClose={() => navigate(redirect)}
+        onClose={() => navigate(redirect.includes('/register') ? '/' : redirect)}
         onSuccess={() => navigate(redirect)}
       />
     </div>

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
+import { useStudent } from '../../context/StudentAuthContext';
 import { formatDate, formatTime, formatDateTime } from '../../utils/dateHelpers';
 import './EventDetail.css';
 
 export default function EventDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useStudent();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -160,11 +162,11 @@ export default function EventDetail() {
                   {regStatus === 'OPEN' ? (
                     <>
                       <Link
-                        to={`/events/${slug}/register`}
+                        to={isAuthenticated ? `/events/${slug}/register` : `/login?redirect=/events/${slug}/register`}
                         className="btn btn--primary btn--lg event-detail__main-reg-btn"
                         id="event-detail-register-btn"
                       >
-                        INITIALIZE REGISTRATION
+                        REGISTER NOW
                       </Link>
                       <Link
                         to="/lookup"

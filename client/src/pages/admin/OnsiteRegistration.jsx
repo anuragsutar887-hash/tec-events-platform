@@ -3,28 +3,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 import './OnsiteRegistration.css';
 
-const isOfficialEmail = (email) => {
+const isValidEmail = (email) => {
   if (!email) return false;
-  const e = email.toLowerCase().trim();
-  const personalDomains = [
-    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
-    'icloud.com', 'rediffmail.com', 'aol.com', 'proton.me',
-    'protonmail.com', 'zoho.com', 'mail.com', 'ymail.com'
-  ];
-  const parts = e.split('@');
-  if (parts.length !== 2) return false;
-  const domain = parts[1];
-  if (personalDomains.includes(domain)) return false;
-
-  return (
-    domain === 'indiraicem.ac.in' ||
-    domain.endsWith('.indiraicem.ac.in') ||
-    domain === 'indiraedu.com' ||
-    domain.endsWith('.indiraedu.com') ||
-    domain.endsWith('.ac.in') ||
-    domain.endsWith('.edu.in') ||
-    domain.endsWith('.edu')
-  );
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 };
 
 export default function OnsiteRegistration() {
@@ -64,17 +45,17 @@ export default function OnsiteRegistration() {
     if (!player1.full_name.trim()) errs.p1_name = 'Player 1 name required';
     if (!player1.prn.trim()) errs.p1_prn = 'Player 1 PRN required';
     if (!player1.email.trim()) {
-      errs.p1_email = 'Player 1 official email required';
-    } else if (!isOfficialEmail(player1.email)) {
-      errs.p1_email = 'Official college email required (e.g. @indiraicem.ac.in)';
+      errs.p1_email = 'Player 1 email required';
+    } else if (!isValidEmail(player1.email)) {
+      errs.p1_email = 'Enter a valid email address';
     }
 
     if (!player2.full_name.trim()) errs.p2_name = 'Player 2 name required';
     if (!player2.prn.trim()) errs.p2_prn = 'Player 2 PRN required';
     if (!player2.email.trim()) {
-      errs.p2_email = 'Player 2 official email required';
-    } else if (!isOfficialEmail(player2.email)) {
-      errs.p2_email = 'Official college email required (e.g. @indiraicem.ac.in)';
+      errs.p2_email = 'Player 2 email required';
+    } else if (!isValidEmail(player2.email)) {
+      errs.p2_email = 'Enter a valid email address';
     }
 
     return errs;
@@ -218,7 +199,7 @@ export default function OnsiteRegistration() {
                 {errors.p1_prn && <span className="form-error">{errors.p1_prn}</span>}
               </div>
               <div className="form-group">
-                <label className="form-label form-label--required">Official Email ID</label>
+                <label className="form-label form-label--required">Email ID</label>
                 <input
                   type="email"
                   className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
@@ -265,7 +246,7 @@ export default function OnsiteRegistration() {
                 {errors.p2_prn && <span className="form-error">{errors.p2_prn}</span>}
               </div>
               <div className="form-group">
-                <label className="form-label form-label--required">Official Email ID</label>
+                <label className="form-label form-label--required">Email ID</label>
                 <input
                   type="email"
                   className={`form-input ${errors.p2_email ? 'form-input--error' : ''}`}

@@ -5,29 +5,9 @@ import { useStudent } from '../../context/StudentAuthContext';
 import StudentLoginModal from '../../components/auth/StudentLoginModal';
 import './Register.css';
 
-// Strict check for official college / institutional email
-const isOfficialEmail = (email) => {
+const isValidEmail = (email) => {
   if (!email) return false;
-  const e = email.toLowerCase().trim();
-  const personalDomains = [
-    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
-    'icloud.com', 'rediffmail.com', 'aol.com', 'proton.me',
-    'protonmail.com', 'zoho.com', 'mail.com', 'ymail.com'
-  ];
-  const parts = e.split('@');
-  if (parts.length !== 2) return false;
-  const domain = parts[1];
-  if (personalDomains.includes(domain)) return false;
-
-  return (
-    domain === 'indiraicem.ac.in' ||
-    domain.endsWith('.indiraicem.ac.in') ||
-    domain === 'indiraedu.com' ||
-    domain.endsWith('.indiraedu.com') ||
-    domain.endsWith('.ac.in') ||
-    domain.endsWith('.edu.in') ||
-    domain.endsWith('.edu')
-  );
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 };
 
 export default function Register() {
@@ -59,6 +39,13 @@ export default function Register() {
       .catch(() => setApiError('Event not found'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // If not authenticated, take user to the login portal immediately
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate(`/login?redirect=/events/${slug}/register`, { replace: true });
+    }
+  }, [loading, isAuthenticated, slug, navigate]);
 
   // Automatically pre-fill Player 1 details from logged in user, or clear on logout
   useEffect(() => {
@@ -134,9 +121,9 @@ export default function Register() {
     if (!player1.full_name.trim()) errs.p1_name = 'Player 1 name is required';
     if (!player1.prn.trim()) errs.p1_prn = 'Player 1 PRN is required';
     if (!player1.email.trim()) {
-      errs.p1_email = 'Player 1 official college email is required';
-    } else if (!isOfficialEmail(player1.email)) {
-      errs.p1_email = 'Official college email required (e.g. @indiraicem.ac.in)';
+      errs.p1_email = 'Player 1 email is required';
+    } else if (!isValidEmail(player1.email)) {
+      errs.p1_email = 'Enter a valid email address';
     }
 
     // Player 2 validation
@@ -147,11 +134,9 @@ export default function Register() {
       errs.p2_prn = 'Teammate PRN number is required';
     }
     if (!player2.email.trim()) {
-      errs.p2_email = 'Teammate official college email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(player2.email)) {
+      errs.p2_email = 'Teammate email is required';
+    } else if (!isValidEmail(player2.email)) {
       errs.p2_email = 'Enter a valid email address';
-    } else if (!isOfficialEmail(player2.email)) {
-      errs.p2_email = 'Official college email required (e.g. @indiraicem.ac.in). Personal emails are not allowed.';
     }
 
     if (player1.email && player2.email && player1.email.toLowerCase().trim() === player2.email.toLowerCase().trim()) {
@@ -424,7 +409,7 @@ export default function Register() {
 
                   <div className="form-group">
                     <label htmlFor="p1-email" className="form-label form-label--required">
-                      Official Email ID
+                      Email ID
                     </label>
                     <input
                       type="email"
@@ -496,7 +481,7 @@ export default function Register() {
 
                   <div className="form-group">
                     <label htmlFor="p2-email" className="form-label form-label--required">
-                      Teammate Official Email ID
+                      Teammate Email ID
                     </label>
                     <input
                       type="email"
