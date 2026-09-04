@@ -69,6 +69,30 @@
   gap: var(--space-4);
 }
 
+.student-modal-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  width: 100%;
+}
+
+.student-modal-actions .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  justify-content: center;
+  padding: 0.65rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.student-modal-actions--otp .btn--secondary {
+  flex: 0 0 100px;
+}
+
+.student-modal-actions--otp .btn--primary {
+  flex: 1 1 0;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

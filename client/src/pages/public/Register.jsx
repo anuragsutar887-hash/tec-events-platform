@@ -60,7 +60,7 @@ export default function Register() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Automatically pre-fill Player 1 details from logged in user
+  // Automatically pre-fill Player 1 details from logged in user, or clear on logout
   useEffect(() => {
     if (user) {
       setPlayer1({
@@ -68,6 +68,10 @@ export default function Register() {
         prn: user.prn || '',
         email: user.email || '',
       });
+    } else {
+      setPlayer1({ full_name: '', prn: '', email: '' });
+      setPlayer2({ full_name: '', prn: '', email: '' });
+      setTeamName('');
     }
   }, [user]);
 
@@ -323,30 +327,6 @@ export default function Register() {
       </div>
 
       <div className="container">
-        {/* If user is not authenticated, show mandatory login banner */}
-        {!isAuthenticated && (
-          <div className="card mb-6" style={{ border: '2px solid #000000', background: '#fafafa' }}>
-            <div className="card__body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)', padding: 'var(--space-6)' }}>
-              <div>
-                <span className="section__label" style={{ marginBottom: 0 }}>STUDENT AUTHENTICATION REQUIRED</span>
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 800, margin: '4px 0', color: '#000000' }}>
-                  Please Sign In to Register for this Event
-                </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
-                  Enter your Name, PRN, and Official College Email ID to log in. Your details will be filled automatically!
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn btn--primary btn--lg"
-                onClick={() => setLoginModalOpen(true)}
-              >
-                Sign In to Portal →
-              </button>
-            </div>
-          </div>
-        )}
-
         <div className="register-page__layout">
           {/* Main Form */}
           <div className="register-page__main">
@@ -380,6 +360,7 @@ export default function Register() {
                         setTeamName(e.target.value);
                         if (errors.teamName) setErrors((prev) => ({ ...prev, teamName: '' }));
                       }}
+                      autoComplete="off"
                       autoFocus
                       required
                     />
@@ -390,18 +371,11 @@ export default function Register() {
 
               {/* Section 2: Player 1 (Auto-filled from Logged-In User) */}
               <div className="register-form__section card">
-                <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 1 (PRIMARY / LEADER)</span>
-                    <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
-                      PLAYER 1
-                    </h2>
-                  </div>
-                  {isAuthenticated && (
-                    <span className="otp-verified-badge" title="Authenticated student">
-                      ✓ Authenticated Account
-                    </span>
-                  )}
+                <div className="card__header">
+                  <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 1 (PRIMARY / LEADER)</span>
+                  <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+                    PLAYER 1
+                  </h2>
                 </div>
                 <div className="card__body">
                   <div className="form-row">
@@ -420,6 +394,7 @@ export default function Register() {
                           if (errors.p1_name) setErrors((prev) => ({ ...prev, p1_name: '' }));
                         }}
                         style={isAuthenticated ? { background: '#f5f5f5', cursor: 'not-allowed' } : {}}
+                        autoComplete="off"
                         required
                       />
                       {errors.p1_name && <span className="form-error">{errors.p1_name}</span>}
@@ -440,6 +415,7 @@ export default function Register() {
                           if (errors.p1_prn) setErrors((prev) => ({ ...prev, p1_prn: '' }));
                         }}
                         style={isAuthenticated ? { background: '#f5f5f5', cursor: 'not-allowed' } : {}}
+                        autoComplete="off"
                         required
                       />
                       {errors.p1_prn && <span className="form-error">{errors.p1_prn}</span>}
@@ -461,11 +437,9 @@ export default function Register() {
                         if (errors.p1_email) setErrors((prev) => ({ ...prev, p1_email: '' }));
                       }}
                       style={isAuthenticated ? { background: '#f5f5f5', cursor: 'not-allowed' } : {}}
+                      autoComplete="off"
                       required
                     />
-                    <span className="form-hint">
-                      {isAuthenticated ? 'Auto-filled from your authenticated student account' : 'Must be your official college email (e.g. @indiraicem.ac.in)'}
-                    </span>
                     {errors.p1_email && <span className="form-error">{errors.p1_email}</span>}
                   </div>
                 </div>
@@ -473,22 +447,13 @@ export default function Register() {
 
               {/* Section 3: Player 2 (Teammate with Approval Flow) */}
               <div className="register-form__section card">
-                <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2 (TEAMMATE)</span>
-                    <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
-                      PLAYER 2
-                    </h2>
-                  </div>
-                  <span className="badge badge--tag" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-                    Requires Teammate Approval
-                  </span>
+                <div className="card__header">
+                  <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2 (TEAMMATE)</span>
+                  <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+                    PLAYER 2
+                  </h2>
                 </div>
                 <div className="card__body">
-                  <div className="alert alert--info mb-4" style={{ fontSize: '0.8125rem' }}>
-                    ℹ️ When you submit, a team invitation will be sent to your teammate. Once they log in to their account and approve it, registration will be finalized.
-                  </div>
-
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="p2-name" className="form-label form-label--required">
@@ -503,6 +468,7 @@ export default function Register() {
                           setPlayer2({ ...player2, full_name: e.target.value });
                           if (errors.p2_name) setErrors((prev) => ({ ...prev, p2_name: '' }));
                         }}
+                        autoComplete="off"
                         required
                       />
                       {errors.p2_name && <span className="form-error">{errors.p2_name}</span>}
@@ -521,6 +487,7 @@ export default function Register() {
                           setPlayer2({ ...player2, prn: e.target.value });
                           if (errors.p2_prn) setErrors((prev) => ({ ...prev, p2_prn: '' }));
                         }}
+                        autoComplete="off"
                         required
                       />
                       {errors.p2_prn && <span className="form-error">{errors.p2_prn}</span>}
@@ -540,9 +507,9 @@ export default function Register() {
                         setPlayer2({ ...player2, email: e.target.value });
                         if (errors.p2_email) setErrors((prev) => ({ ...prev, p2_email: '' }));
                       }}
+                      autoComplete="off"
                       required
                     />
-                    <span className="form-hint">Must be an official college email (e.g. @indiraicem.ac.in)</span>
                     {errors.p2_email && <span className="form-error">{errors.p2_email}</span>}
                   </div>
                 </div>

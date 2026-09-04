@@ -42,6 +42,17 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
   const [enteredOtp, setEnteredOtp] = useState('');
   const [otpNotice, setOtpNotice] = useState('');
 
+  // Reset all fields when modal is closed so nothing remains stored
+  useEffect(() => {
+    if (!isOpen) {
+      setForm({ full_name: '', email: '', prn: '' });
+      setEnteredOtp('');
+      setGeneratedOtp('');
+      setErrors({});
+      setStep('FORM');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const validate = () => {
@@ -144,6 +155,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                     setForm({ ...form, full_name: e.target.value });
                     if (errors.full_name) setErrors((prev) => ({ ...prev, full_name: '' }));
                   }}
+                  autoComplete="off"
                   autoFocus
                   required
                 />
@@ -160,6 +172,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                     setForm({ ...form, prn: e.target.value });
                     if (errors.prn) setErrors((prev) => ({ ...prev, prn: '' }));
                   }}
+                  autoComplete="off"
                   required
                 />
                 {errors.prn && <span className="form-error">{errors.prn}</span>}
@@ -175,16 +188,16 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                     setForm({ ...form, email: e.target.value });
                     if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
                   }}
+                  autoComplete="off"
                   required
                 />
-                <span className="form-hint">Must be your college email (e.g. @indiraicem.ac.in)</span>
                 {errors.email && <span className="form-error">{errors.email}</span>}
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+              <div className="student-modal-actions">
                 <button
                   type="submit"
-                  className={`btn btn--primary btn--full ${loading ? 'btn--loading' : ''}`}
+                  className={`btn btn--primary ${loading ? 'btn--loading' : ''}`}
                   disabled={loading}
                 >
                   {loading ? '' : 'Verify with OTP & Sign In'}
@@ -193,8 +206,6 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   type="button"
                   onClick={handleQuickLogin}
                   className="btn btn--secondary"
-                  title="Direct login if already verified"
-                  style={{ flexShrink: 0 }}
                 >
                   Direct Sign In
                 </button>
@@ -219,13 +230,14 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                     if (errors.otp) setErrors((prev) => ({ ...prev, otp: '' }));
                   }}
                   style={{ fontSize: '1.25rem', letterSpacing: '0.2em', textAlign: 'center' }}
+                  autoComplete="off"
                   autoFocus
                   required
                 />
                 {errors.otp && <span className="form-error">{errors.otp}</span>}
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+              <div className="student-modal-actions student-modal-actions--otp">
                 <button
                   type="button"
                   className="btn btn--secondary"
@@ -235,7 +247,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                 </button>
                 <button
                   type="submit"
-                  className="btn btn--primary btn--full"
+                  className="btn btn--primary"
                   disabled={enteredOtp.length !== 6}
                 >
                   Verify & Log In
