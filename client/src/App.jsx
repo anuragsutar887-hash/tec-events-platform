@@ -26,6 +26,10 @@ import CheckIn from './pages/admin/CheckIn';
 import OnsiteRegistration from './pages/admin/OnsiteRegistration';
 import Settings from './pages/admin/Settings';
 
+// Student auth
+import { StudentAuthProvider } from './context/StudentAuthContext';
+import StudentLogin from './pages/public/StudentLogin';
+
 // Automatically scrolls to top on every route change
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -36,9 +40,6 @@ function ScrollToTop() {
 
   return null;
 }
-
-import { StudentAuthProvider } from './context/StudentAuthContext';
-import StudentLogin from './pages/public/StudentLogin';
 
 function PublicLayout({ children }) {
   return (
