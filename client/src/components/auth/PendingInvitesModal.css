@@ -1,0 +1,97 @@
+.invites-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: calc(var(--z-modal) + 12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fadeIn 0.15s ease-out;
+}
+
+.invites-modal-card {
+  width: 100%;
+  max-width: 580px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.invites-modal-header {
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  background: #fafafa;
+}
+
+.invites-modal-title {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #000000;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.invites-modal-subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.invites-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.invite-item {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.invite-item__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.invite-item__team-name {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 4px 0 0;
+}
+
+.invite-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  padding: var(--space-2) 0;
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: var(--space-4);
+}
+
+.invite-item__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

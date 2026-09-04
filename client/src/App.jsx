@@ -37,6 +37,9 @@ function ScrollToTop() {
   return null;
 }
 
+import { StudentAuthProvider } from './context/StudentAuthContext';
+import StudentLogin from './pages/public/StudentLogin';
+
 function PublicLayout({ children }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -49,13 +52,17 @@ function PublicLayout({ children }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <Routes>
-        {/* ── Public routes (Pure public site) ────────────────────────────── */}
-        <Route path="/" element={
-          <PublicLayout><Home /></PublicLayout>
-        } />
+    <StudentAuthProvider>
+      <BrowserRouter>
+        <ScrollToTop />
+        <Routes>
+          {/* ── Public routes (Pure public site) ────────────────────────────── */}
+          <Route path="/" element={
+            <PublicLayout><Home /></PublicLayout>
+          } />
+          <Route path="/login" element={
+            <PublicLayout><StudentLogin /></PublicLayout>
+          } />
         <Route path="/events" element={
           <PublicLayout><Events /></PublicLayout>
         } />
@@ -170,5 +177,6 @@ export default function App() {
         } />
       </Routes>
     </BrowserRouter>
+  </StudentAuthProvider>
   );
 }

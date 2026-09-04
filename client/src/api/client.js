@@ -137,6 +137,20 @@ export const apiClient = {
       return { data: { registration: formatRegistration(reg) } };
     }
 
+    // 7b. Single Registration status check by ID or Code
+    if (url.startsWith('/registrations/') && !url.includes('/leaderboard/')) {
+      const param = url.replace('/registrations/', '').split('?')[0];
+      let query = supabase.from('registrations').select('*, events(*), participants(*)');
+      if (/^\d+$/.test(param)) {
+        query = query.eq('id', parseInt(param));
+      } else {
+        query = query.eq('registration_id', param);
+      }
+      const { data: reg, error } = await query.single();
+      if (error) throw error;
+      return { data: { registration: formatRegistration(reg) } };
+    }
+
     // 8. Admin Registrations List (with filters & search)
     if (url.startsWith('/admin/registrations')) {
       const urlParams = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
@@ -353,6 +367,7 @@ export const apiClient = {
       const p2 = player_2 || payload.player2 || {};
 
       // Insert Registration
+      const initialStatus = payload.status || (is_on_site ? 'CONFIRMED' : 'PENDING_APPROVAL');
       const { data: reg, error: regError } = await supabase
         .from('registrations')
         .insert({
@@ -361,9 +376,11 @@ export const apiClient = {
           team_name: team_name?.trim() || `${p1.full_name}'s Duo`,
           participation_mode: 'TEAM',
           registration_type: is_on_site ? 'ON_SITE' : 'ONLINE',
+          status: initialStatus,
           checked_in: Boolean(payload.checked_in || is_on_site),
           checked_in_at: payload.checked_in || is_on_site ? new Date().toISOString() : null,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -408,6 +425,7 @@ export const apiClient = {
             event_name: eventRecord.name,
             team_name: reg.team_name,
             participation_mode: 'TEAM',
+            status: reg.status,
             participants: [
               { is_leader: true, full_name: p1.full_name, email: p1.email, prn: p1.prn || p1.student_id || '' },
               { is_leader: false, full_name: p2.full_name, email: p2.email, prn: p2.prn || p2.student_id || '' }
@@ -501,6 +519,32 @@ export const apiClient = {
         .single();
       if (error) throw error;
       return { data: { message: 'Check-in reversed', registration: formatRegistration(data) } };
+    }
+
+    // 5. Teammate Approves Team Registration
+    if (url.match(/^\/registrations\/\d+\/approve$/)) {
+      const id = url.split('/registrations/')[1].split('/approve')[0];
+      const { data, error } = await supabase
+        .from('registrations')
+        .update({ status: 'CONFIRMED', updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('*, participants(*), events(*)')
+        .single();
+      if (error) throw error;
+      return { data: { message: 'Registration approved and confirmed!', registration: formatRegistration(data) } };
+    }
+
+    // 6. Teammate Declines Team Registration
+    if (url.match(/^\/registrations\/\d+\/decline$/)) {
+      const id = url.split('/registrations/')[1].split('/decline')[0];
+      const { data, error } = await supabase
+        .from('registrations')
+        .update({ status: 'DECLINED', updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('*, participants(*), events(*)')
+        .single();
+      if (error) throw error;
+      return { data: { message: 'Invitation declined.', registration: formatRegistration(data) } };
     }
 
     throw new Error(`PUT ${url} not mapped`);

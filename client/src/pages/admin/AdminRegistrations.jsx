@@ -317,10 +317,14 @@ export default function AdminRegistrations() {
                         </span>
                       </td>
                       <td>
-                        {r.checked_in ? (
+                        {r.status === 'PENDING_APPROVAL' ? (
+                          <span className="badge badge--upcoming" style={{ fontSize: '0.6875rem', padding: '2px 6px' }}>
+                            ⏳ AWAITING P2
+                          </span>
+                        ) : r.checked_in ? (
                           <span className="badge badge--checked">✓ IN ARENA</span>
                         ) : (
-                          <span className="badge badge--unchecked">PENDING</span>
+                          <span className="badge badge--unchecked">CONFIRMED</span>
                         )}
                       </td>
                       <td className="text-xs text-muted">{timeAgo(r.created_at)}</td>

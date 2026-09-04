@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import apiClient from '../../api/client';
+import { useStudent } from '../../context/StudentAuthContext';
+import StudentLoginModal from '../../components/auth/StudentLoginModal';
 import './Register.css';
 
 // Strict check for official college / institutional email
@@ -31,25 +33,24 @@ const isOfficialEmail = (email) => {
 export default function Register() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useStudent();
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  // Clean form state: Team Name, Player 1 (Name, PRN, Email), Player 2 (Name, PRN, Email)
+  // Form state: Team Name, Player 1 (auto-filled from user), Player 2
   const [teamName, setTeamName] = useState('');
   const [player1, setPlayer1] = useState({ full_name: '', prn: '', email: '' });
   const [player2, setPlayer2] = useState({ full_name: '', prn: '', email: '' });
   const [errors, setErrors] = useState({});
 
-  // 🔐 Email OTP Verification State (Player 1)
-  const [otpState, setOtpState] = useState('IDLE'); // 'IDLE' | 'SENT' | 'VERIFIED'
-  const [enteredOtp, setEnteredOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
-  const [otpError, setOtpError] = useState('');
-  const [otpNotice, setOtpNotice] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
+  // Registration Pending Teammate Approval State
+  const [pendingApprovalReg, setPendingApprovalReg] = useState(null);
+  const [checkingApproval, setCheckingApproval] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -59,74 +60,64 @@ export default function Register() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Resend Countdown Timer
+  // Automatically pre-fill Player 1 details from logged in user
   useEffect(() => {
-    let interval = null;
-    if (resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
+    if (user) {
+      setPlayer1({
+        full_name: user.full_name || '',
+        prn: user.prn || '',
+        email: user.email || '',
+      });
     }
-    return () => clearInterval(interval);
-  }, [resendTimer]);
+  }, [user]);
 
-  // ─── ✉️ Send OTP to Player 1 Official Email ───────────────────
-  const handleSendOtp = () => {
-    setOtpError('');
-    setOtpNotice('');
-
-    const email = player1.email.trim();
-    if (!email) {
-      setErrors((prev) => ({ ...prev, p1_email: 'Please enter your official college email address first' }));
-      return;
+  // Live polling for teammate approval when in pending state
+  useEffect(() => {
+    let timer = null;
+    if (pendingApprovalReg && pendingApprovalReg.id) {
+      timer = setInterval(async () => {
+        try {
+          const { data } = await apiClient.get(`/registrations/${pendingApprovalReg.id}`);
+          if (data?.registration?.status === 'CONFIRMED') {
+            clearInterval(timer);
+            navigate(`/events/${slug}/register/success`, {
+              state: { registration: data.registration }
+            });
+          }
+        } catch {
+          // ignore poll errors
+        }
+      }, 3000);
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setErrors((prev) => ({ ...prev, p1_email: 'Enter a valid email address' }));
-      return;
-    }
-    if (!isOfficialEmail(email)) {
-      setErrors((prev) => ({
-        ...prev,
-        p1_email: 'Official college email required (e.g. @indiraicem.ac.in). Personal emails like Gmail/Yahoo are not allowed.'
-      }));
-      return;
-    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [pendingApprovalReg, slug, navigate]);
 
-    // Generate secure 6-digit numeric OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(code);
-    setOtpState('SENT');
-    setResendTimer(60);
-    setEnteredOtp('');
-    setOtpNotice(`Verification OTP sent to your official email ${email}. (Your OTP code is: ${code})`);
-  };
-
-  // ─── 🔒 Verify Entered OTP ──────────────────────────────────────
-  const handleVerifyOtp = () => {
-    setOtpError('');
-    if (!enteredOtp || enteredOtp.trim().length !== 6) {
-      setOtpError('Please enter the complete 6-digit OTP');
-      return;
-    }
-
-    if (enteredOtp.trim() === generatedOtp) {
-      setOtpState('VERIFIED');
-      setOtpNotice('');
-      setOtpError('');
-      setErrors((prev) => ({ ...prev, p1_email: '' }));
-    } else {
-      setOtpError('Incorrect OTP code. Please verify and try again.');
+  const handleManualCheckStatus = async () => {
+    if (!pendingApprovalReg?.id) return;
+    setCheckingApproval(true);
+    try {
+      const { data } = await apiClient.get(`/registrations/${pendingApprovalReg.id}`);
+      if (data?.registration?.status === 'CONFIRMED') {
+        navigate(`/events/${slug}/register/success`, {
+          state: { registration: data.registration }
+        });
+      } else {
+        alert('Still waiting for teammate to log in and approve. Please ask your teammate to approve from their account.');
+      }
+    } catch {
+      alert('Could not verify status. Please try again in a moment.');
+    } finally {
+      setCheckingApproval(false);
     }
   };
 
-  // Reset OTP state if user wants to change email
-  const handleChangeEmail = () => {
-    setOtpState('IDLE');
-    setEnteredOtp('');
-    setGeneratedOtp('');
-    setOtpError('');
-    setOtpNotice('');
-    setResendTimer(0);
+  const handleCopyInvite = () => {
+    const inviteText = `Hey ${player2.full_name}! I have invited you to join team "${teamName}" for the technical event "${event?.name}". Please log into the portal at ${window.location.origin} and click "Approve" to confirm our registration!`;
+    navigator.clipboard.writeText(inviteText);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 3000);
   };
 
   const validate = () => {
@@ -135,32 +126,24 @@ export default function Register() {
       errs.teamName = 'Team name is required';
     }
 
-    // Player 1 validation
-    if (!player1.full_name.trim()) {
-      errs.p1_name = 'Player 1 name is required';
-    }
-    if (!player1.prn.trim()) {
-      errs.p1_prn = 'Player 1 PRN is required';
-    }
+    // Player 1 validation (Auto-filled from user account)
+    if (!player1.full_name.trim()) errs.p1_name = 'Player 1 name is required';
+    if (!player1.prn.trim()) errs.p1_prn = 'Player 1 PRN is required';
     if (!player1.email.trim()) {
       errs.p1_email = 'Player 1 official college email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(player1.email)) {
-      errs.p1_email = 'Enter a valid email address';
     } else if (!isOfficialEmail(player1.email)) {
-      errs.p1_email = 'Official college email required (e.g. @indiraicem.ac.in). Personal emails are not allowed.';
-    } else if (otpState !== 'VERIFIED') {
-      errs.p1_email = 'Please verify Player 1 official email with OTP before proceeding';
+      errs.p1_email = 'Official college email required (e.g. @indiraicem.ac.in)';
     }
 
     // Player 2 validation
     if (!player2.full_name.trim()) {
-      errs.p2_name = 'Player 2 name is required';
+      errs.p2_name = 'Teammate full name is required';
     }
     if (!player2.prn.trim()) {
-      errs.p2_prn = 'Player 2 PRN is required';
+      errs.p2_prn = 'Teammate PRN number is required';
     }
     if (!player2.email.trim()) {
-      errs.p2_email = 'Player 2 official college email is required';
+      errs.p2_email = 'Teammate official college email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(player2.email)) {
       errs.p2_email = 'Enter a valid email address';
     } else if (!isOfficialEmail(player2.email)) {
@@ -179,6 +162,11 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      setLoginModalOpen(true);
+      return;
+    }
+
     const errs = validate();
     setErrors(errs);
     setApiError('');
@@ -195,6 +183,7 @@ export default function Register() {
         team_name: teamName.trim(),
         player_1: player1,
         player_2: player2,
+        status: 'PENDING_APPROVAL',
       };
 
       const { data } = await apiClient.post('/registrations', payload);
@@ -202,9 +191,9 @@ export default function Register() {
         localStorage.setItem('my_ticket_id', data.registration.registration_id);
       }
 
-      navigate(`/events/${slug}/register/success`, {
-        state: { registration: data.registration },
-      });
+      // Show Waiting for Approval Screen
+      setPendingApprovalReg(data.registration);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const errData = err.response?.data;
       setApiError(
@@ -244,6 +233,85 @@ export default function Register() {
     );
   }
 
+  // ─── ⏳ SCREEN: WAITING FOR APPROVAL FROM TEAMMATE ──────────────
+  if (pendingApprovalReg) {
+    return (
+      <div className="register-page">
+        <div className="register-page__header">
+          <div className="container">
+            <span className="section__label" style={{ color: '#000000' }}>TEAM REGISTRATION INITIATED</span>
+            <h1 className="register-page__title">WAITING FOR TEAMMATE APPROVAL</h1>
+          </div>
+        </div>
+
+        <div className="container--narrow section">
+          <div className="card" style={{ border: '2px solid #000000', overflow: 'hidden' }}>
+            <div className="card__header" style={{ background: '#fafafa', borderBottom: '1px solid var(--border)', padding: 'var(--space-6)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                <div>
+                  <span className="section__label" style={{ marginBottom: 0 }}>EVENT</span>
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>
+                    {event.name}
+                  </h2>
+                </div>
+                <span className="badge badge--upcoming" style={{ fontSize: '0.85rem', padding: '6px 14px' }}>
+                  ⏳ PENDING TEAMMATE APPROVAL
+                </span>
+              </div>
+            </div>
+
+            <div className="card__body" style={{ padding: 'var(--space-6)' }}>
+              <div style={{ textAlign: 'center', padding: 'var(--space-6) 0' }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: 'var(--space-3)' }}>⏳</div>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 800, color: '#000000', marginBottom: 'var(--space-2)' }}>
+                  Registration Request Sent!
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto var(--space-6)', lineHeight: 1.5 }}>
+                  Your team registration for <strong>"{teamName}"</strong> is created. Your teammate <strong>{player2.full_name}</strong> must log in to their account and approve the invitation to officially confirm your team registration.
+                </p>
+
+                <div className="card" style={{ background: '#fcfcfc', border: '1px dashed var(--border)', padding: 'var(--space-4)', maxWidth: '480px', margin: '0 auto var(--space-6)', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span className="text-xs text-muted font-mono fw-bold">LEADER (P1):</span>
+                    <span className="text-xs text-primary font-mono fw-semibold">{player1.full_name} ({player1.prn})</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span className="text-xs text-muted font-mono fw-bold">TEAMMATE (P2):</span>
+                    <span className="text-xs text-primary font-mono fw-semibold">{player2.full_name} ({player2.prn})</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className="text-xs text-muted font-mono fw-bold">TEAMMATE EMAIL:</span>
+                    <span className="text-xs text-primary font-mono fw-semibold">{player2.email}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn--secondary"
+                    onClick={handleCopyInvite}
+                  >
+                    {copySuccess ? '✓ Copied Invite Message!' : '📋 Copy Invitation Message'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`btn btn--primary ${checkingApproval ? 'btn--loading' : ''}`}
+                    onClick={handleManualCheckStatus}
+                    disabled={checkingApproval}
+                  >
+                    {checkingApproval ? '' : '🔄 Check Approval Status'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── MAIN REGISTRATION FORM ──────────────────────────────────────
   return (
     <div className="register-page">
       {/* Header */}
@@ -255,6 +323,30 @@ export default function Register() {
       </div>
 
       <div className="container">
+        {/* If user is not authenticated, show mandatory login banner */}
+        {!isAuthenticated && (
+          <div className="card mb-6" style={{ border: '2px solid #000000', background: '#fafafa' }}>
+            <div className="card__body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)', padding: 'var(--space-6)' }}>
+              <div>
+                <span className="section__label" style={{ marginBottom: 0 }}>STUDENT AUTHENTICATION REQUIRED</span>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 800, margin: '4px 0', color: '#000000' }}>
+                  Please Sign In to Register for this Event
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
+                  Enter your Name, PRN, and Official College Email ID to log in. Your details will be filled automatically!
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn--primary btn--lg"
+                onClick={() => setLoginModalOpen(true)}
+              >
+                Sign In to Portal →
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="register-page__layout">
           {/* Main Form */}
           <div className="register-page__main">
@@ -296,18 +388,18 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Section 2: Player 1 (Full Name, PRN, Official Email ID with OTP) */}
+              {/* Section 2: Player 1 (Auto-filled from Logged-In User) */}
               <div className="register-form__section card">
                 <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 1 (PRIMARY)</span>
+                    <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 1 (PRIMARY / LEADER)</span>
                     <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
                       PLAYER 1
                     </h2>
                   </div>
-                  {otpState === 'VERIFIED' && (
-                    <span className="otp-verified-badge">
-                      ✓ Official Email Verified
+                  {isAuthenticated && (
+                    <span className="otp-verified-badge" title="Authenticated student">
+                      ✓ Authenticated Account
                     </span>
                   )}
                 </div>
@@ -322,10 +414,12 @@ export default function Register() {
                         id="p1-name"
                         className={`form-input ${errors.p1_name ? 'form-input--error' : ''}`}
                         value={player1.full_name}
+                        readOnly={isAuthenticated}
                         onChange={(e) => {
                           setPlayer1({ ...player1, full_name: e.target.value });
                           if (errors.p1_name) setErrors((prev) => ({ ...prev, p1_name: '' }));
                         }}
+                        style={isAuthenticated ? { background: '#f5f5f5', cursor: 'not-allowed' } : {}}
                         required
                       />
                       {errors.p1_name && <span className="form-error">{errors.p1_name}</span>}
@@ -338,12 +432,14 @@ export default function Register() {
                       <input
                         type="text"
                         id="p1-prn"
-                        className={`form-input ${errors.p1_prn ? 'form-input--error' : ''}`}
+                        className={`form-input font-mono ${errors.p1_prn ? 'form-input--error' : ''}`}
                         value={player1.prn}
+                        readOnly={isAuthenticated}
                         onChange={(e) => {
                           setPlayer1({ ...player1, prn: e.target.value });
                           if (errors.p1_prn) setErrors((prev) => ({ ...prev, p1_prn: '' }));
                         }}
+                        style={isAuthenticated ? { background: '#f5f5f5', cursor: 'not-allowed' } : {}}
                         required
                       />
                       {errors.p1_prn && <span className="form-error">{errors.p1_prn}</span>}
@@ -354,123 +450,49 @@ export default function Register() {
                     <label htmlFor="p1-email" className="form-label form-label--required">
                       Official Email ID
                     </label>
-                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                      <input
-                        type="email"
-                        id="p1-email"
-                        className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
-                        value={player1.email}
-                        disabled={otpState === 'VERIFIED'}
-                        onChange={(e) => {
-                          setPlayer1({ ...player1, email: e.target.value });
-                          if (errors.p1_email) setErrors((prev) => ({ ...prev, p1_email: '' }));
-                          if (otpState !== 'IDLE') setOtpState('IDLE');
-                        }}
-                        required
-                      />
-
-                      {otpState === 'IDLE' && (
-                        <button
-                          type="button"
-                          onClick={handleSendOtp}
-                          className="btn btn--secondary"
-                          style={{ flexShrink: 0 }}
-                        >
-                          Verify with OTP
-                        </button>
-                      )}
-
-                      {otpState === 'VERIFIED' && (
-                        <button
-                          type="button"
-                          onClick={handleChangeEmail}
-                          className="btn btn--ghost btn--sm"
-                          style={{ flexShrink: 0 }}
-                          title="Change Email Address"
-                        >
-                          Change
-                        </button>
-                      )}
-                    </div>
-                    <span className="form-hint">Must be your official college email (e.g. @indiraicem.ac.in)</span>
+                    <input
+                      type="email"
+                      id="p1-email"
+                      className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
+                      value={player1.email}
+                      readOnly={isAuthenticated}
+                      onChange={(e) => {
+                        setPlayer1({ ...player1, email: e.target.value });
+                        if (errors.p1_email) setErrors((prev) => ({ ...prev, p1_email: '' }));
+                      }}
+                      style={isAuthenticated ? { background: '#f5f5f5', cursor: 'not-allowed' } : {}}
+                      required
+                    />
+                    <span className="form-hint">
+                      {isAuthenticated ? 'Auto-filled from your authenticated student account' : 'Must be your official college email (e.g. @indiraicem.ac.in)'}
+                    </span>
                     {errors.p1_email && <span className="form-error">{errors.p1_email}</span>}
                   </div>
-
-                  {/* 📩 Inline OTP Entry Box */}
-                  {otpState === 'SENT' && (
-                    <div className="otp-verification-wrap">
-                      <div className="otp-header-info">
-                        <span className="text-xs text-primary font-mono fw-bold">
-                          📩 Enter the 6-digit OTP code sent to your official email
-                        </span>
-                        {resendTimer > 0 ? (
-                          <span className="text-xs text-muted font-mono">
-                            Resend in {resendTimer}s
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleSendOtp}
-                            className="btn btn--ghost btn--sm"
-                            style={{ padding: '0 4px', height: 'auto', fontSize: '0.75rem' }}
-                          >
-                            Resend Code
-                          </button>
-                        )}
-                      </div>
-
-                      {otpNotice && (
-                        <div className="alert alert--info" style={{ margin: 0, padding: '8px 12px', fontSize: '0.8125rem' }}>
-                          <span>{otpNotice}</span>
-                        </div>
-                      )}
-
-                      <div className="otp-inputs-row">
-                        <input
-                          type="text"
-                          maxLength={6}
-                          className="form-input otp-input-field"
-                          value={enteredOtp}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            setEnteredOtp(val);
-                            if (otpError) setOtpError('');
-                          }}
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={handleVerifyOtp}
-                          className="btn btn--primary"
-                          disabled={enteredOtp.length !== 6}
-                        >
-                          Verify Code
-                        </button>
-                      </div>
-
-                      {otpError && (
-                        <span className="form-error" style={{ margin: 0 }}>
-                          ⚠️ {otpError}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Section 3: Player 2 (Full Name, PRN, Official Email ID) */}
+              {/* Section 3: Player 2 (Teammate with Approval Flow) */}
               <div className="register-form__section card">
-                <div className="card__header">
-                  <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2</span>
-                  <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
-                    PLAYER 2
-                  </h2>
+                <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2 (TEAMMATE)</span>
+                    <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+                      PLAYER 2
+                    </h2>
+                  </div>
+                  <span className="badge badge--tag" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+                    Requires Teammate Approval
+                  </span>
                 </div>
                 <div className="card__body">
+                  <div className="alert alert--info mb-4" style={{ fontSize: '0.8125rem' }}>
+                    ℹ️ When you submit, a team invitation will be sent to your teammate. Once they log in to their account and approve it, registration will be finalized.
+                  </div>
+
                   <div className="form-row">
                     <div className="form-group">
                       <label htmlFor="p2-name" className="form-label form-label--required">
-                        Full Name
+                        Teammate Full Name
                       </label>
                       <input
                         type="text"
@@ -488,12 +510,12 @@ export default function Register() {
 
                     <div className="form-group">
                       <label htmlFor="p2-prn" className="form-label form-label--required">
-                        PRN Number
+                        Teammate PRN Number
                       </label>
                       <input
                         type="text"
                         id="p2-prn"
-                        className={`form-input ${errors.p2_prn ? 'form-input--error' : ''}`}
+                        className={`form-input font-mono ${errors.p2_prn ? 'form-input--error' : ''}`}
                         value={player2.prn}
                         onChange={(e) => {
                           setPlayer2({ ...player2, prn: e.target.value });
@@ -507,7 +529,7 @@ export default function Register() {
 
                   <div className="form-group">
                     <label htmlFor="p2-email" className="form-label form-label--required">
-                      Official Email ID
+                      Teammate Official Email ID
                     </label>
                     <input
                       type="email"
@@ -537,7 +559,7 @@ export default function Register() {
                   className={`btn btn--primary btn--lg ${submitting ? 'btn--loading' : ''}`}
                   disabled={submitting}
                 >
-                  {submitting ? '' : 'COMPLETE REGISTRATION'}
+                  {submitting ? '' : 'SUBMIT REGISTRATION & SEND INVITE'}
                 </button>
               </div>
             </form>
@@ -580,6 +602,12 @@ export default function Register() {
           </aside>
         </div>
       </div>
+
+      <StudentLoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        onSuccess={() => setLoginModalOpen(false)}
+      />
     </div>
   );
 }
