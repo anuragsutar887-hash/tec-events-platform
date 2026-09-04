@@ -28,12 +28,10 @@
 }
 
 .pub-header__logo-img {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
   flex-shrink: 0;
-  border: 1px solid var(--border);
   display: block;
 }
 

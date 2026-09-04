@@ -3,6 +3,31 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import apiClient from '../../api/client';
 import './Register.css';
 
+// Strict check for official college / institutional email
+const isOfficialEmail = (email) => {
+  if (!email) return false;
+  const e = email.toLowerCase().trim();
+  const personalDomains = [
+    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
+    'icloud.com', 'rediffmail.com', 'aol.com', 'proton.me',
+    'protonmail.com', 'zoho.com', 'mail.com', 'ymail.com'
+  ];
+  const parts = e.split('@');
+  if (parts.length !== 2) return false;
+  const domain = parts[1];
+  if (personalDomains.includes(domain)) return false;
+
+  return (
+    domain === 'indiraicem.ac.in' ||
+    domain.endsWith('.indiraicem.ac.in') ||
+    domain === 'indiraedu.com' ||
+    domain.endsWith('.indiraedu.com') ||
+    domain.endsWith('.ac.in') ||
+    domain.endsWith('.edu.in') ||
+    domain.endsWith('.edu')
+  );
+};
+
 export default function Register() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -45,18 +70,25 @@ export default function Register() {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  // ─── ✉️ Send OTP to Player 1 Email ─────────────────────────────
+  // ─── ✉️ Send OTP to Player 1 Official Email ───────────────────
   const handleSendOtp = () => {
     setOtpError('');
     setOtpNotice('');
 
     const email = player1.email.trim();
     if (!email) {
-      setErrors((prev) => ({ ...prev, p1_email: 'Please enter your email address first' }));
+      setErrors((prev) => ({ ...prev, p1_email: 'Please enter your official college email address first' }));
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setErrors((prev) => ({ ...prev, p1_email: 'Enter a valid email address' }));
+      return;
+    }
+    if (!isOfficialEmail(email)) {
+      setErrors((prev) => ({
+        ...prev,
+        p1_email: 'Official college email required (e.g. @indiraicem.ac.in). Personal emails like Gmail/Yahoo are not allowed.'
+      }));
       return;
     }
 
@@ -66,7 +98,7 @@ export default function Register() {
     setOtpState('SENT');
     setResendTimer(60);
     setEnteredOtp('');
-    setOtpNotice(`Verification OTP sent to ${email}. (Your OTP code is: ${code})`);
+    setOtpNotice(`Verification OTP sent to your official email ${email}. (Your OTP code is: ${code})`);
   };
 
   // ─── 🔒 Verify Entered OTP ──────────────────────────────────────
@@ -111,11 +143,13 @@ export default function Register() {
       errs.p1_prn = 'Player 1 PRN is required';
     }
     if (!player1.email.trim()) {
-      errs.p1_email = 'Player 1 email is required';
+      errs.p1_email = 'Player 1 official college email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(player1.email)) {
       errs.p1_email = 'Enter a valid email address';
+    } else if (!isOfficialEmail(player1.email)) {
+      errs.p1_email = 'Official college email required (e.g. @indiraicem.ac.in). Personal emails are not allowed.';
     } else if (otpState !== 'VERIFIED') {
-      errs.p1_email = 'Please verify Player 1 email with OTP before proceeding';
+      errs.p1_email = 'Please verify Player 1 official email with OTP before proceeding';
     }
 
     // Player 2 validation
@@ -126,9 +160,11 @@ export default function Register() {
       errs.p2_prn = 'Player 2 PRN is required';
     }
     if (!player2.email.trim()) {
-      errs.p2_email = 'Player 2 email is required';
+      errs.p2_email = 'Player 2 official college email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(player2.email)) {
       errs.p2_email = 'Enter a valid email address';
+    } else if (!isOfficialEmail(player2.email)) {
+      errs.p2_email = 'Official college email required (e.g. @indiraicem.ac.in). Personal emails are not allowed.';
     }
 
     if (player1.email && player2.email && player1.email.toLowerCase().trim() === player2.email.toLowerCase().trim()) {
@@ -252,7 +288,6 @@ export default function Register() {
                         setTeamName(e.target.value);
                         if (errors.teamName) setErrors((prev) => ({ ...prev, teamName: '' }));
                       }}
-                      placeholder="e.g. Binary Beasts, Syntax Squad..."
                       autoFocus
                       required
                     />
@@ -261,7 +296,7 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Section 2: Player 1 (Full Name, PRN, Email ID with OTP) */}
+              {/* Section 2: Player 1 (Full Name, PRN, Official Email ID with OTP) */}
               <div className="register-form__section card">
                 <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
@@ -272,7 +307,7 @@ export default function Register() {
                   </div>
                   {otpState === 'VERIFIED' && (
                     <span className="otp-verified-badge">
-                      ✓ Email Verified
+                      ✓ Official Email Verified
                     </span>
                   )}
                 </div>
@@ -291,7 +326,6 @@ export default function Register() {
                           setPlayer1({ ...player1, full_name: e.target.value });
                           if (errors.p1_name) setErrors((prev) => ({ ...prev, p1_name: '' }));
                         }}
-                        placeholder="Player 1 Name"
                         required
                       />
                       {errors.p1_name && <span className="form-error">{errors.p1_name}</span>}
@@ -310,7 +344,6 @@ export default function Register() {
                           setPlayer1({ ...player1, prn: e.target.value });
                           if (errors.p1_prn) setErrors((prev) => ({ ...prev, p1_prn: '' }));
                         }}
-                        placeholder="e.g. 123B1B045"
                         required
                       />
                       {errors.p1_prn && <span className="form-error">{errors.p1_prn}</span>}
@@ -319,7 +352,7 @@ export default function Register() {
 
                   <div className="form-group">
                     <label htmlFor="p1-email" className="form-label form-label--required">
-                      Email ID
+                      Official Email ID
                     </label>
                     <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                       <input
@@ -333,7 +366,6 @@ export default function Register() {
                           if (errors.p1_email) setErrors((prev) => ({ ...prev, p1_email: '' }));
                           if (otpState !== 'IDLE') setOtpState('IDLE');
                         }}
-                        placeholder="player1@gmail.com"
                         required
                       />
 
@@ -360,6 +392,7 @@ export default function Register() {
                         </button>
                       )}
                     </div>
+                    <span className="form-hint">Must be your official college email (e.g. @indiraicem.ac.in)</span>
                     {errors.p1_email && <span className="form-error">{errors.p1_email}</span>}
                   </div>
 
@@ -368,7 +401,7 @@ export default function Register() {
                     <div className="otp-verification-wrap">
                       <div className="otp-header-info">
                         <span className="text-xs text-primary font-mono fw-bold">
-                          📩 Enter the 6-digit OTP code sent to your email
+                          📩 Enter the 6-digit OTP code sent to your official email
                         </span>
                         {resendTimer > 0 ? (
                           <span className="text-xs text-muted font-mono">
@@ -397,7 +430,6 @@ export default function Register() {
                           type="text"
                           maxLength={6}
                           className="form-input otp-input-field"
-                          placeholder="••••••"
                           value={enteredOtp}
                           onChange={(e) => {
                             const val = e.target.value.replace(/\D/g, '');
@@ -426,7 +458,7 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Section 3: Player 2 (Full Name, PRN, Email ID) */}
+              {/* Section 3: Player 2 (Full Name, PRN, Official Email ID) */}
               <div className="register-form__section card">
                 <div className="card__header">
                   <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2</span>
@@ -449,7 +481,6 @@ export default function Register() {
                           setPlayer2({ ...player2, full_name: e.target.value });
                           if (errors.p2_name) setErrors((prev) => ({ ...prev, p2_name: '' }));
                         }}
-                        placeholder="Player 2 Name"
                         required
                       />
                       {errors.p2_name && <span className="form-error">{errors.p2_name}</span>}
@@ -468,7 +499,6 @@ export default function Register() {
                           setPlayer2({ ...player2, prn: e.target.value });
                           if (errors.p2_prn) setErrors((prev) => ({ ...prev, p2_prn: '' }));
                         }}
-                        placeholder="e.g. 123B1B046"
                         required
                       />
                       {errors.p2_prn && <span className="form-error">{errors.p2_prn}</span>}
@@ -477,7 +507,7 @@ export default function Register() {
 
                   <div className="form-group">
                     <label htmlFor="p2-email" className="form-label form-label--required">
-                      Email ID
+                      Official Email ID
                     </label>
                     <input
                       type="email"
@@ -488,9 +518,9 @@ export default function Register() {
                         setPlayer2({ ...player2, email: e.target.value });
                         if (errors.p2_email) setErrors((prev) => ({ ...prev, p2_email: '' }));
                       }}
-                      placeholder="player2@gmail.com"
                       required
                     />
+                    <span className="form-hint">Must be an official college email (e.g. @indiraicem.ac.in)</span>
                     {errors.p2_email && <span className="form-error">{errors.p2_email}</span>}
                   </div>
                 </div>
