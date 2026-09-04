@@ -10,8 +10,8 @@ export default function OnsiteRegistration() {
   const [selectedEventId, setSelectedEventId] = useState(searchParams.get('event_id') || '');
   
   const [teamName, setTeamName] = useState('');
-  const [player1, setPlayer1] = useState({ full_name: '', email: '' });
-  const [player2, setPlayer2] = useState({ full_name: '', email: '' });
+  const [player1, setPlayer1] = useState({ full_name: '', prn: '', email: '' });
+  const [player2, setPlayer2] = useState({ full_name: '', prn: '', email: '' });
   const [checkInImmediately, setCheckInImmediately] = useState(true);
 
   const [loading, setLoading] = useState(false);
@@ -38,8 +38,10 @@ export default function OnsiteRegistration() {
     if (!selectedEventId) errs.event = 'Select an event';
     if (!teamName.trim()) errs.team_name = 'Team name required';
     if (!player1.full_name.trim()) errs.p1_name = 'Player 1 name required';
+    if (!player1.prn.trim()) errs.p1_prn = 'Player 1 PRN required';
     if (!player1.email.trim()) errs.p1_email = 'Player 1 email required';
     if (!player2.full_name.trim()) errs.p2_name = 'Player 2 name required';
+    if (!player2.prn.trim()) errs.p2_prn = 'Player 2 PRN required';
     if (!player2.email.trim()) errs.p2_email = 'Player 2 email required';
     return errs;
   };
@@ -57,13 +59,14 @@ export default function OnsiteRegistration() {
         team_name: teamName.trim(),
         player_1: player1,
         player_2: player2,
-        check_in_immediately: checkInImmediately,
+        is_on_site: true,
+        checked_in: checkInImmediately,
       };
-      const { data } = await apiClient.post('/admin/registrations', payload);
+      const { data } = await apiClient.post('/admin/registrations/onsite', payload);
       setSuccess(data.registration);
       setTeamName('');
-      setPlayer1({ full_name: '', email: '' });
-      setPlayer2({ full_name: '', email: '' });
+      setPlayer1({ full_name: '', prn: '', email: '' });
+      setPlayer2({ full_name: '', prn: '', email: '' });
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Registration failed' });
     } finally {
@@ -71,46 +74,50 @@ export default function OnsiteRegistration() {
     }
   };
 
-  if (success) {
-    return (
-      <div className="onsite-success">
-        <div className="onsite-success__icon">✅</div>
-        <h2 className="onsite-success__title">On-site Duo Registered!</h2>
-        <div className="onsite-success__reg-id">
-          <div className="text-xs text-muted mb-2 font-mono fw-bold">REGISTRATION ID</div>
-          <span className="reg-id" style={{ fontSize: '1.4rem' }}>{success.registration_id}</span>
-        </div>
-        {success.team_name && (
-          <p className="onsite-success__team">Team: <strong>{success.team_name}</strong></p>
-        )}
-        {checkInImmediately && <p className="text-success mt-2 fw-bold">✓ Team Checked-in to Live Arena</p>}
-        <div className="onsite-success__actions">
-          <button className="btn btn--secondary" onClick={() => setSuccess(null)}>+ Register Another Duo</button>
-          <button className="btn btn--primary" onClick={() => navigate('/admin/checkin')}>Go to Check-in Console</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="onsite-page">
       <div className="onsite-page__header">
         <div>
-          <h1 className="dashboard__title">ON-SITE REGISTRATION</h1>
-          <p className="dashboard__subtitle">Fast desk registration for 2-player duo teams on event day</p>
+          <h1 className="dashboard__title">On-site Registration Desk</h1>
+          <p className="dashboard__subtitle">Register walk-in duo participants and check them in directly</p>
         </div>
       </div>
 
+      {success && (
+        <div className="onsite-success card mb-6">
+          <div className="card__body">
+            <div className="onsite-success__header">
+              <span className="onsite-success__icon">✅</span>
+              <div>
+                <h3 className="onsite-success__title">Team Registered Successfully!</h3>
+                <p className="onsite-success__sub">
+                  Registration ID:{' '}
+                  <span className="font-mono fw-bold text-accent">{success.registration_id}</span>
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+              <button className="btn btn--secondary btn--sm" onClick={() => setSuccess(null)}>
+                + Register Another Team
+              </button>
+              <button
+                className="btn btn--primary btn--sm"
+                onClick={() => navigate(`/admin/registrations?event_id=${selectedEventId}`)}
+              >
+                View in Registrations →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {errors.submit && <div className="alert alert--error mb-4">⚠️ {errors.submit}</div>}
 
-      <form onSubmit={handleSubmit} className="onsite-form" noValidate>
-        {/* Event Selection & Team Name */}
+      <form onSubmit={handleSubmit} className="onsite-form">
+        {/* Event Selector */}
         <div className="onsite-form__section card">
           <div className="card__header">
-            <span className="section__label" style={{ marginBottom: 0 }}>STEP 1</span>
-            <h2 className="event-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
-              EVENT & TEAM NAME
-            </h2>
+            <h2 className="event-form__section-title">📅 Event Selection</h2>
           </div>
           <div className="card__body form-section">
             <div className="form-group">
@@ -119,10 +126,13 @@ export default function OnsiteRegistration() {
                 className={`form-input form-select ${errors.event ? 'form-input--error' : ''}`}
                 value={selectedEventId}
                 onChange={(e) => setSelectedEventId(e.target.value)}
-                id="onsite-event-select"
               >
-                <option value="">-- Choose event --</option>
-                {events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                <option value="">-- Select Event --</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.name} ({ev.status})
+                  </option>
+                ))}
               </select>
               {errors.event && <span className="form-error">{errors.event}</span>}
             </div>
@@ -147,7 +157,7 @@ export default function OnsiteRegistration() {
           <div className="card__header">
             <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 1</span>
             <h2 className="event-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
-              PLAYER 1
+              PLAYER 1 (LEADER)
             </h2>
           </div>
           <div className="card__body form-section">
@@ -165,7 +175,19 @@ export default function OnsiteRegistration() {
                 {errors.p1_name && <span className="form-error">{errors.p1_name}</span>}
               </div>
               <div className="form-group">
-                <label className="form-label form-label--required">Email</label>
+                <label className="form-label form-label--required">PRN Number</label>
+                <input
+                  type="text"
+                  className={`form-input ${errors.p1_prn ? 'form-input--error' : ''}`}
+                  value={player1.prn}
+                  onChange={(e) => setPlayer1({ ...player1, prn: e.target.value })}
+                  placeholder="e.g. 123B1B045"
+                  required
+                />
+                {errors.p1_prn && <span className="form-error">{errors.p1_prn}</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label form-label--required">Email ID</label>
                 <input
                   type="email"
                   className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
@@ -203,7 +225,19 @@ export default function OnsiteRegistration() {
                 {errors.p2_name && <span className="form-error">{errors.p2_name}</span>}
               </div>
               <div className="form-group">
-                <label className="form-label form-label--required">Email</label>
+                <label className="form-label form-label--required">PRN Number</label>
+                <input
+                  type="text"
+                  className={`form-input ${errors.p2_prn ? 'form-input--error' : ''}`}
+                  value={player2.prn}
+                  onChange={(e) => setPlayer2({ ...player2, prn: e.target.value })}
+                  placeholder="e.g. 123B1B046"
+                  required
+                />
+                {errors.p2_prn && <span className="form-error">{errors.p2_prn}</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label form-label--required">Email ID</label>
                 <input
                   type="email"
                   className={`form-input ${errors.p2_email ? 'form-input--error' : ''}`}
@@ -238,11 +272,10 @@ export default function OnsiteRegistration() {
           </button>
           <button
             type="submit"
-            id="onsite-submit-btn"
             className={`btn btn--primary btn--lg ${loading ? 'btn--loading' : ''}`}
             disabled={loading}
           >
-            {loading ? '' : 'Register Duo On-site'}
+            {loading ? '' : 'Register & Confirm Team'}
           </button>
         </div>
       </form>

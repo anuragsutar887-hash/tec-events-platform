@@ -41,7 +41,7 @@ export default function AdminLayout({ children }) {
         <div className="admin-sidebar__header">
           {/* Logo only - Navigates directly to /admin dashboard */}
           <Link to="/admin" className="admin-sidebar__logo-link" title="Admin Dashboard">
-            <div className="admin-sidebar__logo-icon">⚡</div>
+            <img src="/logo.png" alt="Tech Events" className="admin-sidebar__logo-img" />
           </Link>
         </div>
 

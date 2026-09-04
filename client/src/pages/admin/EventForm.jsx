@@ -53,6 +53,7 @@ export default function EventForm() {
       const ev = data.event;
       setForm({
         name: ev.name || '',
+        slug: ev.slug || '',
         short_description: ev.short_description || '',
         full_description: ev.full_description || '',
         event_date: ev.event_date || '',

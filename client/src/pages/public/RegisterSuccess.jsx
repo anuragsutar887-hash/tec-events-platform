@@ -97,9 +97,14 @@ export default function RegisterSuccess() {
                   {player1 && (
                     <div style={{ padding: 'var(--space-3) var(--space-4)', background: '#fafafa', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
                       <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
-                        PLAYER 1
+                        PLAYER 1 (LEADER)
                       </div>
                       <div className="text-primary fw-bold text-sm">{player1.full_name}</div>
+                      {(player1.prn || player1.student_id) && (
+                        <div className="text-xs font-mono fw-semibold" style={{ color: '#000000', margin: '2px 0' }}>
+                          PRN: {player1.prn || player1.student_id}
+                        </div>
+                      )}
                       <div className="text-muted text-xs">{player1.email}</div>
                     </div>
                   )}
@@ -110,6 +115,11 @@ export default function RegisterSuccess() {
                         PLAYER 2
                       </div>
                       <div className="text-primary fw-bold text-sm">{player2.full_name}</div>
+                      {(player2.prn || player2.student_id) && (
+                        <div className="text-xs font-mono fw-semibold" style={{ color: '#000000', margin: '2px 0' }}>
+                          PRN: {player2.prn || player2.student_id}
+                        </div>
+                      )}
                       <div className="text-muted text-xs">{player2.email}</div>
                     </div>
                   )}

@@ -269,25 +269,21 @@ export default function Dashboard() {
               <thead>
                 <tr>
                   <th>Reg ID</th>
-                  <th>Team / Leader</th>
+                  <th>Team Name</th>
+                  <th>Leader Name</th>
+                  <th>PRNs</th>
                   <th>Event</th>
-                  <th>Type</th>
-                  <th>Registered</th>
                   <th>Check-In Status</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.recent.map((r) => (
                   <tr key={r.registration_id}>
-                    <td><span className="font-mono text-accent">{r.registration_id}</span></td>
-                    <td className="text-primary fw-medium">{r.team_name || r.leader_name}</td>
-                    <td className="text-secondary">{r.event_name}</td>
-                    <td>
-                      <span className={`badge ${r.registration_type === 'ONLINE' ? 'badge--online' : 'badge--onsite'}`}>
-                        {r.registration_type}
-                      </span>
-                    </td>
-                    <td className="text-muted text-xs">{timeAgo(r.created_at)}</td>
+                    <td><span className="font-mono text-accent fw-bold">{r.registration_id}</span></td>
+                    <td className="text-primary fw-bold">{r.team_name || '—'}</td>
+                    <td className="text-secondary fw-medium">{r.leader_name || '—'}</td>
+                    <td><span className="font-mono text-xs">{r.prns || '—'}</span></td>
+                    <td className="text-secondary text-sm">{r.event_name}</td>
                     <td>
                       <span className={`badge ${r.checked_in ? 'badge--checked' : 'badge--unchecked'}`}>
                         {r.checked_in ? '✓ In Arena' : 'Pending'}

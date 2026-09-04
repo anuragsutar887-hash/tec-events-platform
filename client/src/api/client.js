@@ -1,10 +1,21 @@
 import { supabase } from '../lib/supabaseClient';
 
+const computeRegistrationStatus = (ev) => {
+  const status = (ev.status || '').toUpperCase();
+  if (status === 'COMPLETED' || status === 'ARCHIVED') return 'CLOSED';
+  if (status === 'DRAFT') return 'NOT_OPEN';
+  const now = new Date();
+  if (ev.registration_opens_at && new Date(ev.registration_opens_at) > now) return 'NOT_OPEN';
+  if (ev.registration_closes_at && new Date(ev.registration_closes_at) < now) return 'CLOSED';
+  return 'OPEN';
+};
+
 // Helper to format event objects from snake_case / JSON strings
 const parseEvent = (ev) => {
   if (!ev) return null;
   return {
     ...ev,
+    registration_status: computeRegistrationStatus(ev),
     rules: ev.rules || '',
     contact_info: typeof ev.contact_info === 'string' ? JSON.parse(ev.contact_info || '{}') : (ev.contact_info || {}),
     features: typeof ev.features === 'string' ? JSON.parse(ev.features || '{}') : (ev.features || {}),
@@ -14,6 +25,7 @@ const parseEvent = (ev) => {
 const formatRegistration = (r) => {
   if (!r) return null;
   const p1 = r.participants?.find(p => p.is_leader) || r.participants?.[0];
+  const p2 = r.participants?.find(p => !p.is_leader) || r.participants?.[1];
   return {
     ...r,
     event_name: r.events?.name || 'Technical Event',
@@ -23,22 +35,33 @@ const formatRegistration = (r) => {
     leader_phone: p1?.phone || '',
     leader_dept: p1?.department || '',
     leader_year: p1?.year || '',
-    participants: r.participants || []
+    leader_prn: p1?.student_id || '',
+    player2_name: p2?.full_name || '',
+    player2_email: p2?.email || '',
+    player2_prn: p2?.student_id || '',
+    prns: [p1?.student_id, p2?.student_id].filter(Boolean).join(' • ') || '—',
+    participants: (r.participants || []).map(p => ({
+      ...p,
+      prn: p.student_id || ''
+    }))
   };
 };
 
 export const apiClient = {
   // ─── GET Endpoints ──────────────────────────────────────────
   async get(url) {
-    // 1. All Published Events (Public Homepage / Events List)
+    // 1. All Published Events (Public Homepage / Events List) — Ordered by latest update for immediate visibility
     if (url === '/events') {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .in('status', ['PUBLISHED', 'COMPLETED'])
-        .order('event_date', { ascending: true });
+        .order('updated_at', { ascending: false });
       if (error) throw error;
-      return { data: { events: (data || []).map(parseEvent) } };
+      const validEvents = (data || []).filter(e => {
+        const s = (e.status || '').toUpperCase();
+        return s === 'PUBLISHED' || s === 'COMPLETED';
+      });
+      return { data: { events: validEvents.map(parseEvent) } };
     }
 
     // 2. All Events for Admin (Draft, Published, etc.)
@@ -46,7 +69,7 @@ export const apiClient = {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
       if (error) throw error;
       return { data: { events: (data || []).map(parseEvent) } };
     }
@@ -63,14 +86,16 @@ export const apiClient = {
       return { data: { event: parseEvent(data) } };
     }
 
-    // 4. Single Event by Slug (Public Event Detail & Registration)
+    // 4. Single Event by Slug or ID (Public Event Detail & Registration)
     if (url.startsWith('/events/')) {
-      const slug = url.replace('/events/', '').split('?')[0];
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('slug', slug)
-        .single();
+      const param = url.replace('/events/', '').split('?')[0];
+      let query = supabase.from('events').select('*');
+      if (/^\d+$/.test(param)) {
+        query = query.eq('id', parseInt(param));
+      } else {
+        query = query.eq('slug', param);
+      }
+      const { data, error } = await query.single();
       if (error) throw error;
       return { data: { event: parseEvent(data) } };
     }
@@ -143,8 +168,15 @@ export const apiClient = {
           r.team_name?.toLowerCase().includes(search) ||
           r.leader_name?.toLowerCase().includes(search) ||
           r.leader_email?.toLowerCase().includes(search) ||
-          r.leader_phone?.toLowerCase().includes(search) ||
-          r.participants?.some(p => p.full_name?.toLowerCase().includes(search) || p.email?.toLowerCase().includes(search))
+          r.leader_prn?.toLowerCase().includes(search) ||
+          r.player2_name?.toLowerCase().includes(search) ||
+          r.player2_prn?.toLowerCase().includes(search) ||
+          r.prns?.toLowerCase().includes(search) ||
+          r.participants?.some(p => 
+            p.full_name?.toLowerCase().includes(search) || 
+            p.email?.toLowerCase().includes(search) ||
+            p.student_id?.toLowerCase().includes(search)
+          )
         );
       }
 
@@ -166,7 +198,7 @@ export const apiClient = {
       const eventId = url.split('/leaderboard/')[1];
       const { data: teams, error } = await supabase
         .from('registrations')
-        .select('id, registration_id, team_name, checked_in, checked_in_at, score, participants(full_name, department, year, is_leader)')
+        .select('id, registration_id, team_name, checked_in, checked_in_at, score, participants(full_name, student_id, department, year, is_leader)')
         .eq('event_id', eventId)
         .eq('checked_in', true)
         .order('checked_in_at', { ascending: true });
@@ -188,7 +220,7 @@ export const apiClient = {
 
       const { data: recentRegs } = await supabase
         .from('registrations')
-        .select('*, events(name), participants(full_name)')
+        .select('*, events(name), participants(*)')
         .order('created_at', { ascending: false })
         .limit(6);
 
@@ -226,7 +258,8 @@ export const apiClient = {
             recent: (recentRegs || []).map(r => ({
               ...r,
               event_name: r.events?.name || 'Event',
-              leader_name: r.participants?.[0]?.full_name || r.team_name
+              leader_name: r.participants?.[0]?.full_name || r.team_name,
+              prns: (r.participants || []).map(p => p.student_id).filter(Boolean).join(', ') || '—'
             }))
           },
           event_stats: eventStats
@@ -276,7 +309,7 @@ export const apiClient = {
         venue: payload.venue || '',
         registration_opens_at: payload.registration_opens_at || null,
         registration_closes_at: payload.registration_closes_at || null,
-        status: payload.status || 'PUBLISHED',
+        status: (payload.status || 'PUBLISHED').toUpperCase(),
         allows_solo: Boolean(payload.allows_solo),
         allows_team: Boolean(payload.allows_team ?? true),
         min_team_size: payload.min_team_size || 2,
@@ -299,7 +332,7 @@ export const apiClient = {
       return { data: { event: parseEvent(data) } };
     }
 
-    // 3. Register Team (Public & On-site)
+    // 3. Register Team (Public & On-site) — Saves Full Name, PRN, Email ID
     if (url === '/registrations' || url === '/admin/registrations/onsite') {
       const { event_slug, event_id, team_name, player_1, player_2, is_on_site } = payload;
 
@@ -337,33 +370,33 @@ export const apiClient = {
 
       if (regError) throw regError;
 
-      // Insert Player 1
+      // Insert Player 1 (Includes PRN in student_id)
       await supabase.from('participants').insert({
         registration_id: reg.id,
         event_id: eventRecord.id,
         is_leader: true,
-        full_name: p1.full_name || '',
-        email: p1.email || '',
+        full_name: p1.full_name?.trim() || '',
+        email: p1.email?.trim() || '',
         phone: p1.phone || '',
         college: p1.college || 'ICEM Pune',
         department: p1.department || 'IT',
         year: p1.year || '',
-        student_id: p1.student_id || ''
+        student_id: p1.prn?.trim() || p1.student_id?.trim() || ''
       });
 
-      // Insert Player 2
+      // Insert Player 2 (Includes PRN in student_id)
       if (p2.full_name) {
         await supabase.from('participants').insert({
           registration_id: reg.id,
           event_id: eventRecord.id,
           is_leader: false,
-          full_name: p2.full_name || '',
-          email: p2.email || '',
+          full_name: p2.full_name?.trim() || '',
+          email: p2.email?.trim() || '',
           phone: p2.phone || '',
           college: p2.college || p1.college || 'ICEM Pune',
           department: p2.department || p1.department || 'IT',
           year: p2.year || p1.year || '',
-          student_id: p2.student_id || ''
+          student_id: p2.prn?.trim() || p2.student_id?.trim() || ''
         });
       }
 
@@ -376,8 +409,8 @@ export const apiClient = {
             team_name: reg.team_name,
             participation_mode: 'TEAM',
             participants: [
-              { is_leader: true, full_name: p1.full_name, email: p1.email },
-              { is_leader: false, full_name: p2.full_name, email: p2.email }
+              { is_leader: true, full_name: p1.full_name, email: p1.email, prn: p1.prn || p1.student_id || '' },
+              { is_leader: false, full_name: p2.full_name, email: p2.email, prn: p2.prn || p2.student_id || '' }
             ]
           }
         }
@@ -394,7 +427,7 @@ export const apiClient = {
       const id = url.split('/admin/events/')[1].split('/status')[0];
       const { data, error } = await supabase
         .from('events')
-        .update({ status: payload.status, updated_at: new Date().toISOString() })
+        .update({ status: (payload.status || 'PUBLISHED').toUpperCase(), updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
@@ -405,28 +438,35 @@ export const apiClient = {
     // 2. Edit Event Details / Status (Sanitized with actual database columns)
     if (url.match(/^\/admin\/events\/\d+$/)) {
       const id = url.split('/admin/events/')[1];
-      const updateData = { 
-        name: payload.name?.trim(),
-        short_description: payload.short_description || '',
-        full_description: payload.full_description || '',
-        event_date: payload.event_date || null,
-        start_time: payload.start_time || null,
-        end_time: payload.end_time || null,
-        venue: payload.venue || '',
-        registration_opens_at: payload.registration_opens_at || null,
-        registration_closes_at: payload.registration_closes_at || null,
-        status: payload.status || 'PUBLISHED',
-        allows_solo: Boolean(payload.allows_solo),
-        allows_team: Boolean(payload.allows_team ?? true),
-        min_team_size: payload.min_team_size || 2,
-        max_team_size: payload.max_team_size || 2,
-        rules: typeof payload.rules === 'string' ? payload.rules : (Array.isArray(payload.rules) ? payload.rules.join('\n') : ''),
-        instructions: payload.instructions || '',
-        contact_info: typeof payload.contact_info === 'string' ? payload.contact_info : JSON.stringify(payload.contact_info || {}),
-        banner_url: payload.banner_url || '',
-        features: typeof payload.features === 'string' ? payload.features : JSON.stringify(payload.features || {}),
-        updated_at: new Date().toISOString() 
-      };
+      const updateData = { updated_at: new Date().toISOString() };
+
+      if (payload.name !== undefined) updateData.name = payload.name.trim();
+      if (payload.slug !== undefined) updateData.slug = payload.slug.trim();
+      if (payload.short_description !== undefined) updateData.short_description = payload.short_description;
+      if (payload.full_description !== undefined) updateData.full_description = payload.full_description;
+      if (payload.event_date !== undefined) updateData.event_date = payload.event_date || null;
+      if (payload.start_time !== undefined) updateData.start_time = payload.start_time || null;
+      if (payload.end_time !== undefined) updateData.end_time = payload.end_time || null;
+      if (payload.venue !== undefined) updateData.venue = payload.venue;
+      if (payload.registration_opens_at !== undefined) updateData.registration_opens_at = payload.registration_opens_at || null;
+      if (payload.registration_closes_at !== undefined) updateData.registration_closes_at = payload.registration_closes_at || null;
+      if (payload.status !== undefined) updateData.status = payload.status.toUpperCase();
+      if (payload.allows_solo !== undefined) updateData.allows_solo = Boolean(payload.allows_solo);
+      if (payload.allows_team !== undefined) updateData.allows_team = Boolean(payload.allows_team);
+      if (payload.min_team_size !== undefined) updateData.min_team_size = payload.min_team_size;
+      if (payload.max_team_size !== undefined) updateData.max_team_size = payload.max_team_size;
+      if (payload.rules !== undefined) {
+        updateData.rules = typeof payload.rules === 'string' ? payload.rules : (Array.isArray(payload.rules) ? payload.rules.join('\n') : '');
+      }
+      if (payload.instructions !== undefined) updateData.instructions = payload.instructions;
+      if (payload.contact_info !== undefined) {
+        updateData.contact_info = typeof payload.contact_info === 'string' ? payload.contact_info : JSON.stringify(payload.contact_info || {});
+      }
+      if (payload.banner_url !== undefined) updateData.banner_url = payload.banner_url;
+      if (payload.features !== undefined) {
+        updateData.features = typeof payload.features === 'string' ? payload.features : JSON.stringify(payload.features || {});
+      }
+
       const { data, error } = await supabase
         .from('events')
         .update(updateData)
@@ -447,7 +487,7 @@ export const apiClient = {
         .select('*, participants(*)')
         .single();
       if (error) throw error;
-      return { data: { message: 'Checked in successfully', registration: data } };
+      return { data: { message: 'Checked in successfully', registration: formatRegistration(data) } };
     }
 
     // 4. Undo Check-In
@@ -460,7 +500,7 @@ export const apiClient = {
         .select('*, participants(*)')
         .single();
       if (error) throw error;
-      return { data: { message: 'Check-in reversed', registration: data } };
+      return { data: { message: 'Check-in reversed', registration: formatRegistration(data) } };
     }
 
     throw new Error(`PUT ${url} not mapped`);

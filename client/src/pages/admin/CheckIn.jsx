@@ -284,8 +284,13 @@ export default function CheckIn() {
                             <div className="checkin__participant-name">
                               {p.full_name}
                             </div>
-                            <div className="checkin__participant-meta">
-                              📧 {p.email}
+                            <div className="checkin__participant-meta" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              {(p.student_id || p.prn) && (
+                                <span className="font-mono fw-bold" style={{ color: '#000000' }}>
+                                  🆔 PRN: {p.student_id || p.prn}
+                                </span>
+                              )}
+                              <span>📧 {p.email}</span>
                             </div>
                           </div>
                         </div>

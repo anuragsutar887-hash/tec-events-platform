@@ -37,6 +37,16 @@
   border-bottom: 1px solid var(--border);
 }
 
+.admin-sidebar__logo-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 .admin-sidebar__logo {
   display: flex;
   align-items: center;

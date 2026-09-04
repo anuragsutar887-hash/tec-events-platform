@@ -46,6 +46,7 @@ export default function PublicHeader() {
             title="Tech Events Home"
             onClick={(e) => handleNavClick(e, 'top', '/')}
           >
+            <img src="/logo.png" alt="Tech Events" className="pub-header__logo-img" />
             <span className="pub-header__logo-brand">TECH EVENTS</span>
           </Link>
 

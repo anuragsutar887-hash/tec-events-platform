@@ -22,8 +22,19 @@
 .pub-header__logo {
   display: flex;
   align-items: center;
+  gap: var(--space-3);
   text-decoration: none;
   flex-shrink: 0;
+}
+
+.pub-header__logo-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  display: block;
 }
 
 .pub-header__logo-brand {

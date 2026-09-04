@@ -12,10 +12,10 @@ export default function Register() {
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  // Clean form state: Team Name, Player 1 (Name, Email), Player 2 (Name, Email)
+  // Clean form state: Team Name, Player 1 (Name, PRN, Email), Player 2 (Name, PRN, Email)
   const [teamName, setTeamName] = useState('');
-  const [player1, setPlayer1] = useState({ full_name: '', email: '' });
-  const [player2, setPlayer2] = useState({ full_name: '', email: '' });
+  const [player1, setPlayer1] = useState({ full_name: '', prn: '', email: '' });
+  const [player2, setPlayer2] = useState({ full_name: '', prn: '', email: '' });
   const [errors, setErrors] = useState({});
 
   // 🔐 Email OTP Verification State (Player 1)
@@ -102,8 +102,13 @@ export default function Register() {
     if (!teamName.trim()) {
       errs.teamName = 'Team name is required';
     }
+
+    // Player 1 validation
     if (!player1.full_name.trim()) {
       errs.p1_name = 'Player 1 name is required';
+    }
+    if (!player1.prn.trim()) {
+      errs.p1_prn = 'Player 1 PRN is required';
     }
     if (!player1.email.trim()) {
       errs.p1_email = 'Player 1 email is required';
@@ -113,8 +118,12 @@ export default function Register() {
       errs.p1_email = 'Please verify Player 1 email with OTP before proceeding';
     }
 
+    // Player 2 validation
     if (!player2.full_name.trim()) {
       errs.p2_name = 'Player 2 name is required';
+    }
+    if (!player2.prn.trim()) {
+      errs.p2_prn = 'Player 2 PRN is required';
     }
     if (!player2.email.trim()) {
       errs.p2_email = 'Player 2 email is required';
@@ -122,8 +131,11 @@ export default function Register() {
       errs.p2_email = 'Enter a valid email address';
     }
 
-    if (player1.email && player2.email && player1.email.toLowerCase() === player2.email.toLowerCase()) {
+    if (player1.email && player2.email && player1.email.toLowerCase().trim() === player2.email.toLowerCase().trim()) {
       errs.p2_email = 'Player 1 and Player 2 must have distinct email addresses';
+    }
+    if (player1.prn && player2.prn && player1.prn.toLowerCase().trim() === player2.prn.toLowerCase().trim()) {
+      errs.p2_prn = 'Player 1 and Player 2 must have distinct PRNs';
     }
 
     return errs;
@@ -249,7 +261,7 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Section 2: Player 1 (with OTP Verification) */}
+              {/* Section 2: Player 1 (Full Name, PRN, Email ID with OTP) */}
               <div className="register-form__section card">
                 <div className="card__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
@@ -286,50 +298,69 @@ export default function Register() {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="p1-email" className="form-label form-label--required">
-                        Email Address
+                      <label htmlFor="p1-prn" className="form-label form-label--required">
+                        PRN Number
                       </label>
-                      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                        <input
-                          type="email"
-                          id="p1-email"
-                          className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
-                          value={player1.email}
-                          disabled={otpState === 'VERIFIED'}
-                          onChange={(e) => {
-                            setPlayer1({ ...player1, email: e.target.value });
-                            if (errors.p1_email) setErrors((prev) => ({ ...prev, p1_email: '' }));
-                            if (otpState !== 'IDLE') setOtpState('IDLE');
-                          }}
-                          placeholder="player1@gmail.com"
-                          required
-                        />
-
-                        {otpState === 'IDLE' && (
-                          <button
-                            type="button"
-                            onClick={handleSendOtp}
-                            className="btn btn--secondary"
-                            style={{ flexShrink: 0 }}
-                          >
-                            Verify with OTP
-                          </button>
-                        )}
-
-                        {otpState === 'VERIFIED' && (
-                          <button
-                            type="button"
-                            onClick={handleChangeEmail}
-                            className="btn btn--ghost btn--sm"
-                            style={{ flexShrink: 0 }}
-                            title="Change Email Address"
-                          >
-                            Change
-                          </button>
-                        )}
-                      </div>
-                      {errors.p1_email && <span className="form-error">{errors.p1_email}</span>}
+                      <input
+                        type="text"
+                        id="p1-prn"
+                        className={`form-input ${errors.p1_prn ? 'form-input--error' : ''}`}
+                        value={player1.prn}
+                        onChange={(e) => {
+                          setPlayer1({ ...player1, prn: e.target.value });
+                          if (errors.p1_prn) setErrors((prev) => ({ ...prev, p1_prn: '' }));
+                        }}
+                        placeholder="e.g. 123B1B045"
+                        required
+                      />
+                      {errors.p1_prn && <span className="form-error">{errors.p1_prn}</span>}
                     </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="p1-email" className="form-label form-label--required">
+                      Email ID
+                    </label>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                      <input
+                        type="email"
+                        id="p1-email"
+                        className={`form-input ${errors.p1_email ? 'form-input--error' : ''}`}
+                        value={player1.email}
+                        disabled={otpState === 'VERIFIED'}
+                        onChange={(e) => {
+                          setPlayer1({ ...player1, email: e.target.value });
+                          if (errors.p1_email) setErrors((prev) => ({ ...prev, p1_email: '' }));
+                          if (otpState !== 'IDLE') setOtpState('IDLE');
+                        }}
+                        placeholder="player1@gmail.com"
+                        required
+                      />
+
+                      {otpState === 'IDLE' && (
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          className="btn btn--secondary"
+                          style={{ flexShrink: 0 }}
+                        >
+                          Verify with OTP
+                        </button>
+                      )}
+
+                      {otpState === 'VERIFIED' && (
+                        <button
+                          type="button"
+                          onClick={handleChangeEmail}
+                          className="btn btn--ghost btn--sm"
+                          style={{ flexShrink: 0 }}
+                          title="Change Email Address"
+                        >
+                          Change
+                        </button>
+                      )}
+                    </div>
+                    {errors.p1_email && <span className="form-error">{errors.p1_email}</span>}
                   </div>
 
                   {/* 📩 Inline OTP Entry Box */}
@@ -395,7 +426,7 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Section 3: Player 2 */}
+              {/* Section 3: Player 2 (Full Name, PRN, Email ID) */}
               <div className="register-form__section card">
                 <div className="card__header">
                   <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2</span>
@@ -425,23 +456,42 @@ export default function Register() {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="p2-email" className="form-label form-label--required">
-                        Email Address
+                      <label htmlFor="p2-prn" className="form-label form-label--required">
+                        PRN Number
                       </label>
                       <input
-                        type="email"
-                        id="p2-email"
-                        className={`form-input ${errors.p2_email ? 'form-input--error' : ''}`}
-                        value={player2.email}
+                        type="text"
+                        id="p2-prn"
+                        className={`form-input ${errors.p2_prn ? 'form-input--error' : ''}`}
+                        value={player2.prn}
                         onChange={(e) => {
-                          setPlayer2({ ...player2, email: e.target.value });
-                          if (errors.p2_email) setErrors((prev) => ({ ...prev, p2_email: '' }));
+                          setPlayer2({ ...player2, prn: e.target.value });
+                          if (errors.p2_prn) setErrors((prev) => ({ ...prev, p2_prn: '' }));
                         }}
-                        placeholder="player2@gmail.com"
+                        placeholder="e.g. 123B1B046"
                         required
                       />
-                      {errors.p2_email && <span className="form-error">{errors.p2_email}</span>}
+                      {errors.p2_prn && <span className="form-error">{errors.p2_prn}</span>}
                     </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="p2-email" className="form-label form-label--required">
+                      Email ID
+                    </label>
+                    <input
+                      type="email"
+                      id="p2-email"
+                      className={`form-input ${errors.p2_email ? 'form-input--error' : ''}`}
+                      value={player2.email}
+                      onChange={(e) => {
+                        setPlayer2({ ...player2, email: e.target.value });
+                        if (errors.p2_email) setErrors((prev) => ({ ...prev, p2_email: '' }));
+                      }}
+                      placeholder="player2@gmail.com"
+                      required
+                    />
+                    {errors.p2_email && <span className="form-error">{errors.p2_email}</span>}
                   </div>
                 </div>
               </div>

@@ -249,9 +249,10 @@ export default function AdminRegistrations() {
             <thead>
               <tr>
                 <th>REG ID</th>
-                <th>DUO TEAM / LEADER</th>
+                <th>TEAM NAME</th>
+                <th>LEADER NAME</th>
+                <th>PRNs</th>
                 <th>EVENT</th>
-                <th>MODE</th>
                 <th>TYPE</th>
                 <th>ATTENDANCE</th>
                 <th>REGISTERED</th>
@@ -279,18 +280,37 @@ export default function AdminRegistrations() {
                       </td>
                       <td>
                         <div className="fw-bold text-primary" style={{ fontSize: '0.95rem' }}>
-                          {r.team_name || leader.full_name}
+                          {r.team_name || '—'}
+                        </div>
+                        {teammate && (
+                          <div className="text-xs text-muted">
+                            🤝 Partner: {teammate.full_name}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div className="fw-bold text-primary" style={{ fontSize: '0.9rem' }}>
+                          👑 {leader.full_name || r.leader_name || 'Leader'}
                         </div>
                         <div className="text-xs text-muted">
-                          👑 {leader.full_name || 'Leader'} {teammate ? `• 🤝 ${teammate.full_name}` : ''}
+                          {leader.email || r.leader_email}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="font-mono text-xs" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div>
+                            <span className="text-muted fw-bold">P1: </span>
+                            <span className="fw-semibold text-primary">{leader.student_id || leader.prn || r.leader_prn || '—'}</span>
+                          </div>
+                          {teammate && (
+                            <div>
+                              <span className="text-muted fw-bold">P2: </span>
+                              <span className="fw-semibold text-primary">{teammate.student_id || teammate.prn || r.player2_prn || '—'}</span>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="text-secondary text-sm">{r.event_name}</td>
-                      <td>
-                        <span className={`badge ${r.participation_mode === 'SOLO' ? 'badge--solo' : 'badge--team'}`}>
-                          {r.participation_mode}
-                        </span>
-                      </td>
                       <td>
                         <span className={`badge ${r.registration_type === 'ONLINE' ? 'badge--online' : 'badge--onsite'}`}>
                           {r.registration_type}
@@ -391,10 +411,15 @@ export default function AdminRegistrations() {
                                         <div className="inline-member-pill__top">
                                           <span className="inline-member-pill__name">{p.full_name}</span>
                                           <span className="badge badge--tag" style={{ fontSize: '0.65rem' }}>
-                                            PLAYER {pIdx + 1}
+                                            {p.is_leader ? 'LEADER (P1)' : `PLAYER ${pIdx + 1}`}
                                           </span>
                                         </div>
-                                        <div className="inline-member-pill__meta">
+                                        <div className="inline-member-pill__meta" style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                          {(p.student_id || p.prn) && (
+                                            <span className="font-mono fw-bold" style={{ color: '#000000', fontSize: '0.8rem' }}>
+                                              🆔 PRN: {p.student_id || p.prn}
+                                            </span>
+                                          )}
                                           <span>📧 {p.email}</span>
                                         </div>
                                       </div>

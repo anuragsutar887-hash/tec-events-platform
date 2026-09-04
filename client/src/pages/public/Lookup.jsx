@@ -216,9 +216,14 @@ export default function Lookup() {
                               borderRadius: 'var(--radius-sm)'
                             }}>
                               <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase', marginBottom: '2px' }}>
-                                PLAYER {i + 1}
+                                PLAYER {i + 1} {p.is_leader ? '(LEADER)' : ''}
                               </div>
                               <div className="text-primary fw-bold text-sm">{p.full_name}</div>
+                              {(p.student_id || p.prn) && (
+                                <div className="text-xs font-mono fw-semibold" style={{ color: '#000000', margin: '2px 0' }}>
+                                  PRN: {p.student_id || p.prn}
+                                </div>
+                              )}
                               <div className="text-secondary text-xs">{p.email}</div>
                             </div>
                           ))}
