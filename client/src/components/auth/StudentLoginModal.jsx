@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
-import {
-  isSignInWithEmailLink,
-  sendSignInLinkToEmail,
-  signInWithEmailLink,
-} from 'firebase/auth';
+import { sendSignInLinkToEmail } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { useStudent } from '../../context/StudentAuthContext';
 import './StudentLoginModal.css';
 
 const isGmail = (val) => /^[^\s@]+@gmail\.com$/i.test(val.trim());
+const STORAGE_KEY = 'participant_user';
+const SYNC_CHANNEL = 'participant_auth_channel';
 
 export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
   const { login } = useStudent();
@@ -31,48 +29,59 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
     }
   }, [isOpen]);
 
-  // Handle Firebase Email Link sign-in — fires when user returns from email link in SAME TAB
+  // When email link has been sent, watch for the email verification event in real time!
+  // This automatically logs the user in and gives access in this SAME TAB.
   useEffect(() => {
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      const savedEmail = localStorage.getItem('emailForSignIn') || '';
-      const savedName  = localStorage.getItem('pending_auth_name') || '';
-      const savedPrn   = localStorage.getItem('pending_auth_prn') || '';
+    if (!emailSent) return;
 
-      if (savedEmail) {
-        setLoading(true);
-        signInWithEmailLink(auth, savedEmail, window.location.href)
-          .then((result) => {
-            localStorage.removeItem('emailForSignIn');
-            localStorage.removeItem('pending_auth_name');
-            localStorage.removeItem('pending_auth_prn');
-            // Clean URL without reload so user stays on same page
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            const userData = {
-              full_name: savedName || result.user.displayName || 'Participant',
-              email: result.user.email.toLowerCase(),
-              prn: (savedPrn || '').toUpperCase(),
-              uid: result.user.uid,
-              photoURL: result.user.photoURL || '',
-              logged_in_at: new Date().toISOString(),
-            };
-
+    const checkAndCompleteLogin = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const userData = JSON.parse(stored);
+          if (userData && (userData.email || userData.prn)) {
             login(userData);
             if (onSuccess) onSuccess(userData);
             onClose();
-          })
-          .catch((err) => {
-            console.error('Email link sign-in error:', err);
-            setError('Sign-in link is invalid or expired. Please request a new one.');
-            setLoading(false);
-          });
+          }
+        }
+      } catch {}
+    };
+
+    // 1. BroadcastChannel listener (instant cross-tab signal)
+    let bc;
+    try {
+      bc = new BroadcastChannel(SYNC_CHANNEL);
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'LOGIN_SUCCESS' && event.data.user) {
+          login(event.data.user);
+          if (onSuccess) onSuccess(event.data.user);
+          onClose();
+        }
+      };
+    } catch {}
+
+    // 2. Storage event listener (fires when another tab writes to localStorage)
+    const handleStorage = (e) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        checkAndCompleteLogin();
       }
-    }
-  }, [login, onSuccess, onClose]);
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 3. Polling fallback every 600ms to guarantee zero delay
+    const interval = setInterval(checkAndCompleteLogin, 600);
+
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, [emailSent, login, onSuccess, onClose]);
 
   if (!isOpen) return null;
 
-  // Send Firebase Email Link to user's Gmail — opens in same tab via handleCodeInApp: true
+  // Send Firebase Email Link to user's Gmail
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
     if (!fullName.trim()) { setError('Full Name is required'); return; }
@@ -86,10 +95,16 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
     setError('');
     setLoading(true);
 
-    // url = current page URL — Firebase redirects back here (same tab) after email click
+    // Mark this tab as the origin tab so secondary tabs close themselves
+    sessionStorage.setItem('is_auth_origin_tab', 'true');
+
+    // Build URL with verify_email param so email is preserved in all browser contexts
+    const targetUrl = new URL(window.location.href);
+    targetUrl.searchParams.set('verify_email', email.trim().toLowerCase());
+
     const actionCodeSettings = {
-      url: window.location.href,
-      handleCodeInApp: true,   // opens inside the app (same tab), NOT a new browser tab
+      url: targetUrl.toString(),
+      handleCodeInApp: true,
     };
 
     try {
@@ -112,33 +127,30 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  // ── Email Sent Confirmation View ──────────────────────────────────────────
+  // ── Email Sent Minimal View (Simplified, no clutter/paragraphs) ───────────
   if (emailSent) {
     return (
       <div className="student-modal-overlay" onClick={onClose}>
         <div className="student-modal-card card" onClick={(e) => e.stopPropagation()}>
           <div className="student-modal-header">
-            <h2 className="student-modal-title">Check Your Gmail</h2>
+            <h2 className="student-modal-title">Verify Email</h2>
             <button className="student-modal-close" onClick={onClose} aria-label="Close modal">✕</button>
           </div>
-          <div className="card__body" style={{ padding: 'var(--space-6)' }}>
-            <div className="student-email-sent">
-              <div className="student-email-sent__icon">📧</div>
-              <h3 className="student-email-sent__heading">Verify your email</h3>
-              <p className="student-email-sent__text">
-                We sent a <strong>Verify Email</strong> link to <strong>{email}</strong>.
-                Open your Gmail and click <strong>"Verify Email"</strong> — you'll be
-                logged in automatically in this same tab.
+          <div className="card__body" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>
+            <div className="student-email-waiting">
+              <div className="spinner mb-3" style={{ width: '28px', height: '28px', margin: '0 auto var(--space-3)' }}></div>
+              <p style={{ fontWeight: 600, color: '#000', marginBottom: '6px', fontSize: '0.95rem' }}>
+                Verification link sent to <span style={{ fontFamily: 'var(--font-mono)' }}>{email}</span>
               </p>
-              <p className="student-email-sent__note">
-                Link expires in 1 hour. Check spam/promotions if you don't see it.
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 var(--space-4)' }}>
+                Waiting for verification...
               </p>
               <button
-                className="btn btn--secondary btn--full"
-                style={{ marginTop: 'var(--space-4)' }}
+                type="button"
+                className="btn btn--secondary btn--sm"
                 onClick={() => { setEmailSent(false); setEmail(''); }}
               >
-                Use a different email
+                Change Email
               </button>
             </div>
           </div>

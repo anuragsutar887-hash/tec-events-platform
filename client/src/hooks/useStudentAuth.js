@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { signOut } from 'firebase/auth';
+import { signOut, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabaseClient';
 
 const STORAGE_KEY = 'participant_user';
+const SYNC_CHANNEL = 'participant_auth_channel';
 
 export function useStudentAuth() {
   const [user, setUser] = useState(() => {
@@ -28,7 +29,6 @@ export function useStudentAuth() {
 
     try {
       setLoadingInvites(true);
-      // Find participant records where student_id matches or email matches, and is NOT the leader
       let query = supabase
         .from('participants')
         .select('*, registrations!inner(*, events(*))')
@@ -47,7 +47,6 @@ export function useStudentAuth() {
         return;
       }
 
-      // Format invites
       const formatted = (data || []).map((item) => {
         const reg = item.registrations;
         const ev = reg?.events;
@@ -78,16 +77,117 @@ export function useStudentAuth() {
     }
   }, [user, fetchPendingInvites]);
 
+  // Handle incoming verification email link if opened in ANY tab
+  useEffect(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const emailFromUrl = urlParams.get('verify_email') || '';
+      const savedEmail = localStorage.getItem('emailForSignIn') || emailFromUrl;
+      const savedName = localStorage.getItem('pending_auth_name') || '';
+      const savedPrn = localStorage.getItem('pending_auth_prn') || '';
+
+      if (savedEmail) {
+        signInWithEmailLink(auth, savedEmail, window.location.href)
+          .then((result) => {
+            localStorage.removeItem('emailForSignIn');
+            localStorage.removeItem('pending_auth_name');
+            localStorage.removeItem('pending_auth_prn');
+
+            const userData = {
+              full_name: savedName || result.user?.displayName || 'Participant',
+              email: result.user?.email ? result.user.email.toLowerCase() : savedEmail.toLowerCase(),
+              prn: (savedPrn || '').toUpperCase(),
+              uid: result.user?.uid || '',
+              photoURL: result.user?.photoURL || '',
+              college: 'Indira College of Engineering & Management',
+              logged_in_at: new Date().toISOString(),
+            };
+
+            // 1. Store in localStorage (fires storage event in origin tab)
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+            localStorage.setItem('participant_auth_sync', Date.now().toString());
+
+            // 2. Broadcast to other open tabs
+            try {
+              const bc = new BroadcastChannel(SYNC_CHANNEL);
+              bc.postMessage({ type: 'LOGIN_SUCCESS', user: userData });
+            } catch {}
+
+            // 3. Update current tab
+            setUser(userData);
+            fetchPendingInvites(userData);
+
+            // 4. If this is a secondary tab opened from email, close it so origin tab is active!
+            const isOriginTab = sessionStorage.getItem('is_auth_origin_tab') === 'true';
+            if (!isOriginTab) {
+              window.close();
+              setTimeout(() => {
+                window.close();
+              }, 400);
+            }
+
+            // Clean query params from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          })
+          .catch((err) => {
+            console.error('Email link auth error:', err);
+          });
+      }
+    }
+  }, [fetchPendingInvites]);
+
+  // Sync auth state across all open tabs via BroadcastChannel & storage events
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === STORAGE_KEY) {
+        try {
+          const updated = e.newValue ? JSON.parse(e.newValue) : null;
+          setUser(updated);
+          if (updated) fetchPendingInvites(updated);
+        } catch {}
+      }
+    };
+
+    let bc;
+    try {
+      bc = new BroadcastChannel(SYNC_CHANNEL);
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'LOGIN_SUCCESS' && event.data.user) {
+          setUser(event.data.user);
+          fetchPendingInvites(event.data.user);
+        } else if (event.data?.type === 'LOGOUT') {
+          setUser(null);
+          setPendingInvites([]);
+        }
+      };
+    } catch {}
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (bc) bc.close();
+    };
+  }, [fetchPendingInvites]);
+
   const login = (userData) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+    localStorage.setItem('participant_auth_sync', Date.now().toString());
     setUser(userData);
     fetchPendingInvites(userData);
+    try {
+      const bc = new BroadcastChannel(SYNC_CHANNEL);
+      bc.postMessage({ type: 'LOGIN_SUCCESS', user: userData });
+    } catch {}
   };
 
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
     setPendingInvites([]);
+    try {
+      const bc = new BroadcastChannel(SYNC_CHANNEL);
+      bc.postMessage({ type: 'LOGOUT' });
+    } catch {}
     try {
       signOut(auth);
     } catch {}

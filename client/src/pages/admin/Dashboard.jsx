@@ -247,7 +247,7 @@ export default function Dashboard() {
                 ➕ Add On-site Reg
               </Link>
               <Link to={`/leaderboard/${selectedEvent?.slug || 'codedebug'}`} className="btn btn--ghost btn--sm">
-                ⚡ Live Arena Stream
+                🏆 Live Standings
               </Link>
             </div>
           )}

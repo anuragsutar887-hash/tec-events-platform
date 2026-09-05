@@ -269,7 +269,7 @@ export default function OnsiteRegistration() {
                 checked={checkInImmediately}
                 onChange={(e) => setCheckInImmediately(e.target.checked)}
               />
-              <span>Check in immediately into Live Arena upon registration</span>
+              <span>Check in immediately into Standings upon registration</span>
             </label>
           </div>
         </div>
