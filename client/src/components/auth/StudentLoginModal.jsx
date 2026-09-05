@@ -4,10 +4,15 @@ import { auth, googleProvider } from '../../lib/firebase';
 import { useStudent } from '../../context/StudentAuthContext';
 import './StudentLoginModal.css';
 
+const isValidEmail = (val) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+};
+
 export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
   const { login } = useStudent();
   const [fullName, setFullName] = useState('');
   const [prn, setPrn] = useState('');
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showRedirectFallback, setShowRedirectFallback] = useState(false);
@@ -17,6 +22,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
     if (!isOpen) {
       setFullName('');
       setPrn('');
+      setEmail('');
       setError('');
       setLoading(false);
       setShowRedirectFallback(false);
@@ -55,31 +61,58 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  const validate = () => {
+  const handleEmailSignIn = (e) => {
+    e.preventDefault();
     if (!fullName.trim()) {
       setError('Full Name is required');
-      return false;
+      return;
     }
     if (!prn.trim()) {
       setError('PRN Number is required');
-      return false;
+      return;
     }
-    return true;
+    if (!email.trim()) {
+      setError('Email ID is required');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('Enter a valid email address');
+      return;
+    }
+
+    setLoading(true);
+    const userData = {
+      full_name: fullName.trim(),
+      email: email.trim().toLowerCase(),
+      prn: prn.trim().toUpperCase(),
+      college: 'Indira College of Engineering & Management',
+      logged_in_at: new Date().toISOString(),
+    };
+
+    login(userData);
+    if (onSuccess) onSuccess(userData);
+    onClose();
+    setLoading(false);
   };
 
   const handleGoogleSignIn = (e) => {
     if (e) e.preventDefault();
-    if (!validate()) return;
+    if (!fullName.trim()) {
+      setError('Full Name is required');
+      return;
+    }
+    if (!prn.trim()) {
+      setError('PRN Number is required');
+      return;
+    }
 
     setError('');
     setLoading(true);
     setShowRedirectFallback(false);
 
-    // Persist pending credentials so redirect flow has access to them
     localStorage.setItem('pending_auth_name', fullName.trim());
     localStorage.setItem('pending_auth_prn', prn.trim().toUpperCase());
 
-    // Synchronous execution in direct user click context (avoids browser popup blocking)
     signInWithPopup(auth, googleProvider)
       .then((result) => {
         const user = result.user;
@@ -115,18 +148,25 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
           // User closed popup
         } else if (err.code === 'auth/popup-blocked') {
           setShowRedirectFallback(true);
-          setError('Popup was blocked by your browser. Click "Continue with Google (Direct Redirect)" below.');
+          setError('Popup was blocked by your browser. Click "Continue with Google (Direct Redirect)" below, or use Email Sign In above.');
         } else if (err.code === 'auth/unauthorized-domain') {
-          setError('Domain not authorized in Firebase. Please add this domain to Firebase Console > Authentication > Settings > Authorized domains.');
+          setError('Domain not authorized in Firebase. Please add tec-events-platform.vercel.app to Firebase Console > Authentication > Settings > Authorized domains, or use Email Sign In above.');
         } else {
-          setError(err.message || 'Google authentication failed. Please try again.');
+          setError(err.message || 'Google authentication failed. Please try again or use Email Sign In.');
         }
       });
   };
 
   const handleDirectRedirect = (e) => {
     if (e) e.preventDefault();
-    if (!validate()) return;
+    if (!fullName.trim()) {
+      setError('Full Name is required');
+      return;
+    }
+    if (!prn.trim()) {
+      setError('PRN Number is required');
+      return;
+    }
     setLoading(true);
     localStorage.setItem('pending_auth_name', fullName.trim());
     localStorage.setItem('pending_auth_prn', prn.trim().toUpperCase());
@@ -156,7 +196,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
             </div>
           )}
 
-          <form onSubmit={handleGoogleSignIn} className="student-login-form">
+          <form onSubmit={handleEmailSignIn} className="student-login-form">
             <div className="form-group">
               <label className="form-label form-label--required">Full Name</label>
               <input
@@ -188,37 +228,59 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
               />
             </div>
 
+            <div className="form-group">
+              <label className="form-label form-label--required">Email ID</label>
+              <input
+                type="email"
+                className="form-input"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError('');
+                }}
+                autoComplete="off"
+                required
+              />
+            </div>
+
             <div className="student-modal-actions">
               <button
                 type="submit"
-                className={`btn btn--google btn--full ${loading ? 'btn--loading' : ''}`}
+                className={`btn btn--primary btn--full ${loading ? 'btn--loading' : ''}`}
                 disabled={loading}
               >
-                {loading ? (
-                  <div className="spinner"></div>
-                ) : (
-                  <>
-                    <svg width="18" height="18" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                    </svg>
-                    Sign In with Google
-                  </>
-                )}
+                {loading ? '' : 'Sign In'}
               </button>
             </div>
+
+            <div className="student-login-divider">
+              <span>OR</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className={`btn btn--google btn--full ${loading ? 'btn--loading' : ''}`}
+              disabled={loading}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              Continue with Google
+            </button>
 
             {showRedirectFallback && (
               <button
                 type="button"
                 onClick={handleDirectRedirect}
-                className="btn btn--primary btn--full"
-                style={{ marginTop: 'var(--space-3)' }}
+                className="btn btn--secondary btn--full"
+                style={{ marginTop: 'var(--space-2)' }}
                 disabled={loading}
               >
-                Continue with Google (Direct Redirect) →
+                Continue with Google (Direct Redirect)
               </button>
             )}
           </form>

@@ -55,7 +55,7 @@ export default function PublicHeader() {
               className="pub-header__invite-btn"
               onClick={() => setInvitesModalOpen(true)}
             >
-              Review & Approve →
+              Review & Approve
             </button>
           </div>
         </div>
