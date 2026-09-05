@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabaseClient';
 
 const STORAGE_KEY = 'participant_user';
@@ -86,6 +88,9 @@ export function useStudentAuth() {
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
     setPendingInvites([]);
+    try {
+      signOut(auth);
+    } catch {}
   };
 
   return {

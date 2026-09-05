@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../../lib/firebase';
 import './Login.css';
 
 export default function AdminLogin() {
@@ -43,20 +43,41 @@ export default function AdminLogin() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      localStorage.setItem('admin_token', await userCredential.user.getIdToken());
+      localStorage.setItem('admin_user', JSON.stringify({
+        email: userCredential.user.email,
+        uid: userCredential.user.uid,
+        role: 'COMMITTEE_ADMIN'
+      }));
+      navigate('/admin');
+    } catch (err) {
+      console.error('Google Auth Error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        // User closed popup, no error needed
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Popup was blocked by your browser. Please allow popups and try again.');
+      } else {
+        setError(`Google login failed: ${err.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-container">
-        {/* Editorial Top Branding */}
         <div className="login-card">
           <div className="login-card__header">
             <div className="login-card__logo-serif">TECH EVENTS</div>
-            <span className="login-card__badge">[AUTHENTICATION // SECURE_PORTAL]</span>
           </div>
 
           <h1 className="login-card__title">COMMITTEE ACCESS</h1>
-          <p className="login-card__subtitle">
-            Sign in with authorized committee credentials to manage live event telemetry, arena check-in and scoring.
-          </p>
 
           {error && (
             <div className="alert alert--error mb-4" role="alert">
@@ -76,8 +97,7 @@ export default function AdminLogin() {
                 className="form-input login-form__input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="anuragsutar887@gmail.com"
-                autoComplete="email"
+                autoComplete="off"
                 required
               />
             </div>
@@ -92,13 +112,11 @@ export default function AdminLogin() {
                 className="form-input login-form__input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
+                autoComplete="off"
                 required
               />
             </div>
 
-            {/* Submit Button with Buffer Spinner instead of text */}
             <button
               type="submit"
               className={`btn btn--primary btn--full btn--lg login-form__submit ${loading ? 'btn--loading' : ''}`}
@@ -112,12 +130,19 @@ export default function AdminLogin() {
                 'INITIALIZE SESSION'
               )}
             </button>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="btn btn--secondary btn--full btn--lg"
+              disabled={loading}
+              style={{ marginTop: 'var(--space-2)' }}
+            >
+              Sign In with Google
+            </button>
           </form>
 
           <div className="login-card__footer">
-            <div className="login-card__hint">
-              🔒 Access restricted to authorized committee members of Indira College of Engineering and Management.
-            </div>
             <Link to="/" className="login-card__back-link">
               Return to Public Site
             </Link>
