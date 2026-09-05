@@ -268,6 +268,15 @@
 }
 
 /* ─── Responsive: Mobile / Tablet ─────────────────────── */
+@media (max-width: 1024px) {
+  .pub-header__nav {
+    gap: var(--space-4);
+  }
+  .pub-header__logo-brand {
+    font-size: 1.2rem;
+  }
+}
+
 @media (max-width: 768px) {
   .pub-header__mobile-toggle {
     display: block;
@@ -282,12 +291,66 @@
     background: #ffffff;
     border-bottom: 1px solid var(--border);
     flex-direction: column;
-    padding: var(--space-6);
-    gap: var(--space-4);
+    padding: var(--space-4) var(--space-4) var(--space-6);
+    gap: var(--space-3);
     box-shadow: var(--shadow-md);
+    z-index: var(--z-sticky);
   }
 
   .pub-header__nav.open {
     display: flex;
+  }
+
+  .pub-header__link {
+    font-size: 0.875rem;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    width: 100%;
+  }
+
+  .pub-header__link:last-child {
+    border-bottom: none;
+  }
+
+  .pub-header__right {
+    gap: var(--space-2);
+  }
+
+  .pub-header__profile-text {
+    display: none;
+  }
+
+  .pub-header__invite-banner-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}
+
+@media (max-width: 480px) {
+  .pub-header__inner {
+    height: 56px;
+  }
+
+  .pub-header__logo-brand {
+    font-size: 1rem;
+  }
+
+  .pub-header__logo-img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .pub-header__login-btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .pub-header__nav {
+    top: 56px;
+  }
+
+  .pub-header__user-pill {
+    padding: 2px 4px;
   }
 }

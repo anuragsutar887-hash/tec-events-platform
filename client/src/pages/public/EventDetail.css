@@ -251,21 +251,66 @@
 }
 
 /* ─── Responsive ────────────────────────────────────────── */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .event-detail__layout {
+    grid-template-columns: 1fr 300px;
+    gap: var(--space-6);
+  }
+}
+
+/* Mobile landscape */
 @media (max-width: 900px) {
   .event-detail__layout {
     grid-template-columns: 1fr;
   }
   .event-detail__sidebar {
     position: static;
+    order: -1;
+  }
+  .event-detail__banner-card {
+    max-height: 200px;
+  }
+  .event-detail__banner-img {
+    height: 200px;
   }
 }
 
+/* Mobile portrait */
 @media (max-width: 600px) {
+  .event-detail__hero {
+    padding: var(--space-6) 0;
+  }
+  .event-detail__title {
+    font-size: clamp(1.75rem, 6vw, 2.5rem);
+  }
+  .event-detail__meta {
+    gap: var(--space-3);
+    flex-direction: column;
+  }
   .event-detail__action-buttons {
     flex-direction: column;
   }
   .event-detail__main-reg-btn,
   .event-detail__ticket-btn {
     width: 100%;
+    min-width: unset;
+  }
+  .event-detail__layout {
+    padding: var(--space-5) 0 var(--space-10);
+  }
+  .event-detail__banner-card {
+    max-height: 160px;
+  }
+  .event-detail__banner-img {
+    height: 160px;
+  }
+  .event-detail__info-item {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .event-detail__info-val {
+    text-align: left;
   }
 }

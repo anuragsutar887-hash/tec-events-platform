@@ -682,8 +682,60 @@ tbody tr:hover td {
 @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
 @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
 
+/* ══════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE SYSTEM — All Breakpoints
+   ══════════════════════════════════════════════════════════ */
+
+/* ─── Tablet (≤ 1024px) ──────────────────────────── */
+@media (max-width: 1024px) {
+  :root {
+    --text-5xl: 2.75rem;
+    --text-4xl: 2rem;
+    --text-3xl: 1.5rem;
+  }
+  .container { padding: 0 var(--space-6); }
+}
+
+/* ─── Mobile Landscape / Tablet (≤ 768px) ────────── */
 @media (max-width: 768px) {
+  :root {
+    --text-5xl: 2.25rem;
+    --text-4xl: 1.75rem;
+    --text-3xl: 1.35rem;
+    --text-2xl: 1.25rem;
+  }
   .container, .container--narrow { padding: 0 var(--space-4); }
   .section { padding: var(--space-10) 0; }
+  .section--sm { padding: var(--space-6) 0; }
   .card__body, .card__header, .card__footer { padding: var(--space-4); }
+  .section__title { font-size: clamp(1.5rem, 5vw, 2rem); }
+  .form-row { grid-template-columns: 1fr; }
+  .btn { font-size: 0.75rem; padding: 0.65rem 1.1rem; }
+  .btn--lg { padding: 0.75rem 1.4rem; font-size: 0.8125rem; }
+  .table-wrapper { border-radius: var(--radius-sm); }
+  thead th { padding: var(--space-2) var(--space-3); font-size: 0.65rem; }
+  tbody td { padding: var(--space-3); }
+  .btn-group { flex-wrap: wrap; }
+  .empty-state { padding: var(--space-10) var(--space-4); }
+}
+
+/* ─── Mobile Portrait (≤ 480px) ─────────────────── */
+@media (max-width: 480px) {
+  :root {
+    --text-5xl: 1.9rem;
+    --text-4xl: 1.5rem;
+    --text-3xl: 1.25rem;
+    --text-2xl: 1.1rem;
+    --text-xl: 1rem;
+  }
+  .container, .container--narrow { padding: 0 var(--space-3); }
+  .section { padding: var(--space-8) 0; }
+  .card__body, .card__header, .card__footer { padding: var(--space-3); }
+  .section__title { font-size: clamp(1.35rem, 6vw, 1.75rem); }
+  .btn { width: 100%; justify-content: center; }
+  .btn--sm { width: auto; }
+  .btn-group { flex-direction: column; }
+  .btn-group .btn { width: 100%; }
+  .alert { font-size: var(--text-xs); padding: var(--space-3); }
+  .loading-container { padding: var(--space-12) var(--space-4); }
 }

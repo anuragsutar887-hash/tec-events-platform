@@ -128,8 +128,39 @@
 }
 
 @media (max-width: 768px) {
+  .footer {
+    padding: var(--space-8) 0 var(--space-6);
+  }
   .footer__contact-grid {
     grid-template-columns: 1fr;
     gap: var(--space-4);
+  }
+  .footer__logo-serif {
+    font-size: 1.4rem;
+  }
+  .footer__sub-org {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer {
+    padding: var(--space-6) 0 var(--space-4);
+  }
+  .footer__contact-section {
+    padding: var(--space-4);
+  }
+  .footer__contact-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  .footer__logo-serif {
+    font-size: 1.2rem;
+  }
+  .footer__sub-org {
+    font-size: 0.85rem;
+  }
+  .footer__legal {
+    padding-top: var(--space-4);
   }
 }

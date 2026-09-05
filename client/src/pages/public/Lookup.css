@@ -107,3 +107,45 @@
   flex-wrap: wrap;
   align-items: center;
 }
+
+/* ─── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .lookup-page__hero {
+    padding: var(--space-10) 0 var(--space-6);
+  }
+  .lookup-page__title {
+    font-size: clamp(1.75rem, 6vw, 2.5rem);
+  }
+  .lookup-result__reg-id {
+    font-size: var(--text-xl);
+  }
+}
+
+@media (max-width: 480px) {
+  .lookup-page__hero {
+    padding: var(--space-8) 0 var(--space-5);
+  }
+  .lookup-form__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lookup-form__row .btn {
+    width: 100%;
+  }
+  .lookup-result__header {
+    flex-direction: column;
+  }
+  .lookup-result__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lookup-result__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .lookup-result__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+}

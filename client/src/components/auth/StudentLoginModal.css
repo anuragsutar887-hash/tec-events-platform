@@ -176,3 +176,36 @@
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 540px) {
+  .student-modal-overlay {
+    padding: var(--space-3);
+    align-items: flex-end;
+  }
+  .student-modal-card {
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    animation: slideUpMobile 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .student-modal-header {
+    padding: var(--space-4) var(--space-5) var(--space-3);
+  }
+  .student-modal-title {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .student-modal-header {
+    padding: var(--space-3) var(--space-4);
+  }
+  .student-login-form {
+    gap: var(--space-3);
+  }
+}
+
+@keyframes slideUpMobile {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}

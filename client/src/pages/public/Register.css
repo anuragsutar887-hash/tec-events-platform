@@ -195,6 +195,13 @@
   font-family: var(--font-mono);
 }
 
+@media (max-width: 1024px) {
+  .register-page__layout {
+    grid-template-columns: 1fr 280px;
+    gap: var(--space-6);
+  }
+}
+
 @media (max-width: 860px) {
   .register-page__layout {
     grid-template-columns: 1fr;
@@ -203,5 +210,50 @@
   .register-page__sidebar {
     order: -1;
     position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .register-page__header {
+    padding: var(--space-8) 0 var(--space-4);
+  }
+  .register-page__layout {
+    padding: var(--space-5) 0 var(--space-10);
+  }
+  .register-choose__option {
+    padding: var(--space-4);
+    gap: var(--space-3);
+  }
+  .register-choose__option-icon {
+    font-size: 1.5rem;
+  }
+  .register-form__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .register-form__footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .otp-inputs-row {
+    flex-wrap: wrap;
+  }
+  .otp-input-field {
+    max-width: 140px;
+    font-size: 1rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .register-choose__option {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .register-choose__option-arrow {
+    display: none;
+  }
+  .register-member {
+    padding: var(--space-4);
   }
 }

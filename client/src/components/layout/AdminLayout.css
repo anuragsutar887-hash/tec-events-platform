@@ -249,10 +249,24 @@
   overflow-y: auto;
 }
 
+/* ─── Responsive Tablet ─────────────────────────────────── */
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    width: 200px;
+  }
+  .admin-main {
+    margin-left: 200px;
+  }
+  .admin-content {
+    padding: var(--space-5);
+  }
+}
+
 /* ─── Responsive Mobile ─────────────────────────────────── */
 @media (max-width: 768px) {
   .admin-sidebar {
     transform: translateX(-100%);
+    width: 240px;
   }
 
   .admin-sidebar.open {
@@ -269,5 +283,22 @@
 
   .admin-content {
     padding: var(--space-4);
+  }
+}
+
+/* ─── Mobile Portrait ───────────────────────────────────── */
+@media (max-width: 480px) {
+  .admin-topbar {
+    padding: 0 var(--space-3);
+    height: 52px;
+  }
+  .admin-topbar__title {
+    font-size: 1rem;
+  }
+  .admin-content {
+    padding: var(--space-3);
+  }
+  .admin-sidebar__link-label {
+    font-size: var(--text-xs);
   }
 }

@@ -228,3 +228,62 @@
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+/* ─── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .lb-header {
+    padding: var(--space-8) var(--space-4) var(--space-6);
+  }
+  .lb-stats-bar {
+    gap: var(--space-5);
+  }
+  .lb-stat-val {
+    font-size: 1.5rem;
+  }
+  .lb-stat-sep {
+    display: none;
+  }
+  .lb-content {
+    padding: 0 var(--space-4);
+    margin: var(--space-6) auto;
+  }
+  .lb-card {
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+  }
+  .lb-team-name {
+    font-size: 1rem;
+  }
+  .lb-rank-badge {
+    font-size: 1rem;
+  }
+  .lb-rank-col {
+    width: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lb-title {
+    font-size: clamp(1.75rem, 7vw, 2.5rem);
+  }
+  .lb-stats-bar {
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    justify-content: space-around;
+  }
+  .lb-card {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .lb-status-col {
+    align-items: flex-start;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .lb-duo-grid {
+    gap: var(--space-1);
+  }
+}
