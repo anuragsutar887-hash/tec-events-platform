@@ -7,26 +7,13 @@ export default function PendingInvitesModal({ isOpen, onClose, invites = [], onA
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // 🔒 Body scroll lock — prevents background webpage from scrolling on both mobile and desktop
+  // 🔒 Prevent background scrolling without causing page scroll jump
   useEffect(() => {
     if (isOpen) {
-      const scrollY = window.scrollY;
       const originalOverflow = document.body.style.overflow;
-      const originalPosition = document.body.style.position;
-      const originalTop = document.body.style.top;
-      const originalWidth = document.body.style.width;
-
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-
       return () => {
         document.body.style.overflow = originalOverflow;
-        document.body.style.position = originalPosition;
-        document.body.style.top = originalTop;
-        document.body.style.width = originalWidth;
-        window.scrollTo(0, scrollY);
       };
     }
   }, [isOpen]);

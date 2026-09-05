@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../../lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 import './Login.css';
 
 export default function AdminLogin() {
@@ -37,32 +37,6 @@ export default function AdminLogin() {
         setError('Too many failed attempts. Please wait a moment and try again.');
       } else {
         setError(`Login failed: ${err.message}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const userCredential = await signInWithPopup(auth, googleProvider);
-      localStorage.setItem('admin_token', await userCredential.user.getIdToken());
-      localStorage.setItem('admin_user', JSON.stringify({
-        email: userCredential.user.email,
-        uid: userCredential.user.uid,
-        role: 'COMMITTEE_ADMIN'
-      }));
-      navigate('/admin');
-    } catch (err) {
-      console.error('Google Auth Error:', err);
-      if (err.code === 'auth/popup-closed-by-user') {
-        // User closed popup, no error needed
-      } else if (err.code === 'auth/popup-blocked') {
-        setError('Popup was blocked by your browser. Please allow popups and try again.');
-      } else {
-        setError(`Google login failed: ${err.message}`);
       }
     } finally {
       setLoading(false);
@@ -127,18 +101,8 @@ export default function AdminLogin() {
                   <div className="spinner spinner--white"></div>
                 </div>
               ) : (
-                'INITIALIZE SESSION'
+                'CHECK IN'
               )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="btn btn--secondary btn--full btn--lg"
-              disabled={loading}
-              style={{ marginTop: 'var(--space-2)' }}
-            >
-              Sign In with Google
             </button>
           </form>
 
