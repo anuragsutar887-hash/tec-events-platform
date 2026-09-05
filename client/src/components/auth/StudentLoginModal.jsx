@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import {
+  signInWithRedirect,
+  getRedirectResult,
+  isSignInWithEmailLink,
+  sendSignInLinkToEmail,
+  signInWithEmailLink,
+} from 'firebase/auth';
 import { auth, googleProvider } from '../../lib/firebase';
 import { useStudent } from '../../context/StudentAuthContext';
 import './StudentLoginModal.css';
 
-const isValidEmail = (val) => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
-};
+const isGmail = (val) => /^[^\s@]+@gmail\.com$/i.test(val.trim());
 
 export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
   const { login } = useStudent();
@@ -15,9 +19,9 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showRedirectFallback, setShowRedirectFallback] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
-  // Reset fields when modal is closed
+  // Reset fields when modal closes
   useEffect(() => {
     if (!isOpen) {
       setFullName('');
@@ -25,11 +29,11 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
       setEmail('');
       setError('');
       setLoading(false);
-      setShowRedirectFallback(false);
+      setEmailSent(false);
     }
   }, [isOpen]);
 
-  // Check if user just returned from Google Redirect
+  // Handle Google Redirect result on page load
   useEffect(() => {
     getRedirectResult(auth)
       .then((result) => {
@@ -45,7 +49,6 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
             prn: (savedPrn || '').toUpperCase(),
             uid: result.user.uid,
             photoURL: result.user.photoURL || '',
-            college: 'Indira College of Engineering & Management',
             logged_in_at: new Date().toISOString(),
           };
 
@@ -55,126 +58,140 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
         }
       })
       .catch((err) => {
-        console.error('Redirect result error in modal:', err);
+        console.error('Redirect result error:', err);
       });
+  }, [login, onSuccess, onClose]);
+
+  // Handle Firebase Email Link sign-in (when user comes back from email)
+  useEffect(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      const savedEmail = localStorage.getItem('emailForSignIn') || '';
+      const savedName = localStorage.getItem('pending_auth_name') || '';
+      const savedPrn = localStorage.getItem('pending_auth_prn') || '';
+
+      if (savedEmail) {
+        setLoading(true);
+        signInWithEmailLink(auth, savedEmail, window.location.href)
+          .then((result) => {
+            localStorage.removeItem('emailForSignIn');
+            localStorage.removeItem('pending_auth_name');
+            localStorage.removeItem('pending_auth_prn');
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            const userData = {
+              full_name: savedName || result.user.displayName || 'Participant',
+              email: result.user.email.toLowerCase(),
+              prn: (savedPrn || '').toUpperCase(),
+              uid: result.user.uid,
+              photoURL: result.user.photoURL || '',
+              logged_in_at: new Date().toISOString(),
+            };
+
+            login(userData);
+            if (onSuccess) onSuccess(userData);
+            onClose();
+          })
+          .catch((err) => {
+            console.error('Email link sign-in error:', err);
+            setError('Sign-in link is invalid or expired. Please try again.');
+            setLoading(false);
+          });
+      }
+    }
   }, [login, onSuccess, onClose]);
 
   if (!isOpen) return null;
 
-  const handleEmailSignIn = (e) => {
+  // Send Firebase Email Link to user's Gmail
+  const handleEmailSignIn = async (e) => {
     e.preventDefault();
-    if (!fullName.trim()) {
-      setError('Full Name is required');
-      return;
-    }
-    if (!prn.trim()) {
-      setError('PRN Number is required');
-      return;
-    }
-    if (!email.trim()) {
-      setError('Email ID is required');
-      return;
-    }
-    if (!isValidEmail(email)) {
-      setError('Enter a valid email address');
-      return;
-    }
-
-    setLoading(true);
-    const userData = {
-      full_name: fullName.trim(),
-      email: email.trim().toLowerCase(),
-      prn: prn.trim().toUpperCase(),
-      college: 'Indira College of Engineering & Management',
-      logged_in_at: new Date().toISOString(),
-    };
-
-    login(userData);
-    if (onSuccess) onSuccess(userData);
-    onClose();
-    setLoading(false);
-  };
-
-  const handleGoogleSignIn = (e) => {
-    if (e) e.preventDefault();
-    if (!fullName.trim()) {
-      setError('Full Name is required');
-      return;
-    }
-    if (!prn.trim()) {
-      setError('PRN Number is required');
+    if (!fullName.trim()) { setError('Full Name is required'); return; }
+    if (!prn.trim()) { setError('PRN Number is required'); return; }
+    if (!email.trim()) { setError('Gmail ID is required'); return; }
+    if (!isGmail(email)) {
+      setError('Only @gmail.com emails are allowed. Please enter a valid Gmail address.');
       return;
     }
 
     setError('');
     setLoading(true);
-    setShowRedirectFallback(false);
 
-    localStorage.setItem('pending_auth_name', fullName.trim());
-    localStorage.setItem('pending_auth_prn', prn.trim().toUpperCase());
+    const actionCodeSettings = {
+      url: window.location.origin + window.location.pathname,
+      handleCodeInApp: true,
+    };
 
-    signInWithPopup(auth, googleProvider)
-      .then((result) => {
-        const user = result.user;
-        if (!user || !user.email) {
-          setError('No email found on Google account.');
-          setLoading(false);
-          return;
-        }
-
-        localStorage.removeItem('pending_auth_name');
-        localStorage.removeItem('pending_auth_prn');
-
-        const userData = {
-          full_name: fullName.trim() || user.displayName || 'Participant',
-          email: user.email.toLowerCase(),
-          prn: prn.trim().toUpperCase(),
-          uid: user.uid,
-          photoURL: user.photoURL || '',
-          college: 'Indira College of Engineering & Management',
-          logged_in_at: new Date().toISOString(),
-        };
-
-        login(userData);
-        if (onSuccess) onSuccess(userData);
-        onClose();
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Firebase Google Auth Error:', err);
-        setLoading(false);
-
-        if (err.code === 'auth/popup-closed-by-user') {
-          // User closed popup
-        } else if (err.code === 'auth/popup-blocked') {
-          setShowRedirectFallback(true);
-          setError('Popup was blocked by your browser. Click "Continue with Google (Direct Redirect)" below, or use Email Sign In above.');
-        } else if (err.code === 'auth/unauthorized-domain') {
-          setError('Domain not authorized in Firebase. Please add tec-events-platform.vercel.app to Firebase Console > Authentication > Settings > Authorized domains, or use Email Sign In above.');
-        } else {
-          setError(err.message || 'Google authentication failed. Please try again or use Email Sign In.');
-        }
-      });
+    try {
+      await sendSignInLinkToEmail(auth, email.trim().toLowerCase(), actionCodeSettings);
+      localStorage.setItem('emailForSignIn', email.trim().toLowerCase());
+      localStorage.setItem('pending_auth_name', fullName.trim());
+      localStorage.setItem('pending_auth_prn', prn.trim().toUpperCase());
+      setEmailSent(true);
+    } catch (err) {
+      console.error('Send email link error:', err);
+      if (err.code === 'auth/unauthorized-domain') {
+        setError('Domain not authorized. Please add this domain in Firebase Console > Authentication > Authorized domains.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address. Please enter a valid Gmail.');
+      } else {
+        setError(err.message || 'Failed to send sign-in link. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDirectRedirect = (e) => {
-    if (e) e.preventDefault();
-    if (!fullName.trim()) {
-      setError('Full Name is required');
-      return;
-    }
-    if (!prn.trim()) {
-      setError('PRN Number is required');
-      return;
-    }
+  // Google Sign-In using redirect (no popup — avoids popup blocked issues)
+  const handleGoogleSignIn = () => {
+    if (!fullName.trim()) { setError('Full Name is required'); return; }
+    if (!prn.trim()) { setError('PRN Number is required'); return; }
+
+    setError('');
     setLoading(true);
     localStorage.setItem('pending_auth_name', fullName.trim());
     localStorage.setItem('pending_auth_prn', prn.trim().toUpperCase());
+
     signInWithRedirect(auth, googleProvider).catch((err) => {
-      setError(err.message || 'Could not redirect to Google.');
+      console.error('Google redirect error:', err);
+      setError(err.message || 'Could not redirect to Google. Please try again.');
       setLoading(false);
     });
   };
+
+  // "Email sent" confirmation view
+  if (emailSent) {
+    return (
+      <div className="student-modal-overlay" onClick={onClose}>
+        <div className="student-modal-card card" onClick={(e) => e.stopPropagation()}>
+          <div className="student-modal-header">
+            <h2 className="student-modal-title">Check Your Gmail</h2>
+            <button className="student-modal-close" onClick={onClose} aria-label="Close modal">✕</button>
+          </div>
+          <div className="card__body" style={{ padding: 'var(--space-6)' }}>
+            <div className="student-email-sent">
+              <div className="student-email-sent__icon">📧</div>
+              <h3 className="student-email-sent__heading">Sign-in link sent!</h3>
+              <p className="student-email-sent__text">
+                We sent a sign-in link to <strong>{email}</strong>.
+                Open your Gmail and click the link to complete sign-in.
+              </p>
+              <p className="student-email-sent__note">
+                The link expires in 1 hour. Check your spam folder if you don't see it.
+              </p>
+              <button
+                className="btn btn--secondary btn--full"
+                style={{ marginTop: 'var(--space-4)' }}
+                onClick={() => { setEmailSent(false); setEmail(''); }}
+              >
+                Use a different email
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="student-modal-overlay" onClick={onClose}>
@@ -203,10 +220,8 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                 type="text"
                 className="form-input"
                 value={fullName}
-                onChange={(e) => {
-                  setFullName(e.target.value);
-                  if (error) setError('');
-                }}
+                onChange={(e) => { setFullName(e.target.value); if (error) setError(''); }}
+                placeholder="Enter your full name"
                 autoComplete="off"
                 autoFocus
                 required
@@ -219,28 +234,25 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                 type="text"
                 className="form-input font-mono"
                 value={prn}
-                onChange={(e) => {
-                  setPrn(e.target.value);
-                  if (error) setError('');
-                }}
+                onChange={(e) => { setPrn(e.target.value); if (error) setError(''); }}
+                placeholder="e.g. IT250B1016"
                 autoComplete="off"
                 required
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label form-label--required">Email ID</label>
+              <label className="form-label form-label--required">Gmail ID</label>
               <input
                 type="email"
                 className="form-input"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (error) setError('');
-                }}
+                onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+                placeholder="yourname@gmail.com"
                 autoComplete="off"
                 required
               />
+              <span className="form-hint">Only @gmail.com addresses are accepted</span>
             </div>
 
             <div className="student-modal-actions">
@@ -249,7 +261,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                 className={`btn btn--primary btn--full ${loading ? 'btn--loading' : ''}`}
                 disabled={loading}
               >
-                {loading ? '' : 'Sign In'}
+                {loading ? '' : 'Send Sign-In Link'}
               </button>
             </div>
 
@@ -271,18 +283,6 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
               </svg>
               Continue with Google
             </button>
-
-            {showRedirectFallback && (
-              <button
-                type="button"
-                onClick={handleDirectRedirect}
-                className="btn btn--secondary btn--full"
-                style={{ marginTop: 'var(--space-2)' }}
-                disabled={loading}
-              >
-                Continue with Google (Direct Redirect)
-              </button>
-            )}
           </form>
         </div>
       </div>
