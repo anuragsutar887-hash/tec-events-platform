@@ -55,10 +55,10 @@ export default function Lookup() {
       {/* Header */}
       <div className="lookup-page__hero">
         <div className="container">
-          <div className="section__label">OFFICIAL PASS // DIGITAL TICKET</div>
+          <div className="section__label">OFFICIAL REGISTRATION // STATUS</div>
           <h1 className="lookup-page__title">MY REGISTRATION</h1>
           <p className="lookup-page__subtitle">
-            Enter your Registration Number to access your verified event ticket and duo team details for IT Department events.
+            Enter your Registration Number to verify registration status and duo team details for IT Department events.
           </p>
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function Lookup() {
                     You have {pendingInvites.length} team registration approval waiting!
                   </h3>
                   <p style={{ color: '#a1a1aa', fontSize: '0.825rem', margin: 0 }}>
-                    A teammate added you to their team. Approve below to confirm your team and unlock your official ticket.
+                    A teammate added you to their team. Approve below to confirm your team registration.
                   </p>
                 </div>
                 <button
@@ -165,7 +165,7 @@ export default function Lookup() {
                   gap: 'var(--space-2)'
                 }}>
                   <div>
-                    <span className="section__label" style={{ marginBottom: 0 }}>VERIFIED DIGITAL PASS</span>
+                    <span className="section__label" style={{ marginBottom: 0 }}>VERIFIED REGISTRATION</span>
                     <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>
                       {result.event?.name || 'Department Technical Event'}
                     </h2>

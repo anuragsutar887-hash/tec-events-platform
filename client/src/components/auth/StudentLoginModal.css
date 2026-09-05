@@ -63,6 +63,63 @@
   color: #000000;
 }
 
+/* ─── Modal Tabs (Sign In / Create Account) ──────────── */
+.student-modal-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f4f4f5;
+  border-bottom: 1px solid var(--border);
+}
+
+.student-modal-tab {
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  text-align: center;
+  border-bottom: 2px solid transparent;
+}
+
+.student-modal-tab:hover {
+  color: #000000;
+}
+
+.student-modal-tab.active {
+  background: #ffffff;
+  color: #000000;
+  border-bottom: 2px solid #000000;
+}
+
+.student-modal-switch-text {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-top: var(--space-3);
+}
+
+.student-modal-switch-btn {
+  background: none;
+  border: none;
+  color: #000000;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  font-size: 0.8125rem;
+}
+
+.student-modal-switch-btn:hover {
+  color: var(--text-secondary);
+}
+
+
 .student-login-form {
   display: flex;
   flex-direction: column;

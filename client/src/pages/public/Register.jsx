@@ -198,9 +198,6 @@ export default function Register() {
       };
 
       const { data } = await apiClient.post('/registrations', payload);
-      if (data.registration?.registration_id) {
-        localStorage.setItem('my_ticket_id', data.registration.registration_id);
-      }
 
       // Show Waiting for Approval Screen
       setPendingApprovalReg(data.registration);
@@ -263,7 +260,7 @@ export default function Register() {
               </h2>
               <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
                 {userRegistration.status === 'CONFIRMED'
-                  ? 'Your team has been successfully registered. View your ticket for QR code and event details.'
+                  ? 'Your team registration is confirmed for this event.'
                   : 'Your registration is awaiting your teammate\'s approval. Once they approve, your registration will be confirmed.'}
               </p>
               <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: 'var(--space-6)' }}>
@@ -271,16 +268,16 @@ export default function Register() {
               </p>
               <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Link
-                  to={`/lookup?id=${userRegistration.reg_code}`}
+                  to={`/events/${slug}`}
                   className="btn btn--primary btn--lg"
                 >
-                  VIEW YOUR TICKET
+                  VIEW EVENT DETAILS
                 </Link>
                 <Link
-                  to={`/events/${slug}`}
+                  to="/#events-section"
                   className="btn btn--secondary btn--lg"
                 >
-                  BACK TO EVENT
+                  BROWSE ALL EVENTS
                 </Link>
               </div>
             </div>

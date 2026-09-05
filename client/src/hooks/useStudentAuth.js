@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { signOut, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
+import {
+  signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabaseClient';
 
@@ -201,13 +206,94 @@ export function useStudentAuth() {
     } catch {}
   };
 
+  const registerWithPRN = async ({ fullName, prn, email, password }) => {
+    const cleanPrn = (prn || '').trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (!cleanPrn) throw new Error('PRN is required');
+    const authEmail = `${cleanPrn}@prn.indiraicem.ac.in`;
+    
+    const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
+    const profilePayload = {
+      name: (fullName || '').trim(),
+      prn: (prn || '').trim().toUpperCase(),
+      email: (email || '').trim().toLowerCase(),
+    };
+
+    try {
+      await updateProfile(cred.user, {
+        displayName: JSON.stringify(profilePayload),
+      });
+    } catch (err) {
+      console.warn('Profile update non-critical error:', err);
+    }
+
+    const userData = {
+      full_name: profilePayload.name,
+      prn: profilePayload.prn,
+      email: profilePayload.email,
+      uid: cred.user.uid,
+      college: 'Indira College of Engineering & Management',
+      logged_in_at: new Date().toISOString(),
+    };
+
+    login(userData);
+    return userData;
+  };
+
+  const loginWithPRN = async ({ prn, password }) => {
+    const cleanPrn = (prn || '').trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (!cleanPrn) throw new Error('PRN is required');
+    const authEmail = `${cleanPrn}@prn.indiraicem.ac.in`;
+
+    const cred = await signInWithEmailAndPassword(auth, authEmail, password);
+    
+    let parsed = {};
+    try {
+      parsed = JSON.parse(cred.user?.displayName || '{}');
+    } catch {
+      parsed = { name: cred.user?.displayName || 'Participant' };
+    }
+
+    // If email is not stored in displayName, attempt fallback to participants table
+    let email = parsed.email || '';
+    let name = parsed.name || '';
+    if (!email || !name) {
+      try {
+        const { data: part } = await supabase
+          .from('participants')
+          .select('full_name, email')
+          .ilike('student_id', (prn || '').trim())
+          .limit(1)
+          .maybeSingle();
+        if (part) {
+          if (!email) email = part.email || '';
+          if (!name) name = part.full_name || '';
+        }
+      } catch {}
+    }
+
+    const userData = {
+      full_name: name || 'Participant',
+      prn: parsed.prn || (prn || '').trim().toUpperCase(),
+      email: email,
+      uid: cred.user.uid,
+      college: 'Indira College of Engineering & Management',
+      logged_in_at: new Date().toISOString(),
+    };
+
+    login(userData);
+    return userData;
+  };
+
   return {
     user,
     isAuthenticated: Boolean(user && (user.prn || user.email)),
     login,
     logout,
+    registerWithPRN,
+    loginWithPRN,
     pendingInvites,
     loadingInvites,
     refreshInvites: () => fetchPendingInvites(user),
   };
 }
+

@@ -104,14 +104,6 @@ export default function PublicHeader() {
                 </a>
 
                 <Link
-                  to="/lookup"
-                  className={`pub-header__link ${location.pathname === '/lookup' ? 'active' : ''}`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  My Ticket
-                </Link>
-
-                <Link
                   to="/leaderboard"
                   className={`pub-header__link ${location.pathname.startsWith('/leaderboard') ? 'active' : ''}`}
                   onClick={() => setMobileMenuOpen(false)}

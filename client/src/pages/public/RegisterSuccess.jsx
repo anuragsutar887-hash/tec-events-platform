@@ -34,7 +34,7 @@ export default function RegisterSuccess() {
           <h1 className="success-header__title">REGISTRATION CONFIRMED!</h1>
         </div>
 
-        {/* Official Ticket Pass Card */}
+        {/* Official Registration Details Card */}
         <div className="success-card card" style={{ border: '1px solid #000000', overflow: 'hidden' }}>
           <div className="card__header" style={{
             background: '#fafafa',
@@ -45,7 +45,7 @@ export default function RegisterSuccess() {
             justifyContent: 'space-between'
           }}>
             <div>
-              <span className="section__label" style={{ marginBottom: 0 }}>OFFICIAL EVENT PASS</span>
+              <span className="section__label" style={{ marginBottom: 0 }}>OFFICIAL REGISTRATION</span>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>
                 {event_name || 'Department Technical Event'}
               </h2>
@@ -130,9 +130,9 @@ export default function RegisterSuccess() {
         </div>
 
         {/* Actions */}
-        <div className="success-actions" style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', marginTop: 'var(--space-6)' }}>
-          <Link to="/lookup" className="btn btn--primary">
-            VIEW MY TICKET PASS
+        <div className="success-actions" style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', marginTop: 'var(--space-6)', flexWrap: 'wrap' }}>
+          <Link to={`/events/${slug || ''}`} className="btn btn--primary">
+            View Event Details
           </Link>
           <Link to="/#events-section" className="btn btn--secondary">
             Browse More Events

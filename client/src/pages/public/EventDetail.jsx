@@ -179,43 +179,29 @@ export default function EventDetail() {
                 {/* Clean, Non-overlapping Action Buttons */}
                 <div className="event-detail__action-buttons">
                   {userRegistration ? (
-                    /* ✅ Already Registered — show ticket */
+                    /* ✅ Already Registered — show confirmed registration details */
                     <div className="event-detail__already-registered">
                       <div className="event-detail__already-badge">
                         {userRegistration.status === 'CONFIRMED' ? (
-                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ You are registered for this event</span>
+                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ You are officially registered for this event</span>
                         ) : userRegistration.status === 'PENDING_APPROVAL' ? (
                           <span style={{ color: '#d97706', fontWeight: 700 }}>⏳ Registration pending teammate approval</span>
                         ) : (
                           <span style={{ color: '#6b7280', fontWeight: 700 }}>Registration: {userRegistration.status}</span>
                         )}
                       </div>
-                      <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 'var(--space-4)' }}>
-                        Reg ID: <span className="font-mono" style={{ fontWeight: 700, color: '#000' }}>{userRegistration.reg_code}</span>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        Registration ID: <span className="font-mono" style={{ fontWeight: 700, color: '#000', fontSize: '1rem' }}>{userRegistration.reg_code}</span>
                       </div>
-                      <Link
-                        to={`/lookup?id=${userRegistration.reg_code}`}
-                        className="btn btn--primary btn--lg event-detail__main-reg-btn"
-                      >
-                        VIEW YOUR TICKET
-                      </Link>
                     </div>
                   ) : regStatus === 'OPEN' ? (
-                    <>
-                      <Link
-                        to={isAuthenticated ? `/events/${slug}/register` : `/login?redirect=/events/${slug}/register`}
-                        className="btn btn--primary btn--lg event-detail__main-reg-btn"
-                        id="event-detail-register-btn"
-                      >
-                        REGISTER NOW
-                      </Link>
-                      <Link
-                        to="/lookup"
-                        className="btn btn--secondary btn--lg event-detail__ticket-btn"
-                      >
-                        CHECK EXISTING TICKET
-                      </Link>
-                    </>
+                    <Link
+                      to={isAuthenticated ? `/events/${slug}/register` : `/login?redirect=/events/${slug}/register`}
+                      className="btn btn--primary btn--lg event-detail__main-reg-btn"
+                      id="event-detail-register-btn"
+                    >
+                      REGISTER NOW
+                    </Link>
                   ) : regStatus === 'NOT_OPEN' ? (
                     <div className="alert alert--info">
                       Registration opens {event.registration_opens_at ? formatDateTime(event.registration_opens_at) : 'soon'}. Stay tuned!

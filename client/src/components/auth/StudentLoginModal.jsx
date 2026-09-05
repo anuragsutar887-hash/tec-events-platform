@@ -1,21 +1,28 @@
 import { useState, useEffect } from 'react';
-import { sendSignInLinkToEmail } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
 import { useStudent } from '../../context/StudentAuthContext';
 import './StudentLoginModal.css';
 
-const isGmail = (val) => /^[^\s@]+@gmail\.com$/i.test(val.trim());
-const STORAGE_KEY = 'participant_user';
-const SYNC_CHANNEL = 'participant_auth_channel';
+const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 
 export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
-  const { login } = useStudent();
+  const { registerWithPRN, loginWithPRN } = useStudent();
+
+  // Mode: 'LOGIN' or 'REGISTER'
+  const [tab, setTab] = useState('LOGIN');
+
+  // Login Form Fields
+  const [loginPrn, setLoginPrn] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  // Register Form Fields
   const [fullName, setFullName] = useState('');
-  const [prn, setPrn] = useState('');
+  const [registerPrn, setRegisterPrn] = useState('');
   const [email, setEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
 
   // 🔒 Prevent background scrolling without causing page scroll jump
   useEffect(() => {
@@ -31,153 +38,152 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
   // Reset fields when modal closes
   useEffect(() => {
     if (!isOpen) {
+      setLoginPrn('');
+      setLoginPassword('');
       setFullName('');
-      setPrn('');
+      setRegisterPrn('');
       setEmail('');
+      setRegisterPassword('');
+      setConfirmPassword('');
       setError('');
       setLoading(false);
-      setEmailSent(false);
     }
   }, [isOpen]);
 
-  // When email link has been sent, watch for the email verification event in real time!
-  // This automatically logs the user in and gives access in this SAME TAB.
-  useEffect(() => {
-    if (!emailSent) return;
-
-    const checkAndCompleteLogin = () => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const userData = JSON.parse(stored);
-          if (userData && (userData.email || userData.prn)) {
-            login(userData);
-            if (onSuccess) onSuccess(userData);
-            onClose();
-          }
-        }
-      } catch {}
-    };
-
-    // 1. BroadcastChannel listener (instant cross-tab signal)
-    let bc;
-    try {
-      bc = new BroadcastChannel(SYNC_CHANNEL);
-      bc.onmessage = (event) => {
-        if (event.data?.type === 'LOGIN_SUCCESS' && event.data.user) {
-          login(event.data.user);
-          if (onSuccess) onSuccess(event.data.user);
-          onClose();
-        }
-      };
-    } catch {}
-
-    // 2. Storage event listener (fires when another tab writes to localStorage)
-    const handleStorage = (e) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        checkAndCompleteLogin();
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-
-    // 3. Polling fallback every 600ms to guarantee zero delay
-    const interval = setInterval(checkAndCompleteLogin, 600);
-
-    return () => {
-      if (bc) bc.close();
-      window.removeEventListener('storage', handleStorage);
-      clearInterval(interval);
-    };
-  }, [emailSent, login, onSuccess, onClose]);
-
   if (!isOpen) return null;
 
-  // Send Firebase Email Link to user's Gmail
-  const handleEmailSignIn = async (e) => {
+  // Handle Login with PRN + Password
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (!fullName.trim()) { setError('Full Name is required'); return; }
-    if (!prn.trim())      { setError('PRN Number is required'); return; }
-    if (!email.trim())    { setError('Gmail ID is required'); return; }
-    if (!isGmail(email)) {
-      setError('Only @gmail.com addresses are allowed.');
+    if (!loginPrn.trim()) {
+      setError('Please enter your PRN number.');
+      return;
+    }
+    if (!loginPassword) {
+      setError('Please enter your password.');
       return;
     }
 
     setError('');
     setLoading(true);
 
-    // Mark this tab as the origin tab so secondary tabs close themselves
-    sessionStorage.setItem('is_auth_origin_tab', 'true');
-
-    // Build URL with verify_email param so email is preserved in all browser contexts
-    const targetUrl = new URL(window.location.href);
-    targetUrl.searchParams.set('verify_email', email.trim().toLowerCase());
-
-    const actionCodeSettings = {
-      url: targetUrl.toString(),
-      handleCodeInApp: true,
-    };
-
     try {
-      await sendSignInLinkToEmail(auth, email.trim().toLowerCase(), actionCodeSettings);
-      localStorage.setItem('emailForSignIn', email.trim().toLowerCase());
-      localStorage.setItem('pending_auth_name', fullName.trim());
-      localStorage.setItem('pending_auth_prn', prn.trim().toUpperCase());
-      setEmailSent(true);
+      const userData = await loginWithPRN({
+        prn: loginPrn.trim(),
+        password: loginPassword,
+      });
+      if (onSuccess) onSuccess(userData);
+      onClose();
     } catch (err) {
-      console.error('Send email link error:', err);
-      if (err.code === 'auth/unauthorized-domain') {
-        setError('Domain not authorized. Add this domain in Firebase Console > Authentication > Authorized domains.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Invalid email. Please enter a valid Gmail address.');
+      console.error('Login error:', err);
+      const code = err.code || '';
+      if (
+        code === 'auth/invalid-credential' ||
+        code === 'auth/user-not-found' ||
+        code === 'auth/wrong-password'
+      ) {
+        setError('Invalid PRN or password. If you are new, click "Create Account" below.');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please wait a moment and try again.');
       } else {
-        setError(err.message || 'Failed to send sign-in link. Please try again.');
+        setError(err.message || 'Login failed. Please check your credentials.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Email Sent Minimal View (Simplified, no clutter/paragraphs) ───────────
-  if (emailSent) {
-    return (
-      <div className="student-modal-overlay" onClick={onClose}>
-        <div className="student-modal-card card" onClick={(e) => e.stopPropagation()}>
-          <div className="student-modal-header">
-            <h2 className="student-modal-title">Verify Email</h2>
-            <button className="student-modal-close" onClick={onClose} aria-label="Close modal">✕</button>
-          </div>
-          <div className="card__body" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>
-            <div className="student-email-waiting">
-              <div className="spinner mb-3" style={{ width: '28px', height: '28px', margin: '0 auto var(--space-3)' }}></div>
-              <p style={{ fontWeight: 600, color: '#000', marginBottom: '6px', fontSize: '0.95rem' }}>
-                Verification link sent to <span style={{ fontFamily: 'var(--font-mono)' }}>{email}</span>
-              </p>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 var(--space-4)' }}>
-                Waiting for verification...
-              </p>
-              <button
-                type="button"
-                className="btn btn--secondary btn--sm"
-                onClick={() => { setEmailSent(false); setEmail(''); }}
-              >
-                Change Email
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Handle Account Registration with Full Name, PRN, Email, Password
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
 
-  // ── Main Form ─────────────────────────────────────────────────────────────
+    if (!fullName.trim()) {
+      setError('Full Name is required.');
+      return;
+    }
+    if (!registerPrn.trim()) {
+      setError('PRN number is required.');
+      return;
+    }
+    if (!email.trim() || !isValidEmail(email)) {
+      setError('Please enter a valid email address for notifications.');
+      return;
+    }
+    if (!registerPassword) {
+      setError('Password is required.');
+      return;
+    }
+    if (registerPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (registerPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      const userData = await registerWithPRN({
+        fullName: fullName.trim(),
+        prn: registerPrn.trim(),
+        email: email.trim(),
+        password: registerPassword,
+      });
+      if (onSuccess) onSuccess(userData);
+      onClose();
+    } catch (err) {
+      console.error('Registration error:', err);
+      const code = err.code || '';
+      if (code === 'auth/email-already-in-use') {
+        setError(`An account with PRN "${registerPrn.trim().toUpperCase()}" already exists. Please Sign In.`);
+      } else if (code === 'auth/weak-password') {
+        setError('Password is too weak. Please use at least 6 characters.');
+      } else {
+        setError(err.message || 'Failed to create account. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="student-modal-overlay" onClick={onClose}>
       <div className="student-modal-card card" onClick={(e) => e.stopPropagation()}>
+        {/* Header with Title & Close */}
         <div className="student-modal-header">
-          <h2 className="student-modal-title">Participant Login</h2>
+          <div>
+            <h2 className="student-modal-title">
+              {tab === 'LOGIN' ? 'Participant Sign In' : 'Create Account'}
+            </h2>
+            <p className="student-modal-subtitle">
+              {tab === 'LOGIN'
+                ? 'Sign in with your student PRN and password'
+                : 'Register your account using your PRN'}
+            </p>
+          </div>
           <button className="student-modal-close" onClick={onClose} aria-label="Close modal">
             ✕
+          </button>
+        </div>
+
+        {/* Tab Switcher: Sign In vs Create Account */}
+        <div className="student-modal-tabs">
+          <button
+            type="button"
+            className={`student-modal-tab ${tab === 'LOGIN' ? 'active' : ''}`}
+            onClick={() => { setTab('LOGIN'); setError(''); }}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            className={`student-modal-tab ${tab === 'REGISTER' ? 'active' : ''}`}
+            onClick={() => { setTab('REGISTER'); setError(''); }}
+          >
+            Create Account
           </button>
         </div>
 
@@ -189,60 +195,156 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
             </div>
           )}
 
-          <form onSubmit={handleEmailSignIn} className="student-login-form">
-            <div className="form-group">
-              <label className="form-label form-label--required">Full Name</label>
-              <input
-                type="text"
-                className="form-input"
-                value={fullName}
-                onChange={(e) => { setFullName(e.target.value); if (error) setError(''); }}
-                placeholder="Enter your full name"
-                autoComplete="off"
-                autoFocus
-                required
-              />
-            </div>
+          {/* ─── Tab 1: SIGN IN ────────────────────────────────────── */}
+          {tab === 'LOGIN' && (
+            <form onSubmit={handleLoginSubmit} className="student-login-form">
+              <div className="form-group">
+                <label className="form-label form-label--required">PRN Number</label>
+                <input
+                  type="text"
+                  className="form-input font-mono"
+                  value={loginPrn}
+                  onChange={(e) => { setLoginPrn(e.target.value); if (error) setError(''); }}
+                  placeholder="e.g. A4IAJF or IT250B1016"
+                  autoComplete="username"
+                  autoFocus
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label className="form-label form-label--required">PRN Number</label>
-              <input
-                type="text"
-                className="form-input font-mono"
-                value={prn}
-                onChange={(e) => { setPrn(e.target.value); if (error) setError(''); }}
-                placeholder="e.g. IT250B1016"
-                autoComplete="off"
-                required
-              />
-            </div>
+              <div className="form-group">
+                <label className="form-label form-label--required">Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={loginPassword}
+                  onChange={(e) => { setLoginPassword(e.target.value); if (error) setError(''); }}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label className="form-label form-label--required">Gmail ID</label>
-              <input
-                type="email"
-                className="form-input"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
-                placeholder="yourname@gmail.com"
-                autoComplete="off"
-                required
-              />
-              <span className="form-hint">Only @gmail.com addresses are accepted</span>
-            </div>
+              <div className="student-modal-actions">
+                <button
+                  type="submit"
+                  className={`btn btn--primary btn--full ${loading ? 'btn--loading' : ''}`}
+                  disabled={loading}
+                >
+                  {loading ? '' : 'Sign In'}
+                </button>
+              </div>
 
-            <div className="student-modal-actions">
-              <button
-                type="submit"
-                className={`btn btn--primary btn--full ${loading ? 'btn--loading' : ''}`}
-                disabled={loading}
-              >
-                {loading ? '' : 'Send Verification Link'}
-              </button>
-            </div>
-          </form>
+              <div className="student-modal-switch-text">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  className="student-modal-switch-btn"
+                  onClick={() => { setTab('REGISTER'); setError(''); }}
+                >
+                  Create Account
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ─── Tab 2: CREATE ACCOUNT ─────────────────────────────── */}
+          {tab === 'REGISTER' && (
+            <form onSubmit={handleRegisterSubmit} className="student-login-form">
+              <div className="form-group">
+                <label className="form-label form-label--required">Full Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={fullName}
+                  onChange={(e) => { setFullName(e.target.value); if (error) setError(''); }}
+                  placeholder="e.g. Anurag Sutar"
+                  autoComplete="name"
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label form-label--required">PRN Number (Registration)</label>
+                <input
+                  type="text"
+                  className="form-input font-mono"
+                  value={registerPrn}
+                  onChange={(e) => { setRegisterPrn(e.target.value); if (error) setError(''); }}
+                  placeholder="e.g. A4IAJF or IT250B1016"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label form-label--required">Email Address</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+                  placeholder="e.g. anuragsutar887@gmail.com"
+                  autoComplete="email"
+                  required
+                />
+                <span className="form-hint">Used for event messages & teammate notifications</span>
+              </div>
+
+              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                <div className="form-group">
+                  <label className="form-label form-label--required">Password</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    value={registerPassword}
+                    onChange={(e) => { setRegisterPassword(e.target.value); if (error) setError(''); }}
+                    placeholder="Min 6 characters"
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label form-label--required">Confirm Password</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); if (error) setError(''); }}
+                    placeholder="Repeat password"
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="student-modal-actions">
+                <button
+                  type="submit"
+                  className={`btn btn--primary btn--full ${loading ? 'btn--loading' : ''}`}
+                  disabled={loading}
+                >
+                  {loading ? '' : 'Create Account & Sign In'}
+                </button>
+              </div>
+
+              <div className="student-modal-switch-text">
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  className="student-modal-switch-btn"
+                  onClick={() => { setTab('LOGIN'); setError(''); }}
+                >
+                  Sign In
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
