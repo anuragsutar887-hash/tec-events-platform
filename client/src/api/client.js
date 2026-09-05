@@ -363,6 +363,7 @@ export const apiClient = {
 
       // Generate clean registration ID (Format: TEC-2026-XXXX)
       const regId = `TEC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const qrToken = 'qr_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
       const p1 = player_1 || payload.player1 || {};
       const p2 = player_2 || payload.player2 || {};
 
@@ -373,6 +374,7 @@ export const apiClient = {
         .insert({
           event_id: eventRecord.id,
           registration_id: regId,
+          qr_token: qrToken,
           team_name: team_name?.trim() || `${p1.full_name}'s Duo`,
           participation_mode: 'TEAM',
           registration_type: is_on_site ? 'ON_SITE' : 'ONLINE',

@@ -31,7 +31,7 @@ export function useStudentAuth() {
       setLoadingInvites(true);
       let query = supabase
         .from('participants')
-        .select('*, registrations!inner(*, events(*))')
+        .select('*, registrations!inner(*, events(*), participants(*))')
         .eq('is_leader', false)
         .eq('registrations.status', 'PENDING_APPROVAL');
 
@@ -50,11 +50,15 @@ export function useStudentAuth() {
       const formatted = (data || []).map((item) => {
         const reg = item.registrations;
         const ev = reg?.events;
+        const leader = (reg?.participants || []).find((p) => p.is_leader);
         return {
           participantId: item.id,
           registrationId: reg.id,
           regCode: reg.registration_id,
           teamName: reg.team_name,
+          leaderName: leader?.full_name || 'Your teammate',
+          leaderPrn: leader?.student_id || '',
+          leaderEmail: leader?.email || '',
           eventTitle: ev?.name || 'Technical Event',
           eventDate: ev?.event_date,
           eventVenue: ev?.venue,
@@ -74,6 +78,10 @@ export function useStudentAuth() {
   useEffect(() => {
     if (user) {
       fetchPendingInvites(user);
+      const interval = setInterval(() => {
+        fetchPendingInvites(user);
+      }, 5000);
+      return () => clearInterval(interval);
     }
   }, [user, fetchPendingInvites]);
 

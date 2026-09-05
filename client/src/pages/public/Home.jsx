@@ -5,9 +5,13 @@ import EventCard from '../../components/features/EventCard';
 import RevealOnScroll from '../../components/common/RevealOnScroll';
 import { SkeletonEventCard } from '../../components/common/SkeletonCard';
 import { useScrambleText } from '../../hooks/useScrambleText';
+import { useStudent } from '../../context/StudentAuthContext';
+import PendingInvitesModal from '../../components/auth/PendingInvitesModal';
 import './Home.css';
 
 export default function Home() {
+  const { isAuthenticated, pendingInvites, refreshInvites } = useStudent();
+  const [invitesModalOpen, setInvitesModalOpen] = useState(false);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -96,6 +100,37 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── 🔔 TEAM APPROVALS NOTIFICATION SECTION ────────────────── */}
+      {isAuthenticated && pendingInvites && pendingInvites.length > 0 && (
+        <section className="section--sm" style={{ background: '#000000', color: '#ffffff', padding: 'var(--space-6) 0' }}>
+          <div className="container">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+              <div style={{ maxWidth: '680px' }}>
+                <span className="badge badge--bronze" style={{ marginBottom: '8px', display: 'inline-block' }}>
+                  🔔 ACTION REQUIRED · TEAM INVITATION
+                </span>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', fontWeight: 900, color: '#ffffff', margin: '4px 0 6px' }}>
+                  {pendingInvites.length === 1
+                    ? `You've been added to team "${pendingInvites[0].teamName}" for ${pendingInvites[0].eventTitle}!`
+                    : `You have ${pendingInvites.length} pending team registration approvals!`}
+                </h3>
+                <p style={{ color: '#a1a1aa', fontSize: '0.875rem', margin: 0, lineHeight: 1.6 }}>
+                  Another student registered you as their teammate. You must approve the invitation to officially confirm your team registration.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn--secondary btn--lg"
+                style={{ background: '#ffffff', color: '#000000', fontWeight: 800, border: 'none' }}
+                onClick={() => setInvitesModalOpen(true)}
+              >
+                Review & Approve Now
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ─── 2. CORE PILLARS // OUR MISSION ───────────────────────── */}
       <section className="section home__methodology">
         <div className="container">
@@ -180,6 +215,15 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {/* Teammate Approvals Modal */}
+      <PendingInvitesModal
+        isOpen={invitesModalOpen}
+        onClose={() => setInvitesModalOpen(false)}
+        invites={pendingInvites}
+        onApproved={() => refreshInvites()}
+        onDeclined={() => refreshInvites()}
+      />
     </div>
   );
 }

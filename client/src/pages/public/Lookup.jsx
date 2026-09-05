@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { formatDate } from '../../utils/dateHelpers';
+import { useStudent } from '../../context/StudentAuthContext';
+import PendingInvitesModal from '../../components/auth/PendingInvitesModal';
 import './Lookup.css';
 
 export default function Lookup() {
+  const { isAuthenticated, pendingInvites, refreshInvites } = useStudent();
+  const [invitesModalOpen, setInvitesModalOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -49,6 +53,31 @@ export default function Lookup() {
 
       <div className="section">
         <div className="container--narrow">
+          {/* Pending Teammate Invitations Banner */}
+          {isAuthenticated && pendingInvites && pendingInvites.length > 0 && (
+            <div className="card mb-6" style={{ border: '2px solid #000', background: '#000', color: '#fff', padding: 'var(--space-5)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                <div>
+                  <span className="badge badge--bronze mb-1" style={{ display: 'inline-block' }}>🔔 PENDING INVITATION</span>
+                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', color: '#fff', margin: '4px 0' }}>
+                    You have {pendingInvites.length} team registration approval waiting!
+                  </h3>
+                  <p style={{ color: '#a1a1aa', fontSize: '0.825rem', margin: 0 }}>
+                    A teammate added you to their team. Approve below to confirm your team and unlock your official ticket.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm"
+                  style={{ background: '#fff', color: '#000', fontWeight: 800, border: 'none' }}
+                  onClick={() => setInvitesModalOpen(true)}
+                >
+                  Review & Approve
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Registration ID Input */}
           {showManualInput && (
             <form onSubmit={handleSearchSubmit} className="lookup-form card mb-6">
@@ -259,6 +288,15 @@ export default function Lookup() {
           )}
         </div>
       </div>
+
+      {/* Teammate Approvals Modal */}
+      <PendingInvitesModal
+        isOpen={invitesModalOpen}
+        onClose={() => setInvitesModalOpen(false)}
+        invites={pendingInvites}
+        onApproved={() => refreshInvites()}
+        onDeclined={() => refreshInvites()}
+      />
     </div>
   );
 }

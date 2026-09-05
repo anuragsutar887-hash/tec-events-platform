@@ -118,6 +118,25 @@ export default function PublicHeader() {
                 >
                   Standings
                 </Link>
+
+                <button
+                  type="button"
+                  className="pub-header__link pub-header__notif-link"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (!isAuthenticated) {
+                      setLoginModalOpen(true);
+                    } else {
+                      setInvitesModalOpen(true);
+                    }
+                  }}
+                  title="Team Invitations & Approvals"
+                >
+                  <span>Notifications</span>
+                  {pendingInvites && pendingInvites.length > 0 && (
+                    <span className="pub-header__notif-badge">{pendingInvites.length}</span>
+                  )}
+                </button>
               </nav>
 
               {/* 👤 Participant Authentication Control at top right */}
