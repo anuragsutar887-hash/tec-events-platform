@@ -32,6 +32,9 @@ export default function Register() {
   const [checkingApproval, setCheckingApproval] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Already-registered state
+  const [userRegistration, setUserRegistration] = useState(null);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     apiClient.get(`/events/${slug}`)
@@ -61,6 +64,25 @@ export default function Register() {
       setTeamName('');
     }
   }, [user]);
+
+  // Check if user is already registered for this event
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email || !slug) {
+      setUserRegistration(null);
+      return;
+    }
+    apiClient.get(`/participants/check?event_slug=${slug}&email=${encodeURIComponent(user.email)}`)
+      .then(({ data }) => {
+        if (data.registered) {
+          setUserRegistration(data);
+        } else {
+          setUserRegistration(null);
+        }
+      })
+      .catch(() => setUserRegistration(null));
+  }, [isAuthenticated, user?.email, slug]);
+
+
 
   // Live polling for teammate approval when in pending state
   useEffect(() => {
@@ -222,7 +244,54 @@ export default function Register() {
     );
   }
 
+  // ─── ✅ SCREEN: ALREADY REGISTERED ────────────────────────────
+  if (userRegistration) {
+    return (
+      <div className="register-page">
+        <div className="register-page__header">
+          <div className="container">
+            <span className="section__label" style={{ color: '#000000' }}>{event?.name}</span>
+            <h1 className="register-page__title">ALREADY REGISTERED</h1>
+          </div>
+        </div>
+        <div className="container--narrow section">
+          <div className="card" style={{ border: '2px solid #16a34a', overflow: 'hidden' }}>
+            <div className="card__body" style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: 'var(--space-4)' }}>✅</div>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 900, marginBottom: 'var(--space-3)', textTransform: 'uppercase' }}>
+                {userRegistration.status === 'CONFIRMED' ? 'You Are Officially Registered!' : 'Registration Pending Approval'}
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
+                {userRegistration.status === 'CONFIRMED'
+                  ? 'Your team has been successfully registered. View your ticket for QR code and event details.'
+                  : 'Your registration is awaiting your teammate\'s approval. Once they approve, your registration will be confirmed.'}
+              </p>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: 'var(--space-6)' }}>
+                Registration ID: <strong style={{ color: '#000' }}>{userRegistration.reg_code}</strong>
+              </p>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link
+                  to={`/lookup?id=${userRegistration.reg_code}`}
+                  className="btn btn--primary btn--lg"
+                >
+                  VIEW YOUR TICKET
+                </Link>
+                <Link
+                  to={`/events/${slug}`}
+                  className="btn btn--secondary btn--lg"
+                >
+                  BACK TO EVENT
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ─── ⏳ SCREEN: WAITING FOR APPROVAL FROM TEAMMATE ──────────────
+
   if (pendingApprovalReg) {
     return (
       <div className="register-page">

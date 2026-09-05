@@ -388,28 +388,44 @@
 @media (max-width: 480px) {
   .pub-header__inner {
     height: 56px;
+    gap: var(--space-2);
   }
 
+  /* Hide brand text on small phones — logo icon alone is enough */
   .pub-header__logo-brand {
-    font-size: 1rem;
+    display: none;
   }
 
   .pub-header__logo-img {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
   }
 
   .pub-header__login-btn {
-    font-size: 0.75rem;
-    padding: 0.4rem 0.75rem;
+    font-size: 0.6875rem;
+    padding: 0.35rem 0.65rem;
+    letter-spacing: 0.03em;
   }
 
   .pub-header__nav {
     top: 56px;
   }
 
+  /* Compact user pill: avatar only + small logout */
   .pub-header__user-pill {
     padding: 2px 4px;
+    gap: var(--space-1);
+  }
+
+  /* Show only avatar, hide name/prn text */
+  .pub-header__profile-text {
+    display: none;
+  }
+
+  /* Compact logout: shorter text */
+  .pub-header__logout-btn {
+    font-size: 0.625rem;
+    padding: 2px 5px;
   }
 
   .pub-header__bell-icon-btn {
@@ -428,4 +444,15 @@
     width: 7px;
     height: 7px;
   }
+
+  .pub-header__right {
+    gap: var(--space-1);
+  }
 }
+
+/* Prevent any horizontal bleed on all screen sizes */
+.pub-header {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+

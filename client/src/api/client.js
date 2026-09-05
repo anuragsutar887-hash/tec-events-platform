@@ -281,6 +281,41 @@ export const apiClient = {
       };
     }
 
+    // 11. Check if a user is already registered for an event (by email + slug)
+    if (url.startsWith('/participants/check')) {
+      const urlParams = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
+      const eventSlug = urlParams.get('event_slug');
+      const email = urlParams.get('email');
+      if (!eventSlug || !email) return { data: { registered: false } };
+
+      // Fetch event id from slug
+      const { data: ev } = await supabase.from('events').select('id').eq('slug', eventSlug).single();
+      if (!ev) return { data: { registered: false } };
+
+      // Check participants table for this email + event_id
+      const { data: parts } = await supabase
+        .from('participants')
+        .select('id, registration_id, is_leader, registrations!inner(id, registration_id, status)')
+        .eq('event_id', ev.id)
+        .ilike('email', email.trim())
+        .limit(1);
+
+      if (parts && parts.length > 0) {
+        const p = parts[0];
+        const reg = p.registrations;
+        return {
+          data: {
+            registered: true,
+            registration_id: reg?.id,
+            reg_code: reg?.registration_id,
+            status: reg?.status,
+            is_leader: p.is_leader,
+          }
+        };
+      }
+      return { data: { registered: false } };
+    }
+
     throw new Error(`GET ${url} not mapped`);
   },
 
@@ -361,7 +396,38 @@ export const apiClient = {
 
       if (!eventRecord) throw new Error('Event not found');
 
-      // Generate clean registration ID (Format: TEC-2026-XXXX)
+      // ─── Pre-check: Prevent Duplicate Registration ────────────
+      const p1Email = (player_1 || payload.player1 || {}).email?.trim()?.toLowerCase() || '';
+      const p2Email = (player_2 || payload.player2 || {}).email?.trim()?.toLowerCase() || '';
+      if (p1Email) {
+        const { data: existP1 } = await supabase
+          .from('participants')
+          .select('id')
+          .eq('event_id', eventRecord.id)
+          .ilike('email', p1Email)
+          .limit(1);
+        if (existP1 && existP1.length > 0) {
+          const err = new Error('Already registered');
+          err.response = { data: { error: 'You are already registered for this event. Each participant can only register once per event.' } };
+          throw err;
+        }
+      }
+      if (p2Email && p2Email !== p1Email) {
+        const { data: existP2 } = await supabase
+          .from('participants')
+          .select('id')
+          .eq('event_id', eventRecord.id)
+          .ilike('email', p2Email)
+          .limit(1);
+        if (existP2 && existP2.length > 0) {
+          const err = new Error('Teammate already registered');
+          err.response = { data: { error: `Your teammate (${p2Email}) is already registered for this event. Each participant can only be in one team per event.` } };
+          throw err;
+        }
+      }
+      // ─────────────────────────────────────────────────────────
+
+
       const regId = `TEC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
       const qrToken = 'qr_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
       const p1 = player_1 || payload.player1 || {};

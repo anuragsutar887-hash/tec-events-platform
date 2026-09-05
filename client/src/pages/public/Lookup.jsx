@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { formatDate } from '../../utils/dateHelpers';
 import { useStudent } from '../../context/StudentAuthContext';
@@ -14,6 +14,7 @@ export default function Lookup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showManualInput, setShowManualInput] = useState(true);
+  const [searchParams] = useSearchParams();
 
   const fetchRegistration = async (idToFetch) => {
     const q = (idToFetch || query).trim();
@@ -33,10 +34,21 @@ export default function Lookup() {
     }
   };
 
+  // Auto-fetch if ?id= param is in the URL (from View Your Ticket link)
+  useEffect(() => {
+    const idParam = searchParams.get('id');
+    if (idParam) {
+      setQuery(idParam);
+      fetchRegistration(idParam);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchRegistration(query);
   };
+
 
   return (
     <div className="lookup-page">

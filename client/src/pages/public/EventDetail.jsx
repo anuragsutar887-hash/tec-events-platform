@@ -8,10 +8,11 @@ import './EventDetail.css';
 export default function EventDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useStudent();
+  const { isAuthenticated, user } = useStudent();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userRegistration, setUserRegistration] = useState(null); // { reg_code, status, is_leader }
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -20,6 +21,24 @@ export default function EventDetail() {
       .catch(() => setError('Event not found'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Check if the logged-in user is already registered for this event
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email || !slug) {
+      setUserRegistration(null);
+      return;
+    }
+    apiClient.get(`/participants/check?event_slug=${slug}&email=${encodeURIComponent(user.email)}`)
+      .then(({ data }) => {
+        if (data.registered) {
+          setUserRegistration(data);
+        } else {
+          setUserRegistration(null);
+        }
+      })
+      .catch(() => setUserRegistration(null));
+  }, [isAuthenticated, user?.email, slug]);
+
 
   // ⚡ Skeleton Loader for Event Detail
   if (loading) {
@@ -159,7 +178,29 @@ export default function EventDetail() {
 
                 {/* Clean, Non-overlapping Action Buttons */}
                 <div className="event-detail__action-buttons">
-                  {regStatus === 'OPEN' ? (
+                  {userRegistration ? (
+                    /* ✅ Already Registered — show ticket */
+                    <div className="event-detail__already-registered">
+                      <div className="event-detail__already-badge">
+                        {userRegistration.status === 'CONFIRMED' ? (
+                          <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ You are registered for this event</span>
+                        ) : userRegistration.status === 'PENDING_APPROVAL' ? (
+                          <span style={{ color: '#d97706', fontWeight: 700 }}>⏳ Registration pending teammate approval</span>
+                        ) : (
+                          <span style={{ color: '#6b7280', fontWeight: 700 }}>Registration: {userRegistration.status}</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 'var(--space-4)' }}>
+                        Reg ID: <span className="font-mono" style={{ fontWeight: 700, color: '#000' }}>{userRegistration.reg_code}</span>
+                      </div>
+                      <Link
+                        to={`/lookup?id=${userRegistration.reg_code}`}
+                        className="btn btn--primary btn--lg event-detail__main-reg-btn"
+                      >
+                        VIEW YOUR TICKET
+                      </Link>
+                    </div>
+                  ) : regStatus === 'OPEN' ? (
                     <>
                       <Link
                         to={isAuthenticated ? `/events/${slug}/register` : `/login?redirect=/events/${slug}/register`}
