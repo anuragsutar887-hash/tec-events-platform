@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { signOut, getRedirectResult } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabaseClient';
 
@@ -17,34 +17,6 @@ export function useStudentAuth() {
 
   const [pendingInvites, setPendingInvites] = useState([]);
   const [loadingInvites, setLoadingInvites] = useState(false);
-
-  // Check for Google redirect result on page load (fallback for when popups are blocked)
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result && result.user && result.user.email) {
-          const savedName = localStorage.getItem('pending_auth_name') || '';
-          const savedPrn = localStorage.getItem('pending_auth_prn') || '';
-          localStorage.removeItem('pending_auth_name');
-          localStorage.removeItem('pending_auth_prn');
-
-          const userData = {
-            full_name: savedName || result.user.displayName || 'Participant',
-            email: result.user.email.toLowerCase(),
-            prn: (savedPrn || '').toUpperCase(),
-            uid: result.user.uid,
-            photoURL: result.user.photoURL || '',
-            college: 'Indira College of Engineering & Management',
-            logged_in_at: new Date().toISOString(),
-          };
-
-          login(userData);
-        }
-      })
-      .catch((err) => {
-        console.error('Firebase redirect auth error:', err);
-      });
-  }, []);
 
   // Check pending invites for the logged in participant
   const fetchPendingInvites = useCallback(async (student) => {

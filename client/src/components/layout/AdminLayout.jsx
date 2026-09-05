@@ -9,7 +9,7 @@ const navItems = [
   { path: '/admin/registrations', label: 'Registrations', icon: '📋' },
   { path: '/admin/checkin', label: 'Check-in Console', icon: '✅' },
   { path: '/admin/onsite', label: 'On-site Reg', icon: '➕' },
-  { path: '/admin/arena', label: 'Live Arena', icon: '⚡' },
+  { path: '/admin/arena', label: 'Standings', icon: '🏆' },
   { path: '/admin/settings', label: 'Settings', icon: '⚙️' },
 ];
 
@@ -93,9 +93,6 @@ export default function AdminLayout({ children }) {
           </div>
 
           <div className="admin-topbar__actions">
-            <Link to="/admin/arena" className="btn btn--secondary btn--sm" style={{ borderColor: 'var(--accent)' }}>
-              ⚡ Live Arena
-            </Link>
             <Link to="/" className="btn btn--ghost btn--sm" target="_blank">
               Public Site
             </Link>
