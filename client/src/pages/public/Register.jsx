@@ -140,32 +140,30 @@ export default function Register() {
     }
 
     // Player 1 validation (Auto-filled from user account)
-    if (!player1.full_name.trim()) errs.p1_name = 'Player 1 name is required';
-    if (!player1.prn.trim()) errs.p1_prn = 'Player 1 PRN is required';
+    if (!player1.full_name.trim()) errs.p1_name = 'Your name is required';
+    if (!player1.prn.trim()) errs.p1_prn = 'Your PRN is required';
     if (!player1.email.trim()) {
-      errs.p1_email = 'Player 1 email is required';
+      errs.p1_email = 'Your email is required';
     } else if (!isValidEmail(player1.email)) {
       errs.p1_email = 'Enter a valid email address';
     }
 
-    // Player 2 validation
-    if (!player2.full_name.trim()) {
-      errs.p2_name = 'Teammate full name is required';
-    }
-    if (!player2.prn.trim()) {
-      errs.p2_prn = 'Teammate PRN number is required';
-    }
-    if (!player2.email.trim()) {
-      errs.p2_email = 'Teammate email is required';
-    } else if (!isValidEmail(player2.email)) {
-      errs.p2_email = 'Enter a valid email address';
-    }
-
-    if (player1.email && player2.email && player1.email.toLowerCase().trim() === player2.email.toLowerCase().trim()) {
-      errs.p2_email = 'Player 1 and Player 2 must have distinct email addresses';
-    }
-    if (player1.prn && player2.prn && player1.prn.toLowerCase().trim() === player2.prn.toLowerCase().trim()) {
-      errs.p2_prn = 'Player 1 and Player 2 must have distinct PRNs';
+    // Player 2 is OPTIONAL — only validate if user has started filling in teammate details
+    const hasAnyP2 = player2.full_name.trim() || player2.prn.trim() || player2.email.trim();
+    if (hasAnyP2) {
+      if (!player2.full_name.trim()) errs.p2_name = 'Teammate full name is required';
+      if (!player2.prn.trim()) errs.p2_prn = 'Teammate PRN number is required';
+      if (!player2.email.trim()) {
+        errs.p2_email = 'Teammate email is required';
+      } else if (!isValidEmail(player2.email)) {
+        errs.p2_email = 'Enter a valid email address';
+      }
+      if (player1.email && player2.email && player1.email.toLowerCase().trim() === player2.email.toLowerCase().trim()) {
+        errs.p2_email = 'Player 1 and Player 2 must have distinct email addresses';
+      }
+      if (player1.prn && player2.prn && player1.prn.toLowerCase().trim() === player2.prn.toLowerCase().trim()) {
+        errs.p2_prn = 'Player 1 and Player 2 must have distinct PRNs';
+      }
     }
 
     return errs;
@@ -187,21 +185,29 @@ export default function Register() {
       return;
     }
 
+    const hasTeammate = player2.full_name.trim() && player2.prn.trim() && player2.email.trim();
+
     setSubmitting(true);
     try {
       const payload = {
         event_slug: slug,
         team_name: teamName.trim(),
         player_1: player1,
-        player_2: player2,
-        status: 'PENDING_APPROVAL',
+        ...(hasTeammate ? { player_2: player2, status: 'PENDING_APPROVAL' } : { status: 'CONFIRMED' }),
       };
 
       const { data } = await apiClient.post('/registrations', payload);
 
-      // Show Waiting for Approval Screen
-      setPendingApprovalReg(data.registration);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (hasTeammate) {
+        // Show Waiting for Approval Screen
+        setPendingApprovalReg(data.registration);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        // Solo — navigate straight to success
+        navigate(`/events/${slug}/register/success`, {
+          state: { registration: data.registration }
+        });
+      }
     } catch (err) {
       const errData = err.response?.data;
       setApiError(
@@ -496,18 +502,18 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Section 3: Player 2 (Teammate with Approval Flow) */}
+              {/* Section 3: Player 2 (Optional Teammate) */}
               <div className="register-form__section card">
                 <div className="card__header">
-                  <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2 (TEAMMATE)</span>
+                  <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2 (OPTIONAL)</span>
                   <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
-                    PLAYER 2
+                    TEAMMATE
                   </h2>
                 </div>
                 <div className="card__body">
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="p2-name" className="form-label form-label--required">
+                      <label htmlFor="p2-name" className="form-label">
                         Teammate Full Name
                       </label>
                       <input
@@ -520,13 +526,12 @@ export default function Register() {
                           if (errors.p2_name) setErrors((prev) => ({ ...prev, p2_name: '' }));
                         }}
                         autoComplete="off"
-                        required
                       />
                       {errors.p2_name && <span className="form-error">{errors.p2_name}</span>}
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="p2-prn" className="form-label form-label--required">
+                      <label htmlFor="p2-prn" className="form-label">
                         Teammate PRN Number
                       </label>
                       <input
@@ -539,14 +544,13 @@ export default function Register() {
                           if (errors.p2_prn) setErrors((prev) => ({ ...prev, p2_prn: '' }));
                         }}
                         autoComplete="off"
-                        required
                       />
                       {errors.p2_prn && <span className="form-error">{errors.p2_prn}</span>}
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="p2-email" className="form-label form-label--required">
+                    <label htmlFor="p2-email" className="form-label">
                       Teammate Email ID
                     </label>
                     <input
@@ -559,7 +563,6 @@ export default function Register() {
                         if (errors.p2_email) setErrors((prev) => ({ ...prev, p2_email: '' }));
                       }}
                       autoComplete="off"
-                      required
                     />
                     {errors.p2_email && <span className="form-error">{errors.p2_email}</span>}
                   </div>
@@ -577,9 +580,10 @@ export default function Register() {
                   className={`btn btn--primary btn--lg ${submitting ? 'btn--loading' : ''}`}
                   disabled={submitting}
                 >
-                  {submitting ? '' : 'SUBMIT REGISTRATION & SEND INVITE'}
+                  {submitting ? '' : 'SUBMIT REGISTRATION'}
                 </button>
               </div>
+
             </form>
           </div>
 
@@ -594,10 +598,6 @@ export default function Register() {
               </div>
               <div className="card__body">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                  <div>
-                    <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Format</div>
-                    <div className="text-primary text-sm fw-semibold">Duo Team (2 Members)</div>
-                  </div>
                   {event.event_date && (
                     <div>
                       <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Event Date</div>

@@ -221,17 +221,8 @@ export default function Dashboard() {
                 <span className="breakdown-stat-sub">Awaiting entrance</span>
               </div>
 
-              <div className="breakdown-stat-card">
-                <span className="breakdown-stat-label">Duo Teams</span>
-                <span className="breakdown-stat-value">{eventStats.team_registrations}</span>
-                <span className="breakdown-stat-sub">2 members</span>
-              </div>
 
-              <div className="breakdown-stat-card">
-                <span className="breakdown-stat-label">Solo</span>
-                <span className="breakdown-stat-value">{eventStats.solo_registrations}</span>
-                <span className="breakdown-stat-sub">Individual</span>
-              </div>
+
             </div>
           )}
 
