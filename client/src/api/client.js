@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { sendRegistrationEmail } from '../services/emailService';
 
 const computeRegistrationStatus = (ev) => {
   const status = (ev.status || '').toUpperCase();
@@ -593,6 +594,16 @@ export const apiClient = {
         });
       }
 
+      // Dispatch registration confirmation email to all registered teammates via nodemailer
+      sendRegistrationEmail({
+        registration: reg,
+        event: eventRecord,
+        participants: [
+          { is_leader: true, full_name: p1.full_name, email: p1.email, prn: p1.prn || p1.student_id || '' },
+          ...(p2?.full_name ? [{ is_leader: false, full_name: p2.full_name, email: p2.email, prn: p2.prn || p2.student_id || '' }] : [])
+        ]
+      }).catch((e) => console.warn('[client] Registration email dispatch warning:', e));
+
       return {
         data: {
           registration: {
@@ -707,6 +718,14 @@ export const apiClient = {
         .select('*, participants(*), events(*)')
         .single();
       if (error) throw error;
+
+      // Dispatch confirmation email to all teammates upon approval via nodemailer
+      sendRegistrationEmail({
+        registration: data,
+        event: data.events,
+        participants: data.participants || [],
+      }).catch((e) => console.warn('[client] Teammate approval email dispatch warning:', e));
+
       return { data: { message: 'Registration approved and confirmed!', registration: formatRegistration(data) } };
     }
 

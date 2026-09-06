@@ -2,9 +2,13 @@
   "name": "tec-events-platform",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "npm --prefix client run dev",
     "build": "npm --prefix client run build",
     "preview": "npm --prefix client run preview"
+  },
+  "dependencies": {
+    "nodemailer": "^10.0.0"
   }
 }
