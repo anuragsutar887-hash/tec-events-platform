@@ -1,160 +1,301 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { SkeletonLeaderboardCard } from '../../components/common/SkeletonCard';
 import './Leaderboard.css';
 
 export default function Leaderboard({ isAdminView = false }) {
-  const { eventSlug = 'codedebug' } = useParams();
-  const [event, setEvent] = useState(null);
-  const [teams, setTeams] = useState([]);
+  const [standings, setStandings] = useState([]);
+  const [stats, setStats] = useState({ total_players: 0, total_points_awarded: 0 });
   const [loading, setLoading] = useState(true);
-  const [lastScannedTeam, setLastScannedTeam] = useState(null);
-  const prevCountRef = useRef(0);
+  const [search, setSearch] = useState('');
+  const [deptFilter, setDeptFilter] = useState('ALL');
+  const [expandedKey, setExpandedKey] = useState(null);
 
   useEffect(() => {
-    fetchLeaderboardData();
-
-    // Poll every 3 seconds for live event-day real-time updates
-    const interval = setInterval(fetchLeaderboardData, 3000);
+    fetchStandings();
+    // Real-time polling every 5 seconds
+    const interval = setInterval(fetchStandings, 5000);
     return () => clearInterval(interval);
-  }, [eventSlug]);
+  }, []);
 
-  const fetchLeaderboardData = async () => {
+  const fetchStandings = async () => {
     try {
-      // 1. Get event details
-      const { data: evData } = await apiClient.get(`/events/${eventSlug}`);
-      setEvent(evData.event);
-
-      // 2. Fetch registrations for this event
-      const { data: regData } = await apiClient.get(`/registrations/leaderboard/${evData.event.id}`);
-      const checkedInList = regData.teams || [];
-
-      // Check if new team arrived
-      if (checkedInList.length > prevCountRef.current && prevCountRef.current > 0) {
-        const newest = checkedInList[checkedInList.length - 1];
-        setLastScannedTeam(newest.team_name || newest.leader_name);
-        setTimeout(() => setLastScannedTeam(null), 5000);
-      }
-      prevCountRef.current = checkedInList.length;
-      setTeams(checkedInList);
+      const { data } = await apiClient.get('/standings');
+      setStandings(data.standings || []);
+      setStats({
+        total_players: data.total_players || (data.standings || []).length,
+        total_points_awarded: data.total_points_awarded || 0,
+      });
     } catch (err) {
-      console.error('Leaderboard error:', err);
+      console.error('Standings fetch error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const getRankBadge = (idx) => {
-    if (idx === 0) return '🥇 1st';
-    if (idx === 1) return '🥈 2nd';
-    if (idx === 2) return '🥉 3rd';
-    return `#${idx + 1}`;
+  // Get unique departments for filter
+  const departments = ['ALL', ...new Set(standings.map((p) => p.department).filter(Boolean))];
+
+  // Filtered standings
+  const filteredStandings = standings.filter((p) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      p.full_name?.toLowerCase().includes(q) ||
+      p.prn?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q) ||
+      p.department?.toLowerCase().includes(q);
+
+    const matchesDept = deptFilter === 'ALL' || p.department === deptFilter;
+    return matchesSearch && matchesDept;
+  });
+
+  const getRankBadge = (rank) => {
+    if (rank === 1) return '🥇 1st';
+    if (rank === 2) return '🥈 2nd';
+    if (rank === 3) return '🥉 3rd';
+    return `#${rank}`;
+  };
+
+  const getRankClass = (rank) => {
+    if (rank === 1) return 'lb-rank--gold';
+    if (rank === 2) return 'lb-rank--silver';
+    if (rank === 3) return 'lb-rank--bronze';
+    return '';
   };
 
   return (
     <div className={`lb-page ${isAdminView ? 'lb-page--admin' : ''}`}>
+      {/* ─── Editorial Header ────────────────────────────────────────── */}
       <div className="lb-header">
-        <div className="lb-live-indicator">
-          <span className="lb-pulse-dot"></span>
-          <span>LIVE ARENA STREAM · REAL-TIME CHECK-IN</span>
-        </div>
-        <h1 className="lb-title">⚡ {event?.name || 'codeDebug'} Leaderboard</h1>
-        <p className="lb-subtitle">
-          Real-time stream of verified Duo Teams entering the competition arena
-        </p>
+        <div className="container">
+          <div className="lb-live-indicator">
+            <span className="lb-pulse-dot"></span>
+            <span>PLATFORM STANDINGS · CUMULATIVE SCOREBOARD</span>
+          </div>
 
-        <div className="lb-stats-bar">
-          <div className="lb-stat-pill">
-            <span className="lb-stat-val">{loading ? '...' : teams.length}</span>
-            <span className="lb-stat-lbl">Teams Checked In</span>
-          </div>
-          <div className="lb-stat-sep">|</div>
-          <div className="lb-stat-pill">
-            <span className="lb-stat-val">{loading ? '...' : teams.length * 2}</span>
-            <span className="lb-stat-lbl">Participants in Arena</span>
-          </div>
-          <div className="lb-stat-sep">|</div>
-          <div className="lb-stat-pill">
-            <span className="lb-stat-val">{event?.venue || 'IT Department'}</span>
-            <span className="lb-stat-lbl">Arena Venue</span>
+          <h1 className="lb-title">DEPARTMENT STANDINGS</h1>
+          <p className="lb-subtitle">
+            Overall rankings and cumulative points earned by all participants registered on the platform across all technical events, hackathons, and competitions.
+          </p>
+
+          {/* Stat Summary Bar */}
+          <div className="lb-stats-bar">
+            <div className="lb-stat-pill">
+              <span className="lb-stat-val">{loading ? '...' : stats.total_players}</span>
+              <span className="lb-stat-lbl">Registered Players</span>
+            </div>
+            <div className="lb-stat-sep">|</div>
+            <div className="lb-stat-pill">
+              <span className="lb-stat-val text-accent">{loading ? '...' : stats.total_points_awarded}</span>
+              <span className="lb-stat-lbl">Total Points Awarded</span>
+            </div>
+            <div className="lb-stat-sep">|</div>
+            <div className="lb-stat-pill">
+              <span className="lb-stat-val" style={{ fontSize: '1.25rem' }}>ICEM Pune</span>
+              <span className="lb-stat-lbl">IT Department</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {lastScannedTeam && (
-        <div className="lb-toast-banner">
-          🎉 Team <strong>{lastScannedTeam}</strong> just checked in and joined the live arena!
-        </div>
-      )}
-
       <div className="lb-content">
-        {loading ? (
-          <div className="lb-teams-list">
-            {[1, 2, 3].map((n) => (
-              <SkeletonLeaderboardCard key={n} />
+        {/* ─── Top 3 Podium Spotlight (when >= 1 players exist) ──────── */}
+        {!loading && filteredStandings.length > 0 && !search && deptFilter === 'ALL' && (
+          <div className="lb-podium-grid">
+            {filteredStandings.slice(0, 3).map((player) => (
+              <div
+                key={player.key}
+                className={`lb-podium-card ${getRankClass(player.rank)}`}
+                onClick={() => setExpandedKey(expandedKey === player.key ? null : player.key)}
+              >
+                <div className="lb-podium-badge">{getRankBadge(player.rank)}</div>
+                <div className="lb-podium-avatar">
+                  {player.full_name?.[0]?.toUpperCase() || 'P'}
+                </div>
+                <h3 className="lb-podium-name">{player.full_name}</h3>
+                <div className="lb-podium-prn font-mono">PRN: {player.prn}</div>
+                <div className="lb-podium-points">
+                  <span>⚡</span> {player.total_points} <small>PTS</small>
+                </div>
+                <div className="lb-podium-events">
+                  {player.events_count} {player.events_count === 1 ? 'Event Joined' : 'Events Joined'}
+                </div>
+              </div>
             ))}
           </div>
-        ) : teams.length === 0 ? (
-          <div className="lb-empty-card">
-            <div className="lb-empty-icon">⏳</div>
-            <h2>Waiting for Duo Teams</h2>
+        )}
+
+        {/* ─── Search & Filters Bar ──────────────────────────────────── */}
+        <div className="lb-controls card">
+          <div className="lb-controls__inner">
+            <div className="lb-search-box">
+              <span className="lb-search-icon">🔍</span>
+              <input
+                type="text"
+                className="form-input lb-search-input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by player name or PRN (e.g. Anurag, A4IAJF)..."
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="lb-search-clear"
+                  onClick={() => setSearch('')}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {departments.length > 2 && (
+              <div className="lb-dept-filter">
+                <select
+                  className="form-input form-select"
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                >
+                  {departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d === 'ALL' ? 'All Departments' : `Dept: ${d}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Standings Table / List ────────────────────────────────── */}
+        {loading ? (
+          <div className="card" style={{ padding: 'var(--space-10)', textAlign: 'center' }}>
+            <div className="spinner mb-3" style={{ margin: '0 auto var(--space-3)' }}></div>
+            <div className="font-mono text-sm text-muted">Calculating overall player standings...</div>
+          </div>
+        ) : filteredStandings.length === 0 ? (
+          <div className="card lb-empty-card">
+            <div className="lb-empty-icon">🏆</div>
+            <h2>No Players Found</h2>
             <p>
-              Teams will instantly appear here on the auditorium screen as soon as they check in at the entrance desk.
+              {search || deptFilter !== 'ALL'
+                ? 'No participants match your current search query.'
+                : 'No participants registered on the platform yet. Once students register for department events, their cumulative points and rankings will automatically show here.'}
             </p>
-            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to={`/events/${eventSlug}/register`} className="btn btn--primary">
-                Register Your Duo Team
-              </Link>
-              <Link to="/admin/checkin" className="btn btn--secondary">
-                Desk Check-In Console
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <Link to="/#events-section" className="btn btn--primary">
+                Browse Events
               </Link>
             </div>
           </div>
         ) : (
-          <div className="lb-teams-list">
-            {teams.map((team, idx) => {
-              const leader = team.participants?.find((p) => p.is_leader) || { full_name: team.leader_name, department: team.leader_dept };
-              const member = team.participants?.find((p) => !p.is_leader);
+          <div className="lb-table-card card">
+            <div className="lb-table-header-row">
+              <span className="section__label" style={{ marginBottom: 0 }}>
+                VERIFIED PLATFORM RANKINGS ({filteredStandings.length} {filteredStandings.length === 1 ? 'PLAYER' : 'PLAYERS'})
+              </span>
+              <span className="text-xs font-mono text-muted">
+                ⚡ Sorted by total points across all events
+              </span>
+            </div>
 
-              return (
-                <div
-                  key={team.id || idx}
-                  className={`lb-card ${idx === 0 ? 'lb-card--gold' : idx === 1 ? 'lb-card--silver' : idx === 2 ? 'lb-card--bronze' : ''}`}
-                >
-                  <div className="lb-rank-col">
-                    <span className="lb-rank-badge">{getRankBadge(idx)}</span>
-                  </div>
+            <div className="table-wrapper">
+              <table className="table lb-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '80px', textAlign: 'center' }}>Rank</th>
+                    <th>Participant</th>
+                    <th>Department & College</th>
+                    <th style={{ textAlign: 'center' }}>Events Participated</th>
+                    <th style={{ textAlign: 'right', paddingRight: 'var(--space-6)' }}>Total Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStandings.map((player) => {
+                    const isExpanded = expandedKey === player.key;
 
-                  <div className="lb-team-col">
-                    <div className="lb-team-heading">
-                      <span className="lb-team-name">{team.team_name || `${leader.full_name}'s Duo`}</span>
-                      <span className="lb-reg-pill">{team.registration_id}</span>
-                    </div>
+                    return (
+                      <tr
+                        key={player.key}
+                        className={`lb-row ${getRankClass(player.rank)} ${isExpanded ? 'lb-row--expanded' : ''}`}
+                        onClick={() => setExpandedKey(isExpanded ? null : player.key)}
+                        style={{ cursor: 'pointer' }}
+                        title="Click to view event points breakdown"
+                      >
+                        {/* Rank Column */}
+                        <td style={{ textAlign: 'center' }}>
+                          <span className={`lb-rank-badge ${getRankClass(player.rank)}`}>
+                            {getRankBadge(player.rank)}
+                          </span>
+                        </td>
 
-                    <div className="lb-duo-grid">
-                      <div className="lb-duo-tag leader">
-                        👤 <strong>Player 1:</strong> {leader.full_name}
-                      </div>
-                      {member && (
-                        <div className="lb-duo-tag member">
-                          👤 <strong>Player 2:</strong> {member.full_name}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                        {/* Player Profile Column */}
+                        <td>
+                          <div className="lb-player-cell">
+                            <div className="lb-avatar">
+                              {player.full_name?.[0]?.toUpperCase() || 'P'}
+                            </div>
+                            <div>
+                              <div className="lb-player-name">{player.full_name}</div>
+                              <div className="lb-player-meta">
+                                <span className="lb-prn-pill font-mono">PRN: {player.prn}</span>
+                                {player.email && <span className="lb-email text-muted">{player.email}</span>}
+                              </div>
+                            </div>
+                          </div>
 
-                  <div className="lb-status-col">
-                    <span className="lb-status-pill">✅ In Arena</span>
-                    <span className="lb-checkin-time">
-                      {team.checked_in_at
-                        ? new Date(team.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                        : 'Just now'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                          {/* Expandable Breakdown of Events */}
+                          {isExpanded && player.events?.length > 0 && (
+                            <div className="lb-expanded-breakdown" onClick={(e) => e.stopPropagation()}>
+                              <div className="text-xs font-mono fw-bold mb-2" style={{ textTransform: 'uppercase', color: '#000' }}>
+                                Events & Points Breakdown ({player.events.length})
+                              </div>
+                              <div className="lb-events-list">
+                                {player.events.map((ev, i) => (
+                                  <div key={i} className="lb-event-item">
+                                    <div>
+                                      <span className="fw-bold">{ev.event_name}</span>
+                                      <span className="text-muted text-xs font-mono ml-2">({ev.registration_id})</span>
+                                    </div>
+                                    <div className="lb-event-points">
+                                      <span className="badge badge--online" style={{ fontSize: '0.7rem' }}>
+                                        {ev.status}
+                                      </span>
+                                      <strong className="font-mono text-accent">+{ev.points} pts</strong>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Department Column */}
+                        <td>
+                          <div className="text-primary fw-semibold">{player.department}</div>
+                          <div className="text-muted text-xs">{player.college}</div>
+                        </td>
+
+                        {/* Events Participated Count */}
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="badge badge--tag" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
+                            {player.events_count} {player.events_count === 1 ? 'Event' : 'Events'}
+                          </span>
+                        </td>
+
+                        {/* Total Points */}
+                        <td style={{ textAlign: 'right', paddingRight: 'var(--space-6)' }}>
+                          <div className="lb-total-points">
+                            <span className="lb-points-num">{player.total_points}</span>
+                            <span className="lb-points-label">PTS</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

@@ -6,6 +6,9 @@ export default function RegistrationDetailModal({ registrationId, onClose, onChe
   const [reg, setReg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checkinLoading, setCheckinLoading] = useState(false);
+  const [scoreInput, setScoreInput] = useState(0);
+  const [savingScore, setSavingScore] = useState(false);
+  const [scoreSuccess, setScoreSuccess] = useState(false);
 
   useEffect(() => {
     fetchReg();
@@ -15,7 +18,24 @@ export default function RegistrationDetailModal({ registrationId, onClose, onChe
     try {
       const { data } = await apiClient.get(`/admin/registrations/${registrationId}`);
       setReg(data.registration);
+      setScoreInput(data.registration?.score || 0);
     } catch { } finally { setLoading(false); }
+  };
+
+  const handleSaveScore = async () => {
+    setSavingScore(true);
+    setScoreSuccess(false);
+    try {
+      await apiClient.put(`/admin/registrations/${registrationId}/score`, { score: parseInt(scoreInput || 0, 10) });
+      setScoreSuccess(true);
+      await fetchReg();
+      onCheckin?.();
+      setTimeout(() => setScoreSuccess(false), 3000);
+    } catch {
+      alert('Failed to update score');
+    } finally {
+      setSavingScore(false);
+    }
   };
 
   const handleCheckin = async () => {
@@ -159,6 +179,37 @@ export default function RegistrationDetailModal({ registrationId, onClose, onChe
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Event Score / Points for Leaderboard & Standings */}
+                  <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-4)', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                      <span className="text-xs text-muted fw-bold" style={{ textTransform: 'uppercase' }}>
+                        ⚡ CONTEST SCORE / BONUS POINTS (STANDINGS)
+                      </span>
+                      {scoreSuccess && <span className="text-xs text-success fw-bold">✓ Points Updated</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        className="form-input"
+                        style={{ width: '130px', padding: '6px 10px', fontWeight: 700 }}
+                        value={scoreInput}
+                        onChange={(e) => setScoreInput(e.target.value)}
+                        placeholder="0"
+                      />
+                      <button
+                        type="button"
+                        className="btn btn--primary btn--sm"
+                        onClick={handleSaveScore}
+                        disabled={savingScore}
+                      >
+                        {savingScore ? 'Saving...' : 'Save Points'}
+                      </button>
+                    </div>
+                    <span className="text-xs text-muted" style={{ display: 'block', marginTop: '6px' }}>
+                      These points are automatically credited to each team member's overall standing on the platform.
+                    </span>
                   </div>
                 </div>
               </div>

@@ -220,6 +220,114 @@ export const apiClient = {
       return { data: { teams: teams || [] } };
     }
 
+    // 9b. Global Overall Platform Standings (Free of any single event, aggregates all player points across all events)
+    if (url === '/standings' || url === '/registrations/standings' || url === '/leaderboard') {
+      const { data: participants, error: partErr } = await supabase
+        .from('participants')
+        .select(`
+          id,
+          full_name,
+          student_id,
+          email,
+          phone,
+          college,
+          department,
+          year,
+          registration_id,
+          event_id,
+          created_at,
+          registrations (
+            id,
+            registration_id,
+            team_name,
+            score,
+            status,
+            checked_in,
+            events (
+              id,
+              name,
+              slug,
+              event_date
+            )
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (partErr) throw partErr;
+
+      const playerMap = new Map();
+
+      for (const p of (participants || [])) {
+        const prn = (p.student_id || '').trim().toUpperCase();
+        const email = (p.email || '').trim().toLowerCase();
+        const key = prn || email || p.full_name?.trim();
+        if (!key) continue;
+
+        const reg = p.registrations;
+        const ev = reg?.events;
+        const contestScore = Number(reg?.score || 0);
+        const attendanceScore = reg?.checked_in ? 50 : 0;
+        const participationScore = (reg?.status === 'CONFIRMED') ? 100 : 50;
+        const totalEventPoints = participationScore + attendanceScore + contestScore;
+
+        if (!playerMap.has(key)) {
+          playerMap.set(key, {
+            id: p.id,
+            key,
+            full_name: p.full_name || 'Participant',
+            prn: prn || '—',
+            email: email,
+            department: p.department || 'IT',
+            college: p.college || 'Indira College of Engineering & Management',
+            year: p.year || '',
+            total_points: 0,
+            events_count: 0,
+            events: []
+          });
+        }
+
+        const player = playerMap.get(key);
+        player.total_points += totalEventPoints;
+        player.events_count += 1;
+        if (ev) {
+          player.events.push({
+            registration_id: reg?.registration_id,
+            event_name: ev.name,
+            event_slug: ev.slug,
+            status: reg?.status,
+            checked_in: reg?.checked_in,
+            points: totalEventPoints,
+            contest_score: contestScore
+          });
+        }
+      }
+
+      const standings = Array.from(playerMap.values()).sort((a, b) => {
+        if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+        return b.events_count - a.events_count;
+      });
+
+      let currentRank = 1;
+      const rankedStandings = standings.map((player, index) => {
+        if (index > 0 && player.total_points < standings[index - 1].total_points) {
+          currentRank = index + 1;
+        }
+        return {
+          ...player,
+          rank: currentRank
+        };
+      });
+
+      return {
+        data: {
+          standings: rankedStandings,
+          total_players: rankedStandings.length,
+          total_points_awarded: rankedStandings.reduce((sum, p) => sum + p.total_points, 0)
+        }
+      };
+    }
+
+
     // 10. Dashboard Stats
     if (url.startsWith('/admin/dashboard/stats')) {
       const urlParams = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
@@ -614,6 +722,21 @@ export const apiClient = {
       if (error) throw error;
       return { data: { message: 'Invitation declined.', registration: formatRegistration(data) } };
     }
+
+    // 7. Update Registration Score / Points (Admin)
+    if (url.match(/^\/admin\/registrations\/\d+\/score$/)) {
+      const regId = url.split('/admin/registrations/')[1].split('/score')[0];
+      const newScore = parseInt(payload.score || 0, 10);
+      const { data, error } = await supabase
+        .from('registrations')
+        .update({ score: newScore, updated_at: new Date().toISOString() })
+        .eq('id', regId)
+        .select('*, participants(*)')
+        .single();
+      if (error) throw error;
+      return { data: { message: 'Score updated successfully', registration: formatRegistration(data) } };
+    }
+
 
     throw new Error(`PUT ${url} not mapped`);
   },

@@ -82,6 +82,9 @@ export default function App() {
         <Route path="/leaderboard" element={
           <PublicLayout><Leaderboard isAdminView={false} /></PublicLayout>
         } />
+        <Route path="/standings" element={
+          <PublicLayout><Leaderboard isAdminView={false} /></PublicLayout>
+        } />
         <Route path="/leaderboard/:eventSlug" element={
           <PublicLayout><Leaderboard isAdminView={false} /></PublicLayout>
         } />
