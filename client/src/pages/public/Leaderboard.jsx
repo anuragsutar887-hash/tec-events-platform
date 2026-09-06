@@ -69,15 +69,7 @@ export default function Leaderboard({ isAdminView = false }) {
       {/* ─── Editorial Header ────────────────────────────────────────── */}
       <div className="lb-header">
         <div className="container">
-          <div className="lb-live-indicator">
-            <span className="lb-pulse-dot"></span>
-            <span>PLATFORM STANDINGS · CUMULATIVE SCOREBOARD</span>
-          </div>
-
-          <h1 className="lb-title">DEPARTMENT STANDINGS</h1>
-          <p className="lb-subtitle">
-            Overall rankings and cumulative points earned by all participants registered on the platform across all technical events, hackathons, and competitions.
-          </p>
+          <h1 className="lb-title">STANDINGS</h1>
 
           {/* Stat Summary Bar */}
           <div className="lb-stats-bar">
@@ -89,11 +81,6 @@ export default function Leaderboard({ isAdminView = false }) {
             <div className="lb-stat-pill">
               <span className="lb-stat-val text-accent">{loading ? '...' : stats.total_points_awarded}</span>
               <span className="lb-stat-lbl">Total Points Awarded</span>
-            </div>
-            <div className="lb-stat-sep">|</div>
-            <div className="lb-stat-pill">
-              <span className="lb-stat-val" style={{ fontSize: '1.25rem' }}>ICEM Pune</span>
-              <span className="lb-stat-lbl">IT Department</span>
             </div>
           </div>
         </div>
@@ -136,7 +123,7 @@ export default function Leaderboard({ isAdminView = false }) {
                 className="form-input lb-search-input"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by player name or PRN (e.g. Anurag, A4IAJF)..."
+                placeholder=""
               />
               {search && (
                 <button

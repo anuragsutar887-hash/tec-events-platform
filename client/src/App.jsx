@@ -30,11 +30,17 @@ import Settings from './pages/admin/Settings';
 import { StudentAuthProvider } from './context/StudentAuthContext';
 import StudentLogin from './pages/public/StudentLogin';
 
-// Automatically scrolls to top on every route change
+// Automatically scrolls to top on forward navigation only (not browser back)
 function ScrollToTop() {
   const { pathname } = useLocation();
+  const location = useLocation();
 
   useEffect(() => {
+    // Only scroll to top on PUSH (forward nav), not POP (back button)
+    if (location.key !== 'default' && window.history.state?.idx !== undefined) {
+      // POP navigation — do nothing, restore browser's native scroll position
+      return;
+    }
     window.scrollTo(0, 0);
   }, [pathname]);
 

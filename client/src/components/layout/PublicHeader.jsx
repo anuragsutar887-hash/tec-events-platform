@@ -150,7 +150,13 @@ export default function PublicHeader() {
                   <button
                     type="button"
                     className="pub-header__logout-btn"
-                    onClick={logout}
+                    onClick={() => {
+                      logout();
+                      // Skeleton refresh: fade out, then reload
+                      document.body.style.transition = 'opacity 0.3s ease';
+                      document.body.style.opacity = '0';
+                      setTimeout(() => window.location.reload(), 300);
+                    }}
                     title="Sign out of student portal"
                   >
                     Logout

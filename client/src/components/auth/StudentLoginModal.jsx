@@ -205,7 +205,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   className="form-input font-mono"
                   value={loginPrn}
                   onChange={(e) => { setLoginPrn(e.target.value); if (error) setError(''); }}
-                  placeholder="e.g. A4IAJF or IT250B1016"
+                  placeholder=""
                   autoComplete="username"
                   autoFocus
                   required
@@ -272,7 +272,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   className="form-input font-mono"
                   value={registerPrn}
                   onChange={(e) => { setRegisterPrn(e.target.value); if (error) setError(''); }}
-                  placeholder="e.g. A4IAJF or IT250B1016"
+                  placeholder=""
                   autoComplete="off"
                   required
                 />
