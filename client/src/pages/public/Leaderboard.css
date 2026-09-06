@@ -249,12 +249,12 @@
   position: relative;
 }
 
-.lb-search-icon {
+.lb-search-icon-svg {
   position: absolute;
   left: 12px;
-  font-size: 0.85rem;
   color: var(--text-muted);
   pointer-events: none;
+  flex-shrink: 0;
 }
 
 .lb-search-input {

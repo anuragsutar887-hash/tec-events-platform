@@ -87,14 +87,13 @@ export default function Leaderboard({ isAdminView = false }) {
       </div>
 
       <div className="lb-content">
-        {/* ─── Top 3 Podium Spotlight (when >= 1 players exist) ──────── */}
-        {!loading && filteredStandings.length > 0 && !search && deptFilter === 'ALL' && (
+        {/* ─── Top 3 Podium Spotlight (always visible when players exist) ── */}
+        {!loading && standings.length > 0 && (
           <div className="lb-podium-grid">
-            {filteredStandings.slice(0, 3).map((player) => (
+            {standings.slice(0, 3).map((player) => (
               <div
                 key={player.key}
                 className={`lb-podium-card ${getRankClass(player.rank)}`}
-                onClick={() => setExpandedKey(expandedKey === player.key ? null : player.key)}
               >
                 <div className="lb-podium-badge">{getRankBadge(player.rank)}</div>
                 <div className="lb-podium-avatar">
@@ -113,17 +112,21 @@ export default function Leaderboard({ isAdminView = false }) {
           </div>
         )}
 
+
         {/* ─── Search & Filters Bar ──────────────────────────────────── */}
         <div className="lb-controls card">
           <div className="lb-controls__inner">
             <div className="lb-search-box">
-              <span className="lb-search-icon">🔍</span>
+              <svg className="lb-search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input
                 type="text"
                 className="form-input lb-search-input"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder=""
+                placeholder="Search player or PRN..."
               />
               {search && (
                 <button
@@ -153,6 +156,7 @@ export default function Leaderboard({ isAdminView = false }) {
             )}
           </div>
         </div>
+
 
         {/* ─── Standings Table / List ────────────────────────────────── */}
         {loading ? (

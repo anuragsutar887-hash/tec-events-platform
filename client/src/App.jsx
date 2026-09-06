@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
+
 
 // Layout
 import PublicHeader from './components/layout/PublicHeader';
@@ -33,16 +34,13 @@ import StudentLogin from './pages/public/StudentLogin';
 // Automatically scrolls to top on forward navigation only (not browser back)
 function ScrollToTop() {
   const { pathname } = useLocation();
-  const location = useLocation();
+  const navType = useNavigationType();
 
   useEffect(() => {
-    // Only scroll to top on PUSH (forward nav), not POP (back button)
-    if (location.key !== 'default' && window.history.state?.idx !== undefined) {
-      // POP navigation — do nothing, restore browser's native scroll position
-      return;
-    }
+    // POP = back/forward button — let the browser restore scroll naturally
+    if (navType === 'POP') return;
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [pathname, navType]);
 
   return null;
 }
