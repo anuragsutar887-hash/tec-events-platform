@@ -255,6 +255,18 @@
   color: var(--text-muted);
   pointer-events: none;
   flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Hide icon when user focuses the search box */
+.lb-search-box:focus-within .lb-search-icon-svg {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* When focused, remove the icon's left padding offset so cursor starts at edge */
+.lb-search-box:focus-within .lb-search-input {
+  padding-left: 12px;
 }
 
 .lb-search-input {

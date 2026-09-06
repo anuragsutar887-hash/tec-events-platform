@@ -126,7 +126,7 @@ export default function Leaderboard({ isAdminView = false }) {
                 className="form-input lb-search-input"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search player or PRN..."
+                placeholder=""
               />
               {search && (
                 <button
