@@ -289,7 +289,7 @@ export default function AdminRegistrations() {
                       handleSelectEvent(ev.id);
                     }}
                   >
-                    View Registrations ({ev.total_registrations || 0}) →
+                    View Registrations ({ev.total_registrations || 0})
                   </button>
                 </div>
               </div>
@@ -314,7 +314,7 @@ export default function AdminRegistrations() {
             onClick={() => handleSelectEvent(null)}
             style={{ paddingLeft: 0, fontWeight: 700 }}
           >
-            ← Back to All Events
+            Back to All Events
           </button>
           <div className="section__label">
             {activeEvent?.status} // EVENT REGISTRATIONS

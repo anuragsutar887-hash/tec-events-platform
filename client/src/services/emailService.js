@@ -74,8 +74,26 @@ export async function sendRegistrationEmail({
     }
 
     const teamId = registration?.registration_id || `TEC-2026-${registration?.id || '0000'}`;
-    const cleanDigits = teamId.replace(/\D/g, '').slice(-4) || '2026';
-    const finalPassword = password || `TEC#${cleanDigits}`;
+
+    // Generate a cryptographically random password (unambiguous charset, no I/l/O/0/1)
+    const generateRandomPassword = () => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let pwd = 'TEC-';
+      const arr = new Uint8Array(6);
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        crypto.getRandomValues(arr);
+        for (let i = 0; i < 6; i++) {
+          pwd += chars[arr[i] % chars.length];
+        }
+      } else {
+        // Fallback for non-browser environments
+        for (let i = 0; i < 6; i++) {
+          pwd += chars[Math.floor(Math.random() * chars.length)];
+        }
+      }
+      return pwd;
+    };
+    const finalPassword = password || generateRandomPassword();
 
     const isSolo = uniqueRecipients.length === 1 && !registration?.team_name?.includes('&');
     const p1 = participants.find((p) => p.is_leader) || participants[0];
