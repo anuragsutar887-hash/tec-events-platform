@@ -92,38 +92,43 @@ export default function RegisterSuccess() {
                   </div>
                 </div>
 
-                {/* Player 1 & Player 2 Details */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-                  {player1 && (
-                    <div style={{ padding: 'var(--space-3) var(--space-4)', background: '#fafafa', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
-                      <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
-                        PLAYER 1 (LEADER)
-                      </div>
-                      <div className="text-primary fw-bold text-sm">{player1.full_name}</div>
-                      {(player1.prn || player1.student_id) && (
-                        <div className="text-xs font-mono fw-semibold" style={{ color: '#000000', margin: '2px 0' }}>
-                          PRN: {player1.prn || player1.student_id}
+                {/* Player Details */}
+                {(() => {
+                  const hasPlayer2 = Boolean(player2 && player2.full_name && player2.full_name.trim());
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: hasPlayer2 ? '1fr 1fr' : '1fr', gap: 'var(--space-3)' }}>
+                      {player1 && (
+                        <div style={{ padding: 'var(--space-3) var(--space-4)', background: '#fafafa', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                          <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
+                            {hasPlayer2 ? 'PLAYER 1 (LEADER)' : 'PARTICIPANT'}
+                          </div>
+                          <div className="text-primary fw-bold text-sm">{player1.full_name}</div>
+                          {(player1.prn || player1.student_id) && (
+                            <div className="text-xs font-mono fw-semibold" style={{ color: '#000000', margin: '2px 0' }}>
+                              PRN: {player1.prn || player1.student_id}
+                            </div>
+                          )}
+                          <div className="text-muted text-xs">{player1.email}</div>
                         </div>
                       )}
-                      <div className="text-muted text-xs">{player1.email}</div>
-                    </div>
-                  )}
 
-                  {player2 && (
-                    <div style={{ padding: 'var(--space-3) var(--space-4)', background: '#fafafa', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
-                      <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
-                        PLAYER 2
-                      </div>
-                      <div className="text-primary fw-bold text-sm">{player2.full_name}</div>
-                      {(player2.prn || player2.student_id) && (
-                        <div className="text-xs font-mono fw-semibold" style={{ color: '#000000', margin: '2px 0' }}>
-                          PRN: {player2.prn || player2.student_id}
+                      {hasPlayer2 && (
+                        <div style={{ padding: 'var(--space-3) var(--space-4)', background: '#fafafa', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                          <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
+                            PLAYER 2
+                          </div>
+                          <div className="text-primary fw-bold text-sm">{player2.full_name}</div>
+                          {(player2.prn || player2.student_id) && (
+                            <div className="text-xs font-mono fw-semibold" style={{ color: '#000000', margin: '2px 0' }}>
+                              PRN: {player2.prn || player2.student_id}
+                            </div>
+                          )}
+                          <div className="text-muted text-xs">{player2.email}</div>
                         </div>
                       )}
-                      <div className="text-muted text-xs">{player2.email}</div>
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

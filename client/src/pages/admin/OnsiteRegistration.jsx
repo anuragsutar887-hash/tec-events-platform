@@ -94,7 +94,7 @@ export default function OnsiteRegistration() {
       <div className="onsite-page__header">
         <div>
           <h1 className="dashboard__title">On-site Registration Desk</h1>
-          <p className="dashboard__subtitle">Register walk-in duo participants and check them in directly</p>
+          <p className="dashboard__subtitle">Register walk-in participants and check them in directly</p>
         </div>
       </div>
 
@@ -153,7 +153,7 @@ export default function OnsiteRegistration() {
             </div>
 
             <div className="form-group">
-              <label className="form-label form-label--required">Duo Team Name</label>
+              <label className="form-label form-label--required">Team Name</label>
               <input
                 type="text"
                 className={`form-input ${errors.team_name ? 'form-input--error' : ''}`}

@@ -159,7 +159,7 @@ export default function RegistrationDetailModal({ registrationId, onClose, onChe
                   {/* Participants (Player 1 & Player 2) */}
                   <div>
                     <div className="text-xs text-muted fw-bold mb-2" style={{ textTransform: 'uppercase' }}>
-                      DUO TEAM MEMBERS (2 PLAYERS)
+                      {reg.participants?.length > 1 ? 'TEAM MEMBERS' : 'PARTICIPANT DETAILS'}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                       {reg.participants?.map((p, i) => (

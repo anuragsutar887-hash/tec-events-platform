@@ -58,7 +58,7 @@ export default function Lookup() {
           <div className="section__label">OFFICIAL REGISTRATION // STATUS</div>
           <h1 className="lookup-page__title">MY REGISTRATION</h1>
           <p className="lookup-page__subtitle">
-            Enter your Registration Number to verify registration status and duo team details for IT Department events.
+            Enter your Registration Number to verify registration status and event details.
           </p>
         </div>
       </div>
@@ -214,7 +214,7 @@ export default function Lookup() {
                       {result.team_name && (
                         <div style={{ marginBottom: 'var(--space-4)' }}>
                           <div className="text-xs text-muted font-mono fw-bold" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                            Duo Team Name
+                            Team / Participant Name
                           </div>
                           <div className="text-primary fw-bold text-xl">{result.team_name}</div>
                         </div>
@@ -235,7 +235,7 @@ export default function Lookup() {
                         )}
                         <div>
                           <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Format</div>
-                          <div className="text-primary text-sm fw-semibold">{result.participation_mode || 'Duo Team'}</div>
+                          <div className="text-primary text-sm fw-semibold">{result.participants?.length > 1 ? 'Team' : 'Solo'}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Status</div>
@@ -243,12 +243,12 @@ export default function Lookup() {
                         </div>
                       </div>
 
-                      {/* Duo Players (Player 1 & Player 2) */}
+                      {/* Participants Details */}
                       <div>
                         <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase', marginBottom: 'var(--space-2)' }}>
-                          Duo Team Members (2 Players)
+                          {result.participants?.length > 1 ? 'Team Members' : 'Participant Details'}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: result.participants?.length > 1 ? '1fr 1fr' : '1fr', gap: 'var(--space-3)' }}>
                           {result.participants?.map((p, i) => (
                             <div key={i} style={{
                               padding: 'var(--space-3) var(--space-4)',
@@ -257,7 +257,7 @@ export default function Lookup() {
                               borderRadius: 'var(--radius-sm)'
                             }}>
                               <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase', marginBottom: '2px' }}>
-                                PLAYER {i + 1} {p.is_leader ? '(LEADER)' : ''}
+                                {result.participants?.length > 1 ? `PLAYER ${i + 1} ${p.is_leader ? '(LEADER)' : ''}` : 'PARTICIPANT'}
                               </div>
                               <div className="text-primary fw-bold text-sm">{p.full_name}</div>
                               {(p.student_id || p.prn) && (

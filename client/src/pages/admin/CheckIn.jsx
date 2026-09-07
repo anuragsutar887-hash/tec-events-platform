@@ -270,10 +270,12 @@ export default function CheckIn() {
                   📅 Event: <strong>{result.event_name || 'Technical Event'}</strong>
                 </div>
 
-                {/* Player 1 & Player 2 Details */}
+                {/* Participant Details */}
                 <div className="checkin__participants-box">
-                  <span className="section__label">DUO TEAM MEMBERS (2 PLAYERS)</span>
-                  <div className="checkin__participants-list" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                  <span className="section__label">
+                    {result.participants?.length > 1 ? 'TEAM MEMBERS' : 'PARTICIPANT'}
+                  </span>
+                  <div className="checkin__participants-list" style={{ display: 'grid', gridTemplateColumns: result.participants?.length > 1 ? '1fr 1fr' : '1fr', gap: 'var(--space-3)' }}>
                     {result.participants?.map((p, i) => (
                       <div key={i} className="checkin__participant-row">
                         <div className="checkin__participant-left">

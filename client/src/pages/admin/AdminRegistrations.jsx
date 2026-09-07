@@ -1,47 +1,81 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import apiClient from '../../api/client';
-import { formatDateTime, timeAgo } from '../../utils/dateHelpers';
+import { formatDateTime, formatDate, timeAgo } from '../../utils/dateHelpers';
 import RegistrationDetailModal from './RegistrationDetailModal';
 import './AdminRegistrations.css';
 
 export default function AdminRegistrations() {
-  const [searchParams] = useSearchParams();
-  const [registrations, setRegistrations] = useState([]);
-  const [pagination, setPagination] = useState({});
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialEventId = searchParams.get('event_id') || null;
+
+  const [selectedEventId, setSelectedEventId] = useState(initialEventId);
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({
-    event_id: searchParams.get('event_id') || '',
     registration_type: '',
-    participation_mode: '',
     checked_in: '',
   });
   const [expandedRegId, setExpandedRegId] = useState(null);
   const [modalRegId, setModalRegId] = useState(null);
-  const [page, setPage] = useState(1);
   const [checkinLoading, setCheckinLoading] = useState({});
 
-  useEffect(() => { loadEvents(); }, []);
-  useEffect(() => { loadRegistrations(); }, [filters, page]);
+  useEffect(() => {
+    loadEvents();
+  }, []);
 
-  const handleSearch = useCallback(() => { setPage(1); loadRegistrations(); }, [search, filters]);
+  useEffect(() => {
+    if (selectedEventId) {
+      loadRegistrations(selectedEventId);
+    }
+  }, [selectedEventId, filters]);
 
   const loadEvents = async () => {
+    setEventsLoading(true);
     try {
-      const { data } = await apiClient.get('/admin/dashboard/events');
-      setEvents(data.events || []);
-    } catch {}
+      const [{ data: eventsData }, { data: regsData }] = await Promise.all([
+        apiClient.get('/admin/dashboard/events'),
+        apiClient.get('/admin/registrations'),
+      ]);
+
+      const allEvents = eventsData.events || [];
+      const allRegs = regsData.registrations || [];
+
+      // Compute registration statistics for each event
+      const eventsWithStats = allEvents.map((ev) => {
+        const evRegs = allRegs.filter((r) => String(r.event_id) === String(ev.id));
+        const checkedInCount = evRegs.filter((r) => r.checked_in).length;
+        return {
+          ...ev,
+          total_registrations: evRegs.length,
+          checked_in_count: checkedInCount,
+          pending_count: evRegs.length - checkedInCount,
+        };
+      });
+
+      setEvents(eventsWithStats);
+    } catch (err) {
+      console.error('Failed to load events:', err);
+    } finally {
+      setEventsLoading(false);
+    }
   };
 
-  const loadRegistrations = async () => {
+  const loadRegistrations = async (eventId) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ ...filters, search, page, limit: 50 });
+      const params = new URLSearchParams({
+        event_id: eventId,
+        ...filters,
+        search,
+        limit: 100,
+      });
       const { data } = await apiClient.get(`/admin/registrations?${params}`);
       setRegistrations(data.registrations || []);
-      setPagination(data.pagination || {});
     } catch {
       setRegistrations([]);
     } finally {
@@ -49,13 +83,29 @@ export default function AdminRegistrations() {
     }
   };
 
+  const handleSelectEvent = (eventId) => {
+    setSelectedEventId(eventId);
+    setSearch('');
+    setFilters({ registration_type: '', checked_in: '' });
+    if (eventId) {
+      setSearchParams({ event_id: eventId });
+    } else {
+      setSearchParams({});
+      loadEvents();
+    }
+  };
+
+  const handleSearch = useCallback(() => {
+    if (selectedEventId) loadRegistrations(selectedEventId);
+  }, [search, filters, selectedEventId]);
+
   const handleCheckin = async (reg) => {
     if (reg.checked_in) return;
     setCheckinLoading((p) => ({ ...p, [reg.id]: true }));
     try {
       await apiClient.put(`/admin/registrations/${reg.id}/checkin`);
       setRegistrations((prev) =>
-        prev.map((r) => r.id === reg.id ? { ...r, checked_in: true, checked_in_at: new Date().toISOString() } : r)
+        prev.map((r) => (r.id === reg.id ? { ...r, checked_in: true, checked_in_at: new Date().toISOString() } : r))
       );
     } catch (err) {
       alert(err.response?.data?.error || 'Check-in failed');
@@ -65,12 +115,12 @@ export default function AdminRegistrations() {
   };
 
   const handleUndoCheckin = async (reg) => {
-    if (!window.confirm(`Undo check-in for team ${reg.team_name || reg.registration_id}?`)) return;
+    if (!window.confirm(`Undo check-in for ${reg.team_name || reg.registration_id}?`)) return;
     setCheckinLoading((p) => ({ ...p, [reg.id]: true }));
     try {
       await apiClient.put(`/admin/registrations/${reg.id}/undo-checkin`);
       setRegistrations((prev) =>
-        prev.map((r) => r.id === reg.id ? { ...r, checked_in: false, checked_in_at: null } : r)
+        prev.map((r) => (r.id === reg.id ? { ...r, checked_in: false, checked_in_at: null } : r))
       );
     } catch {
       alert('Failed to undo check-in');
@@ -79,12 +129,11 @@ export default function AdminRegistrations() {
     }
   };
 
-  // Toggle inline expansion right beneath the team row
   const toggleExpand = (id) => {
     setExpandedRegId((prev) => (prev === id ? null : id));
   };
 
-  // 📊 Ultra-Professional Duo Team Excel Export
+  // 📊 Excel / CSV Export
   const exportToExcel = () => {
     if (!registrations || registrations.length === 0) {
       alert('No registrations found to export.');
@@ -98,71 +147,200 @@ export default function AdminRegistrations() {
       'Registration Type',
       'Player 1 Full Name',
       'Player 1 Email',
+      'Player 1 PRN',
       'Player 2 Full Name',
       'Player 2 Email',
-      'Checked In Status',
-      'Checked In Time',
-      'Registered Timestamp'
+      'Player 2 PRN',
+      'Check-in Status',
+      'Check-in Time',
+      'Registration Date',
     ];
 
+    const escVal = (val) => {
+      if (val === null || val === undefined) return '""';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    };
+
     const rows = registrations.map((r) => {
-      const participants = r.participants || [];
-      const p1 = participants.find((p) => p.is_leader) || participants[0] || {};
-      const p2 = participants.find((p) => !p.is_leader) || (participants.length > 1 ? participants[1] : {});
-
-      const escText = (val) => {
-        if (!val) return '""';
-        const clean = String(val).replace(/"/g, '""');
-        return `="${clean}"`;
-      };
-
-      const escVal = (val) => {
-        if (!val) return '""';
-        return `"${String(val).replace(/"/g, '""')}"`;
-      };
+      const p1 = r.participants?.find((p) => p.is_leader) || r.participants?.[0] || {};
+      const p2 = r.participants?.find((p) => !p.is_leader) || r.participants?.[1] || {};
 
       return [
-        escText(r.registration_id),
-        escVal(r.event_name || 'Technical Event'),
-        escVal(r.team_name || `${p1.full_name || 'Team'}'s Duo`),
+        escVal(r.registration_id),
+        escVal(r.event_name),
+        escVal(r.team_name || `${p1.full_name || 'Solo'}`),
         escVal(r.registration_type || 'ONLINE'),
         escVal(p1.full_name || 'N/A'),
         escVal(p1.email || 'N/A'),
+        escVal(p1.student_id || p1.prn || 'N/A'),
         escVal(p2.full_name || 'N/A'),
         escVal(p2.email || 'N/A'),
+        escVal(p2.student_id || p2.prn || 'N/A'),
         escVal(r.checked_in ? 'YES (In Arena)' : 'NO (Pending)'),
         escVal(r.checked_in_at ? formatDateTime(r.checked_in_at) : 'Not Checked In'),
         escVal(formatDateTime(r.created_at)),
       ].join(',');
     });
 
+    const activeEvent = events.find((e) => String(e.id) === String(selectedEventId));
+    const eventNameSlug = activeEvent?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'Event';
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `TEC_Duo_Participants_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `TEC_${eventNameSlug}_Registrations_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const setFilter = (key, val) => { setFilters((f) => ({ ...f, [key]: val })); setPage(1); };
+  const activeEvent = events.find((e) => String(e.id) === String(selectedEventId));
 
+  // ════════════════════════════════════════════════════════════════
+  // 1. ALL EVENTS DIRECTORY VIEW (When no event is opened)
+  // ════════════════════════════════════════════════════════════════
+  if (!selectedEventId) {
+    return (
+      <div className="admin-registrations">
+        <div className="admin-regs__header">
+          <div>
+            <span className="section__label">EVENT DIRECTORY</span>
+            <h1 className="dashboard__title">REGISTRATIONS BY EVENT</h1>
+            <p className="dashboard__subtitle">
+              Select an event to view and manage its registered participants
+            </p>
+          </div>
+          <div className="admin-regs__header-actions">
+            <Link to="/admin/onsite" className="btn btn--secondary">+ On-site Reg</Link>
+            <Link to="/admin/checkin" className="btn btn--primary">Check-in Console</Link>
+          </div>
+        </div>
+
+        {eventsLoading ? (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <span>Loading events directory...</span>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="empty-state card">
+            <div className="card__body">
+              <div className="empty-state__icon">📅</div>
+              <div className="empty-state__title">No events created yet</div>
+              <p className="empty-state__text">Create an event to start accepting registrations.</p>
+              <Link to="/admin/events/new" className="btn btn--primary mt-4">
+                + Create First Event
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="admin-events-grid">
+            {events.map((ev) => (
+              <div
+                key={ev.id}
+                className="admin-event-card card card--hover"
+                onClick={() => handleSelectEvent(ev.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="admin-event-card__header">
+                  <span className="badge badge--tag">{ev.status}</span>
+                  {ev.event_date && (
+                    <span className="text-xs text-muted font-mono">
+                      📅 {formatDate(ev.event_date)}
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-event-card__body">
+                  <h3 className="admin-event-card__title">{ev.name}</h3>
+                  {ev.venue && (
+                    <p className="admin-event-card__venue text-xs text-muted">
+                      📍 {ev.venue}
+                    </p>
+                  )}
+
+                  <div className="admin-event-card__stats">
+                    <div className="admin-event-stat-box">
+                      <span className="admin-event-stat-box__label">TOTAL REGISTRATIONS</span>
+                      <span className="admin-event-stat-box__val text-accent">
+                        {ev.total_registrations || 0}
+                      </span>
+                    </div>
+                    <div className="admin-event-stat-box">
+                      <span className="admin-event-stat-box__label">CHECKED IN</span>
+                      <span className="admin-event-stat-box__val text-success">
+                        {ev.checked_in_count || 0}
+                      </span>
+                    </div>
+                    <div className="admin-event-stat-box">
+                      <span className="admin-event-stat-box__label">PENDING</span>
+                      <span className="admin-event-stat-box__val text-danger">
+                        {ev.pending_count || 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="admin-event-card__footer">
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--full btn--sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectEvent(ev.id);
+                    }}
+                  >
+                    View Registrations ({ev.total_registrations || 0}) →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // 2. SPECIFIC EVENT REGISTRATIONS VIEW (When an event is opened)
+  // ════════════════════════════════════════════════════════════════
   return (
     <div className="admin-registrations">
+      {/* Top Navigation & Header */}
       <div className="admin-regs__header">
         <div>
-          <h1 className="dashboard__title">REGISTRATIONS MATRIX</h1>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm mb-2"
+            onClick={() => handleSelectEvent(null)}
+            style={{ paddingLeft: 0, fontWeight: 700 }}
+          >
+            ← Back to All Events
+          </button>
+          <div className="section__label">
+            {activeEvent?.status} // EVENT REGISTRATIONS
+          </div>
+          <h1 className="dashboard__title">
+            {activeEvent?.name || 'Event'}
+          </h1>
           <p className="dashboard__subtitle">
-            {pagination.total !== undefined ? `${pagination.total} registration(s) found` : 'Manage duo participants & attendance'}
+            {registrations.length} registration(s) found for this event
           </p>
         </div>
+
         <div className="admin-regs__header-actions">
-          <button onClick={exportToExcel} className="btn btn--secondary" title="Export full participant list to Excel">
+          <button
+            onClick={exportToExcel}
+            className="btn btn--secondary"
+            title="Export this event's participants to Excel"
+          >
             📊 Export to Excel
           </button>
-          <Link to="/admin/onsite" className="btn btn--secondary">+ On-site Reg</Link>
-          <Link to="/admin/checkin" className="btn btn--primary">Check-in Console</Link>
+          <Link to={`/admin/onsite?event_id=${selectedEventId}`} className="btn btn--secondary">
+            + On-site Reg
+          </Link>
+          <Link to={`/admin/checkin?event_id=${selectedEventId}`} className="btn btn--primary">
+            Check-in Console
+          </Link>
         </div>
       </div>
 
@@ -174,7 +352,7 @@ export default function AdminRegistrations() {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search by ID, team name, leader name, email, phone..."
+                placeholder="Search by ID, team name, leader name, email, PRN..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -186,305 +364,171 @@ export default function AdminRegistrations() {
             </div>
           </div>
 
-          <div className="admin-regs__filters">
-            <select
-              className="form-input form-select"
-              value={filters.event_id}
-              onChange={(e) => setFilter('event_id', e.target.value)}
-              aria-label="Filter by Event"
-            >
-              <option value="">All Events</option>
-              {events.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-
+          <div className="admin-regs__filters" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
             <select
               className="form-input form-select"
               value={filters.registration_type}
-              onChange={(e) => setFilter('registration_type', e.target.value)}
+              onChange={(e) => setFilters((f) => ({ ...f, registration_type: e.target.value }))}
               aria-label="Filter by Registration Type"
             >
               <option value="">All Types (Online & On-site)</option>
-              <option value="ONLINE">Online</option>
-              <option value="ON_SITE">On-site</option>
-            </select>
-
-            <select
-              className="form-input form-select"
-              value={filters.participation_mode}
-              onChange={(e) => setFilter('participation_mode', e.target.value)}
-              aria-label="Filter by Mode"
-            >
-              <option value="">Solo & Duo Teams</option>
-              <option value="TEAM">Duo Team</option>
-              <option value="SOLO">Solo</option>
+              <option value="ONLINE">Online Portal</option>
+              <option value="ON_SITE">On-site Desk</option>
             </select>
 
             <select
               className="form-input form-select"
               value={filters.checked_in}
-              onChange={(e) => setFilter('checked_in', e.target.value)}
+              onChange={(e) => setFilters((f) => ({ ...f, checked_in: e.target.value }))}
               aria-label="Filter by Check-in"
             >
-              <option value="">All Attendance</option>
-              <option value="false">Pending Check-in</option>
+              <option value="">All Attendance Statuses</option>
               <option value="true">Checked In (In Arena)</option>
+              <option value="false">Pending Check-in</option>
             </select>
           </div>
         </div>
       </div>
 
+      {/* Registrations List / Table */}
       {loading ? (
-        <div className="skeleton skeleton-card" style={{ height: '300px' }} />
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <span>Loading registrations...</span>
+        </div>
       ) : registrations.length === 0 ? (
         <div className="empty-state card">
           <div className="card__body">
             <div className="empty-state__icon">📋</div>
-            <div className="empty-state__title">No Registrations Found</div>
-            <p className="empty-state__text">Try adjusting your search criteria or filter selections.</p>
+            <div className="empty-state__title">No registrations found</div>
+            <p className="empty-state__text">
+              {search
+                ? 'No participants matched your search criteria.'
+                : 'No participants have registered for this event yet.'}
+            </p>
+            <Link
+              to={`/admin/onsite?event_id=${selectedEventId}`}
+              className="btn btn--secondary mt-4"
+            >
+              + Add On-site Registration
+            </Link>
           </div>
         </div>
       ) : (
-        <div className="table-wrapper">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>REG ID</th>
-                <th>TEAM NAME</th>
-                <th>LEADER NAME</th>
-                <th>PRNs</th>
-                <th>EVENT</th>
-                <th>TYPE</th>
-                <th>ATTENDANCE</th>
-                <th>REGISTERED</th>
-                <th>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registrations.map((r) => {
-                const leader = r.participants?.find((p) => p.is_leader) || r.participants?.[0] || {};
-                const teammate = r.participants?.find((p) => !p.is_leader);
-                const isExpanded = expandedRegId === r.id;
+        <div className="card" style={{ border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>REG ID</th>
+                  <th>TEAM / PARTICIPANT</th>
+                  <th>MEMBERS</th>
+                  <th>TYPE</th>
+                  <th>REGISTERED</th>
+                  <th>STATUS</th>
+                  <th style={{ textAlign: 'right' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {registrations.map((r) => {
+                  const p1 = r.participants?.find((p) => p.is_leader) || r.participants?.[0];
+                  const p2 = r.participants?.find((p) => !p.is_leader) || r.participants?.[1];
+                  const isExpanded = expandedRegId === r.id;
 
-                return (
-                  <>
-                    <tr
-                      key={r.id}
-                      className={`admin-regs__row ${isExpanded ? 'admin-regs__row--expanded' : ''}`}
-                      onClick={() => toggleExpand(r.id)}
-                      style={{ cursor: 'pointer' }}
-                    >
+                  return (
+                    <tr key={r.id} className={isExpanded ? 'admin-regs__row--expanded' : ''}>
                       <td>
-                        <span className="font-mono text-xs fw-bold" style={{ color: '#000000' }}>
+                        <button
+                          className="font-mono text-accent fw-bold"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          onClick={() => setModalRegId(r.id)}
+                          title="Open full details modal"
+                        >
                           {r.registration_id}
-                        </span>
+                        </button>
                       </td>
+
                       <td>
-                        <div className="fw-bold text-primary" style={{ fontSize: '0.95rem' }}>
-                          {r.team_name || '—'}
-                        </div>
-                        {teammate && (
-                          <div className="text-xs text-muted">
-                            🤝 Partner: {teammate.full_name}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <div className="fw-bold text-primary" style={{ fontSize: '0.9rem' }}>
-                          👑 {leader.full_name || r.leader_name || 'Leader'}
-                        </div>
-                        <div className="text-xs text-muted">
-                          {leader.email || r.leader_email}
+                        <div
+                          className="fw-bold text-primary"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => toggleExpand(r.id)}
+                          title="Click to toggle quick inline details"
+                        >
+                          {r.team_name || p1?.full_name || 'Solo Participant'}
+                          <span style={{ fontSize: '0.75rem', marginLeft: '6px', color: 'var(--text-muted)' }}>
+                            {isExpanded ? '▲' : '▼'}
+                          </span>
                         </div>
                       </td>
+
                       <td>
-                        <div className="font-mono text-xs" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div>
-                            <span className="text-muted fw-bold">P1: </span>
-                            <span className="fw-semibold text-primary">{leader.student_id || leader.prn || r.leader_prn || '—'}</span>
-                          </div>
-                          {teammate && (
-                            <div>
-                              <span className="text-muted fw-bold">P2: </span>
-                              <span className="fw-semibold text-primary">{teammate.student_id || teammate.prn || r.player2_prn || '—'}</span>
-                            </div>
+                        <div className="text-xs font-mono">
+                          <div><strong>P1:</strong> {p1?.full_name || '—'}</div>
+                          {p2 && p2.full_name && (
+                            <div><strong>P2:</strong> {p2.full_name}</div>
                           )}
                         </div>
                       </td>
-                      <td className="text-secondary text-sm">{r.event_name}</td>
+
                       <td>
                         <span className={`badge ${r.registration_type === 'ONLINE' ? 'badge--online' : 'badge--onsite'}`}>
                           {r.registration_type}
                         </span>
                       </td>
-                      <td>
-                        {r.status === 'PENDING_APPROVAL' ? (
-                          <span className="badge badge--upcoming" style={{ fontSize: '0.6875rem', padding: '2px 6px' }}>
-                            ⏳ AWAITING P2
-                          </span>
-                        ) : r.checked_in ? (
-                          <span className="badge badge--checked">✓ IN ARENA</span>
-                        ) : (
-                          <span className="badge badge--unchecked">CONFIRMED</span>
-                        )}
+
+                      <td className="text-xs text-muted">
+                        {timeAgo(r.created_at)}
                       </td>
-                      <td className="text-xs text-muted">{timeAgo(r.created_at)}</td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="admin-regs__row-actions">
-                          <button
-                            className="btn btn--secondary btn--sm"
-                            onClick={() => toggleExpand(r.id)}
-                            title="Expand details below team name in center"
-                          >
-                            {isExpanded ? '▲ Hide' : '▼ Details'}
-                          </button>
+
+                      <td>
+                        <span className={`badge ${r.checked_in ? 'badge--checked' : 'badge--unchecked'}`}>
+                          {r.checked_in ? 'Checked In' : 'Pending'}
+                        </span>
+                      </td>
+
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
                           {!r.checked_in ? (
                             <button
-                              className={`btn btn--primary btn--sm ${checkinLoading[r.id] ? 'btn--loading' : ''}`}
+                              className={`btn btn--primary btn--xs ${checkinLoading[r.id] ? 'btn--loading' : ''}`}
                               onClick={() => handleCheckin(r)}
                               disabled={checkinLoading[r.id]}
                             >
-                              {checkinLoading[r.id] ? '' : 'Check In'}
+                              {checkinLoading[r.id] ? '' : '✓ Check-In'}
                             </button>
                           ) : (
                             <button
-                              className="btn btn--danger btn--sm"
+                              className="btn btn--ghost btn--xs text-muted"
                               onClick={() => handleUndoCheckin(r)}
+                              title="Undo check-in"
                             >
                               Undo
                             </button>
                           )}
+                          <button
+                            className="btn btn--secondary btn--xs"
+                            onClick={() => setModalRegId(r.id)}
+                          >
+                            Details
+                          </button>
                         </div>
                       </td>
                     </tr>
-
-                    {/* ⚡ Task 2: Inline Centered Detail View Below Clicked Team Name */}
-                    {isExpanded && (
-                      <tr key={`expand-${r.id}`} className="admin-regs__expansion-row">
-                        <td colSpan={8} className="admin-regs__expansion-cell">
-                          <div className="inline-detail-box card">
-                            <div className="inline-detail-box__inner">
-                              {/* Header & Badges */}
-                              <div className="inline-detail-box__header">
-                                <div>
-                                  <span className="section__label">TEAM REGISTRATION DETAILS</span>
-                                  <h3 className="inline-detail-box__title">{r.team_name || `${leader.full_name}'s Duo`}</h3>
-                                </div>
-                                <div className="inline-detail-box__badges">
-                                  <span className={`badge ${r.registration_type === 'ONLINE' ? 'badge--online' : 'badge--onsite'}`}>
-                                    {r.registration_type}
-                                  </span>
-                                  <span className={`badge ${r.participation_mode === 'SOLO' ? 'badge--solo' : 'badge--team'}`}>
-                                    {r.participation_mode}
-                                  </span>
-                                  <span className={`badge ${r.checked_in ? 'badge--checked' : 'badge--unchecked'}`}>
-                                    {r.checked_in ? '✓ Checked In (In Arena)' : 'Pending Check-In'}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Centered 3-Column Balanced Layout */}
-                              <div className="inline-detail-box__grid">
-                                {/* Col 1: Registration Metadata */}
-                                <div className="inline-detail-box__col">
-                                  <div className="detail-field">
-                                    <span className="detail-field__label">REGISTRATION ID</span>
-                                    <span className="detail-field__val reg-id">{r.registration_id}</span>
-                                  </div>
-                                  <div className="detail-field">
-                                    <span className="detail-field__label">EVENT NAME</span>
-                                    <span className="detail-field__val text-primary">{r.event_name}</span>
-                                  </div>
-                                  <div className="detail-field">
-                                    <span className="detail-field__label">REGISTERED TIMESTAMP</span>
-                                    <span className="detail-field__val">{formatDateTime(r.created_at)}</span>
-                                  </div>
-                                  {r.checked_in && (
-                                    <div className="detail-field">
-                                      <span className="detail-field__label">ARENA CHECK-IN TIME</span>
-                                      <span className="detail-field__val text-success fw-bold">{formatDateTime(r.checked_in_at)}</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Col 2: Duo Members */}
-                                <div className="inline-detail-box__col inline-detail-box__col--members">
-                                  <span className="detail-field__label">DUO TEAM MEMBERS (2 PLAYERS)</span>
-                                  <div className="inline-members-list">
-                                    {r.participants?.map((p, pIdx) => (
-                                      <div key={pIdx} className="inline-member-pill">
-                                        <div className="inline-member-pill__top">
-                                          <span className="inline-member-pill__name">{p.full_name}</span>
-                                          <span className="badge badge--tag" style={{ fontSize: '0.65rem' }}>
-                                            {p.is_leader ? 'LEADER (P1)' : `PLAYER ${pIdx + 1}`}
-                                          </span>
-                                        </div>
-                                        <div className="inline-member-pill__meta" style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                          {(p.student_id || p.prn) && (
-                                            <span className="font-mono fw-bold" style={{ color: '#000000', fontSize: '0.8rem' }}>
-                                              🆔 PRN: {p.student_id || p.prn}
-                                            </span>
-                                          )}
-                                          <span>📧 {p.email}</span>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Footer Actions with Theme-Matching Cancel/Close Button */}
-                              <div className="inline-detail-box__footer">
-                                <div className="inline-detail-box__footer-left">
-                                  {!r.checked_in ? (
-                                    <button
-                                      className={`btn btn--primary btn--sm ${checkinLoading[r.id] ? 'btn--loading' : ''}`}
-                                      onClick={() => handleCheckin(r)}
-                                      disabled={checkinLoading[r.id]}
-                                    >
-                                      {checkinLoading[r.id] ? '' : '✓ Check-In to Arena'}
-                                    </button>
-                                  ) : (
-                                    <button
-                                      className="btn btn--danger btn--sm"
-                                      onClick={() => handleUndoCheckin(r)}
-                                    >
-                                      Undo Check-in
-                                    </button>
-                                  )}
-                                </div>
-                                <button
-                                  className="btn btn--secondary btn--sm"
-                                  onClick={() => toggleExpand(r.id)}
-                                >
-                                  Close Details ✕
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-            </tbody>
-          </table>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {pagination.pages > 1 && (
-        <div className="admin-regs__pagination">
-          <button className="btn btn--secondary btn--sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
-          <span className="text-sm text-muted font-mono">Page {page} of {pagination.pages}</span>
-          <button className="btn btn--secondary btn--sm" onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))} disabled={page === pagination.pages}>Next</button>
-        </div>
-      )}
-
+      {/* Registration Details Modal */}
       {modalRegId && (
         <RegistrationDetailModal
           registrationId={modalRegId}
           onClose={() => setModalRegId(null)}
-          onCheckin={() => loadRegistrations()}
+          onUpdate={() => loadRegistrations(selectedEventId)}
         />
       )}
     </div>

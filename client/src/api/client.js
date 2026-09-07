@@ -266,10 +266,9 @@ export const apiClient = {
 
         const reg = p.registrations;
         const ev = reg?.events;
+        // Real points awarded by committee/evaluators only (no fake demo points)
         const contestScore = Number(reg?.score || 0);
-        const attendanceScore = reg?.checked_in ? 50 : 0;
-        const participationScore = (reg?.status === 'CONFIRMED') ? 100 : 50;
-        const totalEventPoints = participationScore + attendanceScore + contestScore;
+        const totalEventPoints = contestScore;
 
         if (!playerMap.has(key)) {
           playerMap.set(key, {

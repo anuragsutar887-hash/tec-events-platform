@@ -191,7 +191,7 @@ export default function EventForm() {
                 className={`form-input ${errors.name ? 'form-input--error' : ''}`}
                 value={form.name}
                 onChange={(e) => set('name', e.target.value)}
-                placeholder="e.g. codeDebug 2026"
+                placeholder=""
                 required
               />
               {errors.name && <span className="form-error">{errors.name}</span>}
@@ -218,7 +218,7 @@ export default function EventForm() {
                 className="form-input"
                 value={form.short_description}
                 onChange={(e) => set('short_description', e.target.value)}
-                placeholder="Brief one-line summary (shown on event cards)"
+                placeholder=""
                 maxLength={200}
               />
             </div>
@@ -230,7 +230,7 @@ export default function EventForm() {
                 rows={5}
                 value={form.full_description}
                 onChange={(e) => set('full_description', e.target.value)}
-                placeholder="Detailed event overview, problem statement, structure..."
+                placeholder=""
               />
             </div>
 
@@ -241,7 +241,7 @@ export default function EventForm() {
                 className="form-input"
                 value={form.banner_url}
                 onChange={(e) => set('banner_url', e.target.value)}
-                placeholder="https://..."
+                placeholder=""
               />
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function EventForm() {
               <label className="form-label">Venue</label>
               <input type="text" className="form-input" value={form.venue}
                 onChange={(e) => set('venue', e.target.value)}
-                placeholder="e.g. Seminar Hall, Block A" />
+                placeholder="" />
             </div>
           </div>
         </div>
@@ -313,18 +313,18 @@ export default function EventForm() {
               <label className="form-label">Event Rules</label>
               <textarea className="form-input form-textarea" rows={5} value={form.rules}
                 onChange={(e) => set('rules', e.target.value)}
-                placeholder="List the rules for this event..." />
+                placeholder="" />
             </div>
             <div className="form-group">
               <label className="form-label">Instructions</label>
               <textarea className="form-input form-textarea" rows={4} value={form.instructions}
                 onChange={(e) => set('instructions', e.target.value)}
-                placeholder="Registration and participation instructions..." />
+                placeholder="" />
             </div>
           </div>
         </div>
 
-        {/* Contact Info (Clean generic placeholders, no hardcoded values) */}
+        {/* Contact Info */}
         <div className="event-form__section card">
           <div className="card__header">
             <h2 className="event-form__section-title">📞 Contact Information</h2>
@@ -338,7 +338,7 @@ export default function EventForm() {
                   className="form-input"
                   value={form.contact_info.name}
                   onChange={(e) => setContactInfo('name', e.target.value)}
-                  placeholder="Coordinator name"
+                  placeholder=""
                 />
               </div>
               <div className="form-group">
@@ -348,7 +348,7 @@ export default function EventForm() {
                   className="form-input"
                   value={form.contact_info.email}
                   onChange={(e) => setContactInfo('email', e.target.value)}
-                  placeholder="e.g. coordinator@college.edu"
+                  placeholder=""
                 />
               </div>
               <div className="form-group">
@@ -358,7 +358,7 @@ export default function EventForm() {
                   className="form-input"
                   value={form.contact_info.phone}
                   onChange={(e) => setContactInfo('phone', e.target.value)}
-                  placeholder="e.g. +91 98765 43210"
+                  placeholder=""
                 />
               </div>
             </div>
