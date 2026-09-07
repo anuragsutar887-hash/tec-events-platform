@@ -32,6 +32,8 @@ export default async function handler(req, res) {
       loginUrl = 'https://tec-events-platform.vercel.app/login',
       organizerName = 'Technical Committee',
       collegeName = 'Indira College of Engineering and Management (ICEM), Pune',
+      smtpConfig = null,
+      isTestEmail = false,
     } = req.body || {};
 
     // Collect all valid unique recipient emails
@@ -50,7 +52,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No valid recipient email addresses provided.' });
     }
 
-    // Prepare Plain Text Body matching the user's exact specification
+    // Prepare Plain Text Body matching the user's exact template specification
     const textContent = `Hello ${teamName},
 
 Congratulations! 🎉
@@ -86,7 +88,7 @@ ${collegeName}
 Technical Committee
 `;
 
-    // Prepare Professional Responsive HTML Body matching the template layout
+    // Prepare Responsive HTML Body matching the template layout
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -258,29 +260,65 @@ Technical Committee
 </body>
 </html>`;
 
-    // Setup Nodemailer Transporter
-    const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
-    const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
-    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10);
-    const smtpSecure = process.env.SMTP_SECURE === 'true' || (!process.env.SMTP_SECURE && smtpPort === 465);
-    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || `"${organizerName}" <${smtpUser || 'no-reply@indiraicem.ac.in'}>`;
+    // ─── Resolve SMTP Credentials ──────────────────────────────
+    const clientSmtp = smtpConfig || {};
+    let smtpUser = (clientSmtp.user || process.env.SMTP_USER || process.env.EMAIL_USER || '').trim();
+    let smtpPass = (clientSmtp.pass || process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || '').trim();
+    let smtpHost = (clientSmtp.host || process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+    let smtpPort = parseInt(clientSmtp.port || process.env.SMTP_PORT || '465', 10);
+    let smtpSecure = clientSmtp.secure !== undefined ? Boolean(clientSmtp.secure) : (smtpPort === 465);
 
-    let transporter;
+    // Fallback: Check Supabase admins table for persistent SMTP settings
+    if (!smtpUser || !smtpPass) {
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://jzantniagqzetbbvohzn.supabase.co';
+        const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6YW50bmlhZ3F6ZXRiYnZvaHpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNjMxMDQsImV4cCI6MjEwMjYzOTEwNH0.xNGvYpXWjVxSRXdMqykrx8-ox2TdmoEWd_IoB28O-6g';
+        const sb = createClient(supabaseUrl, supabaseAnonKey);
+        const { data: adminRow } = await sb.from('admins').select('full_name').eq('id', 1).single();
+        if (adminRow?.full_name && adminRow.full_name.startsWith('SMTP:')) {
+          const cfg = JSON.parse(adminRow.full_name.slice(5));
+          if (cfg.user && cfg.pass) {
+            smtpUser = cfg.user.trim();
+            smtpPass = cfg.pass.trim();
+            if (cfg.host) smtpHost = cfg.host.trim();
+            if (cfg.port) smtpPort = parseInt(cfg.port, 10);
+            if (cfg.secure !== undefined) smtpSecure = Boolean(cfg.secure);
+          }
+        }
+      } catch (err) {
+        console.warn('[nodemailer] Supabase persistent SMTP lookup note:', err.message);
+      }
+    }
+
+    let transporter = null;
     let isTestAccount = false;
 
     if (smtpUser && smtpPass) {
-      transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpSecure,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
+      const cleanPass = smtpPass.replace(/\s+/g, '');
+      const isGmail = smtpHost.includes('gmail') || smtpUser.includes('@gmail.com');
+
+      const transportConfig = isGmail
+        ? {
+            service: 'gmail',
+            auth: {
+              user: smtpUser,
+              pass: cleanPass,
+            },
+          }
+        : {
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpSecure,
+            auth: {
+              user: smtpUser,
+              pass: cleanPass,
+            },
+          };
+
+      transporter = nodemailer.createTransport(transportConfig);
     } else {
-      // Fallback to Ethereal nodemailer test account so sending always succeeds
+      // Ethereal sandbox test account fallback
       const testAccount = await nodemailer.createTestAccount();
       isTestAccount = true;
       transporter = nodemailer.createTransport({
@@ -294,23 +332,22 @@ Technical Committee
       });
     }
 
-    // Send email to all teammates concurrently
+    const fromAddress = `"${organizerName}" <${smtpUser || 'no-reply@indiraicem.ac.in'}>`;
+
     const mailOptions = {
-      from: smtpFrom,
+      from: fromAddress,
       to: toEmails.join(', '),
-      subject: `Registration Confirmed: ${eventName} (${teamName})`,
+      subject: isTestEmail
+        ? `[TEST EMAIL] Registration System Test - ${eventName}`
+        : `Registration Confirmed: ${eventName} (${teamName})`,
       text: textContent,
       html: htmlContent,
     };
 
     const info = await transporter.sendMail(mailOptions);
-
     const previewUrl = isTestAccount ? nodemailer.getTestMessageUrl(info) : null;
 
-    console.log(`[nodemailer] Sent registration email to: ${toEmails.join(', ')} | ID: ${info.messageId}`);
-    if (previewUrl) {
-      console.log(`[nodemailer] Preview URL: ${previewUrl}`);
-    }
+    console.log(`[nodemailer] Sent registration email to: ${toEmails.join(', ')} | ID: ${info.messageId} | Provider: ${smtpUser ? 'Real SMTP (' + smtpUser + ')' : 'Ethereal Test Sandbox'}`);
 
     return res.status(200).json({
       success: true,
@@ -318,6 +355,10 @@ Technical Committee
       recipients: toEmails,
       isTestAccount,
       previewUrl,
+      senderUsed: smtpUser || 'Ethereal Test Sandbox',
+      statusMessage: smtpUser
+        ? `Delivered to ${toEmails.join(', ')} via ${smtpUser}`
+        : `Sent via test sandbox (set SMTP credentials in Admin Settings to deliver to live Gmail/Outlook inboxes)`,
     });
   } catch (error) {
     console.error('[nodemailer] Error sending email:', error);

@@ -219,7 +219,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   className="form-input"
                   value={loginPassword}
                   onChange={(e) => { setLoginPassword(e.target.value); if (error) setError(''); }}
-                  placeholder="••••••••"
+                  placeholder=""
                   autoComplete="current-password"
                   required
                 />
@@ -258,7 +258,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   className="form-input"
                   value={fullName}
                   onChange={(e) => { setFullName(e.target.value); if (error) setError(''); }}
-                  placeholder="e.g. Anurag Sutar"
+                  placeholder=""
                   autoComplete="name"
                   autoFocus
                   required
@@ -285,11 +285,10 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   className="form-input"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
-                  placeholder="e.g. anuragsutar887@gmail.com"
+                  placeholder=""
                   autoComplete="email"
                   required
                 />
-                <span className="form-hint">Used for event messages & teammate notifications</span>
               </div>
 
               <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
@@ -300,7 +299,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                     className="form-input"
                     value={registerPassword}
                     onChange={(e) => { setRegisterPassword(e.target.value); if (error) setError(''); }}
-                    placeholder="Min 6 characters"
+                    placeholder=""
                     autoComplete="new-password"
                     required
                   />
@@ -313,7 +312,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                     className="form-input"
                     value={confirmPassword}
                     onChange={(e) => { setConfirmPassword(e.target.value); if (error) setError(''); }}
-                    placeholder="Repeat password"
+                    placeholder=""
                     autoComplete="new-password"
                     required
                   />

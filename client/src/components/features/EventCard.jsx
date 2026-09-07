@@ -26,10 +26,6 @@ export default function EventCard({ event }) {
 
   return (
     <div className="event-card card card--hover">
-      <div className="event-card__header">
-        <RegistrationBadge status={registration_status} />
-      </div>
-
       <div className="event-card__body">
         <h3 className="event-card__title">{name}</h3>
         {short_description && (

@@ -89,6 +89,12 @@ export async function sendRegistrationEmail({
     const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://tec-events-platform.vercel.app';
     const loginUrl = `${currentOrigin}/login`;
 
+    let storedSmtp = null;
+    try {
+      const raw = localStorage.getItem('tec_smtp_config');
+      if (raw) storedSmtp = JSON.parse(raw);
+    } catch {}
+
     const payload = {
       recipients: uniqueRecipients,
       teamName,
@@ -101,6 +107,7 @@ export async function sendRegistrationEmail({
       loginUrl,
       organizerName: 'Department of Information Technology',
       collegeName: 'Indira College of Engineering and Management (ICEM), Pune',
+      smtpConfig: storedSmtp,
     };
 
     console.log(`[emailService] Sending registration email via nodemailer to:`, uniqueRecipients, `for Team ID: ${teamId}`);
