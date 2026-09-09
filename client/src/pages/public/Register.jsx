@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { useStudent } from '../../context/StudentAuthContext';
 import StudentLoginModal from '../../components/auth/StudentLoginModal';
 import './Register.css';
 
-const isValidEmail = (email) => {
-  if (!email) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-};
+const isValidEmail = (val) => /^[^s@]+@[^s@]+.[^s@]+$/.test(val.trim());
 
 export default function Register() {
   const { slug } = useParams();
@@ -21,11 +18,20 @@ export default function Register() {
   const [apiError, setApiError] = useState('');
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  // Form state: Team Name, Player 1 (auto-filled from user), Player 2
+  // Form State
   const [teamName, setTeamName] = useState('');
   const [player1, setPlayer1] = useState({ full_name: '', prn: '', email: '' });
   const [player2, setPlayer2] = useState({ full_name: '', prn: '', email: '' });
+  const [player3, setPlayer3] = useState({ full_name: '', prn: '', email: '' });
+  const [player4, setPlayer4] = useState({ full_name: '', prn: '', email: '' });
   const [errors, setErrors] = useState({});
+
+  // Success Pop-up Modal State
+  const [successModalReg, setSuccessModalReg] = useState(null);
+  const [copiedId, setCopiedId] = useState(false);
+  const [copiedPwd, setCopiedPwd] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [showPassword, setShowPassword] = useState(true);
 
   // Registration Pending Teammate Approval State
   const [pendingApprovalReg, setPendingApprovalReg] = useState(null);
@@ -61,6 +67,8 @@ export default function Register() {
     } else {
       setPlayer1({ full_name: '', prn: '', email: '' });
       setPlayer2({ full_name: '', prn: '', email: '' });
+      setPlayer3({ full_name: '', prn: '', email: '' });
+      setPlayer4({ full_name: '', prn: '', email: '' });
       setTeamName('');
     }
   }, [user]);
@@ -81,8 +89,6 @@ export default function Register() {
       })
       .catch(() => setUserRegistration(null));
   }, [isAuthenticated, user?.email, slug]);
-
-
 
   // Live polling for teammate approval when in pending state
   useEffect(() => {
@@ -133,13 +139,16 @@ export default function Register() {
     setTimeout(() => setCopySuccess(false), 3000);
   };
 
+  const maxPlayers = event?.max_team_size || 2;
+  const minPlayers = event?.min_team_size || 1;
+
   const validate = () => {
     const errs = {};
     if (!teamName.trim()) {
       errs.teamName = 'Team name is required';
     }
 
-    // Player 1 validation (Auto-filled from user account)
+    // Player 1 validation (Primary/Leader)
     if (!player1.full_name.trim()) errs.p1_name = 'Your name is required';
     if (!player1.prn.trim()) errs.p1_prn = 'Your PRN is required';
     if (!player1.email.trim()) {
@@ -148,22 +157,33 @@ export default function Register() {
       errs.p1_email = 'Enter a valid email address';
     }
 
-    // Player 2 is OPTIONAL — only validate if user has started filling in teammate details
-    const hasAnyP2 = player2.full_name.trim() || player2.prn.trim() || player2.email.trim();
-    if (hasAnyP2) {
-      if (!player2.full_name.trim()) errs.p2_name = 'Teammate full name is required';
-      if (!player2.prn.trim()) errs.p2_prn = 'Teammate PRN number is required';
-      if (!player2.email.trim()) {
-        errs.p2_email = 'Teammate email is required';
-      } else if (!isValidEmail(player2.email)) {
-        errs.p2_email = 'Enter a valid email address';
+    const checkPlayer = (p, num, isRequired) => {
+      const hasAny = p.full_name.trim() || p.prn.trim() || p.email.trim();
+      if (isRequired || hasAny) {
+        if (!p.full_name.trim()) errs[`p${num}_name`] = `Player ${num} full name is required`;
+        if (!p.prn.trim()) errs[`p${num}_prn`] = `Player ${num} PRN number is required`;
+        if (!p.email.trim()) {
+          errs[`p${num}_email`] = `Player ${num} email is required`;
+        } else if (!isValidEmail(p.email)) {
+          errs[`p${num}_email`] = 'Enter a valid email address';
+        }
       }
-      if (player1.email && player2.email && player1.email.toLowerCase().trim() === player2.email.toLowerCase().trim()) {
-        errs.p2_email = 'Player 1 and Player 2 must have distinct email addresses';
-      }
-      if (player1.prn && player2.prn && player1.prn.toLowerCase().trim() === player2.prn.toLowerCase().trim()) {
-        errs.p2_prn = 'Player 1 and Player 2 must have distinct PRNs';
-      }
+    };
+
+    if (maxPlayers >= 2) checkPlayer(player2, 2, minPlayers >= 2);
+    if (maxPlayers >= 3) checkPlayer(player3, 3, minPlayers >= 3);
+    if (maxPlayers >= 4) checkPlayer(player4, 4, minPlayers >= 4);
+
+    // Cross-check duplicate emails and PRNs
+    const allPlayers = [player1, maxPlayers >= 2 && player2, maxPlayers >= 3 && player3, maxPlayers >= 4 && player4].filter(Boolean);
+    const validEmails = allPlayers.map(p => p.email.trim().toLowerCase()).filter(Boolean);
+    const validPrns = allPlayers.map(p => p.prn.trim().toLowerCase()).filter(Boolean);
+
+    if (new Set(validEmails).size !== validEmails.length) {
+      errs.general = 'All team members must have distinct email addresses';
+    }
+    if (new Set(validPrns).size !== validPrns.length) {
+      errs.general = 'All team members must have distinct PRNs';
     }
 
     return errs;
@@ -185,7 +205,18 @@ export default function Register() {
       return;
     }
 
-    const hasTeammate = player2.full_name.trim() && player2.prn.trim() && player2.email.trim();
+    const activeTeammates = [];
+    if (maxPlayers >= 2 && player2.full_name.trim() && player2.prn.trim() && player2.email.trim()) {
+      activeTeammates.push(player2);
+    }
+    if (maxPlayers >= 3 && player3.full_name.trim() && player3.prn.trim() && player3.email.trim()) {
+      activeTeammates.push(player3);
+    }
+    if (maxPlayers >= 4 && player4.full_name.trim() && player4.prn.trim() && player4.email.trim()) {
+      activeTeammates.push(player4);
+    }
+
+    const hasTeammates = activeTeammates.length > 0;
 
     setSubmitting(true);
     try {
@@ -193,21 +224,27 @@ export default function Register() {
         event_slug: slug,
         team_name: teamName.trim(),
         player_1: player1,
-        ...(hasTeammate ? { player_2: player2, status: 'PENDING_APPROVAL' } : { status: 'CONFIRMED' }),
+        player_2: activeTeammates[0] || null,
+        player_3: activeTeammates[1] || null,
+        player_4: activeTeammates[2] || null,
+        players: [player1, ...activeTeammates],
+        ...(hasTeammates ? { status: 'PENDING_APPROVAL' } : { status: 'CONFIRMED' }),
       };
 
       const { data } = await apiClient.post('/registrations', payload);
 
-      if (hasTeammate) {
-        // Show Waiting for Approval Screen
-        setPendingApprovalReg(data.registration);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        // Solo — navigate straight to success
-        navigate(`/events/${slug}/register/success`, {
-          state: { registration: data.registration }
-        });
+      // Save credentials in local storage cache
+      if (data?.registration?.password) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('tec_team_passwords') || '{}');
+          stored[data.registration.registration_id] = data.registration.password;
+          stored[String(data.registration.id)] = data.registration.password;
+          localStorage.setItem('tec_team_passwords', JSON.stringify(stored));
+        } catch {}
       }
+
+      // Show immediate Registration Success Pop-up Modal with Team ID and Password!
+      setSuccessModalReg(data.registration);
     } catch (err) {
       const errData = err.response?.data;
       setApiError(
@@ -217,6 +254,22 @@ export default function Register() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCloseSuccessModal = () => {
+    if (!successModalReg) return;
+    const reg = successModalReg;
+    setSuccessModalReg(null);
+
+    const hasTeammates = (reg.participants?.length || 1) > 1;
+    if (hasTeammates && reg.status === 'PENDING_APPROVAL') {
+      setPendingApprovalReg(reg);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate(`/events/${slug}/register/success`, {
+        state: { registration: reg }
+      });
     }
   };
 
@@ -247,7 +300,7 @@ export default function Register() {
     );
   }
 
-  // ─── ✅ SCREEN: ALREADY REGISTERED ────────────────────────────
+  // ─── SCREEN: ALREADY REGISTERED ────────────────────────────
   if (userRegistration) {
     return (
       <div className="register-page">
@@ -258,31 +311,27 @@ export default function Register() {
           </div>
         </div>
         <div className="container--narrow section">
-          <div className="card" style={{ border: '2px solid #16a34a', overflow: 'hidden' }}>
+          <div className="card" style={{ border: '2px solid #000000', overflow: 'hidden' }}>
             <div className="card__body" style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
-              <div style={{ fontSize: '3rem', marginBottom: 'var(--space-4)' }}>✅</div>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 900, marginBottom: 'var(--space-3)', textTransform: 'uppercase' }}>
-                {userRegistration.status === 'CONFIRMED' ? 'You Are Officially Registered!' : 'Registration Pending Approval'}
+              <div style={{ fontSize: '3rem', marginBottom: 'var(--space-3)' }}>
+                {userRegistration.status === 'CONFIRMED' ? '✅' : '⏳'}
+              </div>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 800, color: '#000', marginBottom: 'var(--space-2)' }}>
+                {userRegistration.status === 'CONFIRMED' ? 'You are officially registered!' : 'Registration Pending Teammate Approval'}
               </h2>
-              <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-4)', maxWidth: '420px', margin: '0 auto var(--space-4)' }}>
                 {userRegistration.status === 'CONFIRMED'
-                  ? 'Your team registration is confirmed for this event.'
-                  : 'Your registration is awaiting your teammate\'s approval. Once they approve, your registration will be confirmed.'}
+                  ? 'Your participation in this event has been confirmed. You can view your credentials or event details below.'
+                  : 'Your registration is awaiting your teammate approval. Once they log in and approve, your registration is confirmed.'}
               </p>
               <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: 'var(--space-6)' }}>
                 Registration ID: <strong style={{ color: '#000' }}>{userRegistration.reg_code}</strong>
               </p>
               <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <Link
-                  to={`/events/${slug}`}
-                  className="btn btn--primary btn--lg"
-                >
+                <Link to={`/events/${slug}`} className="btn btn--primary btn--lg">
                   VIEW EVENT DETAILS
                 </Link>
-                <Link
-                  to="/#events-section"
-                  className="btn btn--secondary btn--lg"
-                >
+                <Link to="/#events-section" className="btn btn--secondary btn--lg">
                   BROWSE ALL EVENTS
                 </Link>
               </div>
@@ -293,8 +342,7 @@ export default function Register() {
     );
   }
 
-  // ─── ⏳ SCREEN: WAITING FOR APPROVAL FROM TEAMMATE ──────────────
-
+  // ─── SCREEN: WAITING FOR APPROVAL FROM TEAMMATE ──────────────
   if (pendingApprovalReg) {
     return (
       <div className="register-page">
@@ -328,7 +376,7 @@ export default function Register() {
                   Registration Request Sent!
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto var(--space-6)', lineHeight: 1.5 }}>
-                  Your team registration for <strong>"{teamName}"</strong> is created. Your teammate <strong>{player2.full_name}</strong> must log in to their account and approve the invitation to officially confirm your team registration.
+                  Your team registration for <strong>"{teamName}"</strong> is created. Your teammate must log into their account to confirm the registration.
                 </p>
 
                 <div className="card" style={{ background: '#fcfcfc', border: '1px dashed var(--border)', padding: 'var(--space-4)', maxWidth: '480px', margin: '0 auto var(--space-6)', textAlign: 'left' }}>
@@ -336,22 +384,22 @@ export default function Register() {
                     <span className="text-xs text-muted font-mono fw-bold">LEADER (P1):</span>
                     <span className="text-xs text-primary font-mono fw-semibold">{player1.full_name} ({player1.prn})</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span className="text-xs text-muted font-mono fw-bold">TEAMMATE (P2):</span>
-                    <span className="text-xs text-primary font-mono fw-semibold">{player2.full_name} ({player2.prn})</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-xs text-muted font-mono fw-bold">TEAMMATE EMAIL:</span>
-                    <span className="text-xs text-primary font-mono fw-semibold">{player2.email}</span>
-                  </div>
+                  {player2.full_name && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span className="text-xs text-muted font-mono fw-bold">TEAMMATE (P2):</span>
+                      <span className="text-xs text-primary font-mono fw-semibold">{player2.full_name} ({player2.prn})</span>
+                    </div>
+                  )}
+                  {player2.email && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span className="text-xs text-muted font-mono fw-bold">TEAMMATE EMAIL:</span>
+                      <span className="text-xs text-primary font-mono fw-semibold">{player2.email}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className="btn btn--secondary"
-                    onClick={handleCopyInvite}
-                  >
+                  <button type="button" className="btn btn--secondary" onClick={handleCopyInvite}>
                     {copySuccess ? '✓ Copied Invite Message!' : '📋 Copy Invitation Message'}
                   </button>
 
@@ -394,6 +442,12 @@ export default function Register() {
                   <span>{apiError}</span>
                 </div>
               )}
+              {errors.general && (
+                <div className="alert alert--error mb-4">
+                  <span>⚠️</span>
+                  <span>{errors.general}</span>
+                </div>
+              )}
 
               {/* Section 1: Team Name */}
               <div className="register-form__section card">
@@ -406,7 +460,7 @@ export default function Register() {
                 <div className="card__body">
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label htmlFor="team-name-input" className="form-label form-label--required">
-                      Team Name
+                      Team Name / Handle
                     </label>
                     <input
                       type="text"
@@ -502,88 +556,230 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Section 3: Player 2 (Optional Teammate) */}
-              <div className="register-form__section card">
-                <div className="card__header">
-                  <span className="section__label" style={{ marginBottom: 0 }}>MEMBER 2 (OPTIONAL)</span>
-                  <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
-                    TEAMMATE
-                  </h2>
-                </div>
-                <div className="card__body">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="p2-name" className="form-label">
-                        Teammate Full Name
-                      </label>
-                      <input
-                        type="text"
-                        id="p2-name"
-                        className={`form-input ${errors.p2_name ? 'form-input--error' : ''}`}
-                        value={player2.full_name}
-                        onChange={(e) => {
-                          setPlayer2({ ...player2, full_name: e.target.value });
-                          if (errors.p2_name) setErrors((prev) => ({ ...prev, p2_name: '' }));
-                        }}
-                        autoComplete="off"
-                      />
-                      {errors.p2_name && <span className="form-error">{errors.p2_name}</span>}
+              {/* Section 3: Player 2 (If maxPlayers >= 2) */}
+              {maxPlayers >= 2 && (
+                <div className="register-form__section card">
+                  <div className="card__header">
+                    <span className="section__label" style={{ marginBottom: 0 }}>
+                      MEMBER 2 ({minPlayers >= 2 ? 'COMPULSORY' : 'OPTIONAL'})
+                    </span>
+                    <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+                      PLAYER 2
+                    </h2>
+                  </div>
+                  <div className="card__body">
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label htmlFor="p2-name" className={`form-label ${minPlayers >= 2 ? 'form-label--required' : ''}`}>
+                          Teammate Full Name
+                        </label>
+                        <input
+                          type="text"
+                          id="p2-name"
+                          className={`form-input ${errors.p2_name ? 'form-input--error' : ''}`}
+                          value={player2.full_name}
+                          onChange={(e) => {
+                            setPlayer2({ ...player2, full_name: e.target.value });
+                            if (errors.p2_name) setErrors((prev) => ({ ...prev, p2_name: '' }));
+                          }}
+                          autoComplete="off"
+                        />
+                        {errors.p2_name && <span className="form-error">{errors.p2_name}</span>}
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="p2-prn" className={`form-label ${minPlayers >= 2 ? 'form-label--required' : ''}`}>
+                          Teammate PRN Number
+                        </label>
+                        <input
+                          type="text"
+                          id="p2-prn"
+                          className={`form-input font-mono ${errors.p2_prn ? 'form-input--error' : ''}`}
+                          value={player2.prn}
+                          onChange={(e) => {
+                            setPlayer2({ ...player2, prn: e.target.value });
+                            if (errors.p2_prn) setErrors((prev) => ({ ...prev, p2_prn: '' }));
+                          }}
+                          autoComplete="off"
+                        />
+                        {errors.p2_prn && <span className="form-error">{errors.p2_prn}</span>}
+                      </div>
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="p2-prn" className="form-label">
-                        Teammate PRN Number
+                      <label htmlFor="p2-email" className={`form-label ${minPlayers >= 2 ? 'form-label--required' : ''}`}>
+                        Teammate Email ID
                       </label>
                       <input
-                        type="text"
-                        id="p2-prn"
-                        className={`form-input font-mono ${errors.p2_prn ? 'form-input--error' : ''}`}
-                        value={player2.prn}
+                        type="email"
+                        id="p2-email"
+                        className={`form-input ${errors.p2_email ? 'form-input--error' : ''}`}
+                        value={player2.email}
                         onChange={(e) => {
-                          setPlayer2({ ...player2, prn: e.target.value });
-                          if (errors.p2_prn) setErrors((prev) => ({ ...prev, p2_prn: '' }));
+                          setPlayer2({ ...player2, email: e.target.value });
+                          if (errors.p2_email) setErrors((prev) => ({ ...prev, p2_email: '' }));
                         }}
                         autoComplete="off"
                       />
-                      {errors.p2_prn && <span className="form-error">{errors.p2_prn}</span>}
+                      {errors.p2_email && <span className="form-error">{errors.p2_email}</span>}
                     </div>
                   </div>
+                </div>
+              )}
 
-                  <div className="form-group">
-                    <label htmlFor="p2-email" className="form-label">
-                      Teammate Email ID
-                    </label>
-                    <input
-                      type="email"
-                      id="p2-email"
-                      className={`form-input ${errors.p2_email ? 'form-input--error' : ''}`}
-                      value={player2.email}
-                      onChange={(e) => {
-                        setPlayer2({ ...player2, email: e.target.value });
-                        if (errors.p2_email) setErrors((prev) => ({ ...prev, p2_email: '' }));
-                      }}
-                      autoComplete="off"
-                    />
-                    {errors.p2_email && <span className="form-error">{errors.p2_email}</span>}
+              {/* Section 4: Player 3 (If maxPlayers >= 3) */}
+              {maxPlayers >= 3 && (
+                <div className="register-form__section card">
+                  <div className="card__header">
+                    <span className="section__label" style={{ marginBottom: 0 }}>
+                      MEMBER 3 ({minPlayers >= 3 ? 'COMPULSORY' : 'OPTIONAL'})
+                    </span>
+                    <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+                      PLAYER 3
+                    </h2>
+                  </div>
+                  <div className="card__body">
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label htmlFor="p3-name" className={`form-label ${minPlayers >= 3 ? 'form-label--required' : ''}`}>
+                          Member 3 Full Name
+                        </label>
+                        <input
+                          type="text"
+                          id="p3-name"
+                          className={`form-input ${errors.p3_name ? 'form-input--error' : ''}`}
+                          value={player3.full_name}
+                          onChange={(e) => {
+                            setPlayer3({ ...player3, full_name: e.target.value });
+                            if (errors.p3_name) setErrors((prev) => ({ ...prev, p3_name: '' }));
+                          }}
+                          autoComplete="off"
+                        />
+                        {errors.p3_name && <span className="form-error">{errors.p3_name}</span>}
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="p3-prn" className={`form-label ${minPlayers >= 3 ? 'form-label--required' : ''}`}>
+                          Member 3 PRN Number
+                        </label>
+                        <input
+                          type="text"
+                          id="p3-prn"
+                          className={`form-input font-mono ${errors.p3_prn ? 'form-input--error' : ''}`}
+                          value={player3.prn}
+                          onChange={(e) => {
+                            setPlayer3({ ...player3, prn: e.target.value });
+                            if (errors.p3_prn) setErrors((prev) => ({ ...prev, p3_prn: '' }));
+                          }}
+                          autoComplete="off"
+                        />
+                        {errors.p3_prn && <span className="form-error">{errors.p3_prn}</span>}
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="p3-email" className={`form-label ${minPlayers >= 3 ? 'form-label--required' : ''}`}>
+                        Member 3 Email ID
+                      </label>
+                      <input
+                        type="email"
+                        id="p3-email"
+                        className={`form-input ${errors.p3_email ? 'form-input--error' : ''}`}
+                        value={player3.email}
+                        onChange={(e) => {
+                          setPlayer3({ ...player3, email: e.target.value });
+                          if (errors.p3_email) setErrors((prev) => ({ ...prev, p3_email: '' }));
+                        }}
+                        autoComplete="off"
+                      />
+                      {errors.p3_email && <span className="form-error">{errors.p3_email}</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Actions Footer */}
-              <div className="register-form__footer">
-                <Link to={`/events/${slug}`} className="btn btn--secondary btn--lg">
-                  Cancel
-                </Link>
+              {/* Section 5: Player 4 (If maxPlayers >= 4) */}
+              {maxPlayers >= 4 && (
+                <div className="register-form__section card">
+                  <div className="card__header">
+                    <span className="section__label" style={{ marginBottom: 0 }}>
+                      MEMBER 4 ({minPlayers >= 4 ? 'COMPULSORY' : 'OPTIONAL'})
+                    </span>
+                    <h2 className="register-form__section-title" style={{ marginTop: 2, marginBottom: 0 }}>
+                      PLAYER 4
+                    </h2>
+                  </div>
+                  <div className="card__body">
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label htmlFor="p4-name" className={`form-label ${minPlayers >= 4 ? 'form-label--required' : ''}`}>
+                          Member 4 Full Name
+                        </label>
+                        <input
+                          type="text"
+                          id="p4-name"
+                          className={`form-input ${errors.p4_name ? 'form-input--error' : ''}`}
+                          value={player4.full_name}
+                          onChange={(e) => {
+                            setPlayer4({ ...player4, full_name: e.target.value });
+                            if (errors.p4_name) setErrors((prev) => ({ ...prev, p4_name: '' }));
+                          }}
+                          autoComplete="off"
+                        />
+                        {errors.p4_name && <span className="form-error">{errors.p4_name}</span>}
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="p4-prn" className={`form-label ${minPlayers >= 4 ? 'form-label--required' : ''}`}>
+                          Member 4 PRN Number
+                        </label>
+                        <input
+                          type="text"
+                          id="p4-prn"
+                          className={`form-input font-mono ${errors.p4_prn ? 'form-input--error' : ''}`}
+                          value={player4.prn}
+                          onChange={(e) => {
+                            setPlayer4({ ...player4, prn: e.target.value });
+                            if (errors.p4_prn) setErrors((prev) => ({ ...prev, p4_prn: '' }));
+                          }}
+                          autoComplete="off"
+                        />
+                        {errors.p4_prn && <span className="form-error">{errors.p4_prn}</span>}
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="p4-email" className={`form-label ${minPlayers >= 4 ? 'form-label--required' : ''}`}>
+                        Member 4 Email ID
+                      </label>
+                      <input
+                        type="email"
+                        id="p4-email"
+                        className={`form-input ${errors.p4_email ? 'form-input--error' : ''}`}
+                        value={player4.email}
+                        onChange={(e) => {
+                          setPlayer4({ ...player4, email: e.target.value });
+                          if (errors.p4_email) setErrors((prev) => ({ ...prev, p4_email: '' }));
+                        }}
+                        autoComplete="off"
+                      />
+                      {errors.p4_email && <span className="form-error">{errors.p4_email}</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <div className="register-form__footer" style={{ marginTop: 'var(--space-6)' }}>
                 <button
                   type="submit"
-                  id="register-submit-btn"
-                  className={`btn btn--primary btn--lg ${submitting ? 'btn--loading' : ''}`}
+                  className={`btn btn--primary btn--lg btn--full ${submitting ? 'btn--loading' : ''}`}
                   disabled={submitting}
+                  id="register-submit-btn"
                 >
                   {submitting ? '' : 'SUBMIT REGISTRATION'}
                 </button>
               </div>
-
             </form>
           </div>
 
@@ -598,6 +794,12 @@ export default function Register() {
               </div>
               <div className="card__body">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  <div>
+                    <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Team Size</div>
+                    <div className="text-primary text-sm fw-semibold">
+                      {maxPlayers === 1 ? 'Solo (1 Player)' : `Up to ${maxPlayers} Players (${minPlayers} Compulsory)`}
+                    </div>
+                  </div>
                   {event.event_date && (
                     <div>
                       <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>Event Date</div>
@@ -620,6 +822,127 @@ export default function Register() {
           </aside>
         </div>
       </div>
+
+      {/* ─── POP-UP MODAL: REGISTRATION SUCCESSFUL WITH TEAM ID & PASSWORD ─── */}
+      {successModalReg && (
+        <div className="credentials-modal-overlay" onClick={handleCloseSuccessModal}>
+          <div className="credentials-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div style={{ background: '#000000', color: '#ffffff', padding: 'var(--space-6)', borderBottom: '2px solid #27272a' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span className="badge badge--bronze" style={{ fontSize: '0.75rem', fontWeight: 800 }}>
+                  🎉 REGISTRATION SUCCESSFUL
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCloseSuccessModal}
+                  style={{ background: 'none', border: 'none', color: '#a1a1aa', fontSize: '1.25rem', cursor: 'pointer', lineHeight: 1 }}
+                >
+                  ✕
+                </button>
+              </div>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>
+                {successModalReg.team_name || 'Team Registration'}
+              </h2>
+              <p style={{ color: '#a1a1aa', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                {event.name}
+              </p>
+            </div>
+
+            <div style={{ padding: 'var(--space-6)' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 'var(--space-4)', lineHeight: 1.5 }}>
+                Your registration has been created. Here are your <strong>official team credentials</strong>:
+              </p>
+
+              {/* Team ID Card */}
+              <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-4)', marginBottom: 'var(--space-3)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
+                    Team ID / Registration Number
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--xs"
+                    onClick={() => {
+                      navigator.clipboard.writeText(successModalReg.registration_id);
+                      setCopiedId(true);
+                      setTimeout(() => setCopiedId(false), 2000);
+                    }}
+                  >
+                    {copiedId ? '✓ Copied!' : '📋 Copy ID'}
+                  </button>
+                </div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#000000', marginTop: '4px' }}>
+                  {successModalReg.registration_id}
+                </div>
+              </div>
+
+              {/* Password Card */}
+              <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
+                    Generated Team Password
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                    >
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--secondary btn--xs"
+                      onClick={() => {
+                        const pwd = successModalReg.password || successModalReg.team_password;
+                        if (pwd) {
+                          navigator.clipboard.writeText(pwd);
+                          setCopiedPwd(true);
+                          setTimeout(() => setCopiedPwd(false), 2000);
+                        }
+                      }}
+                    >
+                      {copiedPwd ? '✓ Copied!' : '📋 Copy Password'}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#2563eb', marginTop: '4px' }}>
+                  {showPassword ? (successModalReg.password || successModalReg.team_password || 'TEC-2026') : '••••••••••'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm btn--full"
+                  onClick={() => {
+                    const text = `IND-TEC REGISTRATION\nEvent: ${event.name}\nTeam Name: ${successModalReg.team_name}\nTeam ID: ${successModalReg.registration_id}\nPassword: ${successModalReg.password || successModalReg.team_password}\n`;
+                    navigator.clipboard.writeText(text);
+                    setCopiedAll(true);
+                    setTimeout(() => setCopiedAll(false), 2500);
+                  }}
+                >
+                  {copiedAll ? '✓ Copied All Credentials!' : '📋 Copy All Credentials'}
+                </button>
+              </div>
+
+              <div style={{ padding: 'var(--space-3)', background: '#fafafa', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', marginBottom: 'var(--space-5)' }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+                  🔒 <strong>Please note:</strong> Keep your Team ID and Password safe. You will need them to log in to your team dashboard and participate in the event.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn--primary btn--full btn--lg"
+                onClick={handleCloseSuccessModal}
+              >
+                Proceed to Official Confirmation →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <StudentLoginModal
         isOpen={loginModalOpen}

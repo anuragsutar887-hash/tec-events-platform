@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabaseClient';
+
 // Helper to format date nicely
 const formatFriendlyDate = (dateStr) => {
   if (!dateStr) return 'To be announced';
@@ -19,7 +21,6 @@ const formatFriendlyDate = (dateStr) => {
 const formatFriendlyTime = (timeStr) => {
   if (!timeStr) return '10:00 AM';
   try {
-    // If it's HH:mm or HH:mm:ss
     if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeStr)) {
       const parts = timeStr.split(':');
       let hour = parseInt(parts[0], 10);
@@ -35,13 +36,59 @@ const formatFriendlyTime = (timeStr) => {
 };
 
 /**
+ * Generates a cryptographically secure random password (unambiguous charset, no I/l/O/0/1)
+ * Format: TEC-XXXXXX
+ */
+export function generateRandomPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let pwd = 'TEC-';
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const arr = new Uint8Array(6);
+    crypto.getRandomValues(arr);
+    for (let i = 0; i < 6; i++) {
+      pwd += chars[arr[i] % chars.length];
+    }
+  } else {
+    for (let i = 0; i < 6; i++) {
+      pwd += chars[Math.floor(Math.random() * chars.length)];
+    }
+  }
+  return pwd;
+}
+
+/**
+ * Resolves SMTP settings from localStorage or Supabase
+ */
+async function resolveSmtpSettings() {
+  let storedSmtp = null;
+  try {
+    const raw = localStorage.getItem('tec_smtp_config');
+    if (raw) storedSmtp = JSON.parse(raw);
+  } catch {}
+
+  if (!storedSmtp || !storedSmtp.user || !storedSmtp.pass) {
+    try {
+      const { data: adminRow } = await supabase
+        .from('admins')
+        .select('full_name')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (adminRow?.full_name && adminRow.full_name.startsWith('SMTP:')) {
+        const parsed = JSON.parse(adminRow.full_name.slice(5));
+        if (parsed?.user && parsed?.pass) {
+          storedSmtp = parsed;
+        }
+      }
+    } catch (err) {
+      console.warn('[emailService] Supabase SMTP lookup note:', err);
+    }
+  }
+  return storedSmtp;
+}
+
+/**
  * Dispatches a registration confirmation email to all registered teammates via nodemailer.
- *
- * @param {Object} params
- * @param {Object} params.registration - Registration record from Supabase
- * @param {Object} params.event - Event record (name, date, time, venue)
- * @param {Array} params.participants - Array of participants ({ email, full_name, is_leader, prn })
- * @param {string} [params.password] - Optional explicit password, otherwise generates TEC#<digits>
  */
 export async function sendRegistrationEmail({
   registration,
@@ -74,25 +121,6 @@ export async function sendRegistrationEmail({
     }
 
     const teamId = registration?.registration_id || `TEC-2026-${registration?.id || '0000'}`;
-
-    // Generate a cryptographically random password (unambiguous charset, no I/l/O/0/1)
-    const generateRandomPassword = () => {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let pwd = 'TEC-';
-      const arr = new Uint8Array(6);
-      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-        crypto.getRandomValues(arr);
-        for (let i = 0; i < 6; i++) {
-          pwd += chars[arr[i] % chars.length];
-        }
-      } else {
-        // Fallback for non-browser environments
-        for (let i = 0; i < 6; i++) {
-          pwd += chars[Math.floor(Math.random() * chars.length)];
-        }
-      }
-      return pwd;
-    };
     const finalPassword = password || generateRandomPassword();
 
     const isSolo = uniqueRecipients.length === 1 && !registration?.team_name?.includes('&');
@@ -107,13 +135,10 @@ export async function sendRegistrationEmail({
     const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://tec-events-platform.vercel.app';
     const loginUrl = `${currentOrigin}/login`;
 
-    let storedSmtp = null;
-    try {
-      const raw = localStorage.getItem('tec_smtp_config');
-      if (raw) storedSmtp = JSON.parse(raw);
-    } catch {}
+    const storedSmtp = await resolveSmtpSettings();
 
     const payload = {
+      action: 'REGISTRATION',
       recipients: uniqueRecipients,
       teamName,
       eventName,
@@ -149,6 +174,55 @@ export async function sendRegistrationEmail({
     return data;
   } catch (err) {
     console.error('[emailService] Exception while triggering registration email:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Dispatches a password reset email to a student or committee admin via nodemailer.
+ */
+export async function sendPasswordResetEmail({
+  recipient,
+  userName = 'User',
+  resetUrl,
+  role = 'student',
+}) {
+  try {
+    if (!recipient) throw new Error('Recipient email is required');
+
+    const storedSmtp = await resolveSmtpSettings();
+
+    const payload = {
+      action: 'RESET_PASSWORD',
+      recipients: [recipient],
+      userName,
+      resetUrl,
+      role,
+      organizerName: 'Technical Committee',
+      collegeName: 'Indira College of Engineering and Management (ICEM), Pune',
+      smtpConfig: storedSmtp,
+    };
+
+    console.log(`[emailService] Sending password reset email to: ${recipient}`);
+
+    const res = await fetch('/api/send-registration-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[emailService] Reset email error status ${res.status}:`, errText);
+      return { success: false, error: errText };
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error('[emailService] Exception while sending password reset email:', err);
     return { success: false, error: err.message };
   }
 }

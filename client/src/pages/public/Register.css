@@ -257,3 +257,27 @@
     padding: var(--space-4);
   }
 }
+
+/* ─── Credentials Pop-up Modal ──────────────────────────────── */
+.credentials-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.credentials-modal-dialog {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: var(--radius-lg);
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+

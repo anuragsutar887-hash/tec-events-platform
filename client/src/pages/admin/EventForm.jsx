@@ -21,9 +21,9 @@ const emptyForm = {
   registration_opens_at: '',
   registration_closes_at: '',
   status: 'PUBLISHED',
-  allows_solo: false,
+  allows_solo: true,
   allows_team: true,
-  min_team_size: 2,
+  min_team_size: 1,
   max_team_size: 2,
   rules: '',
   instructions: '',
@@ -65,10 +65,10 @@ export default function EventForm() {
         registration_closes_at: ev.registration_closes_at
           ? ev.registration_closes_at.slice(0, 16) : '',
         status: ev.status || 'PUBLISHED',
-        allows_solo: false,
-        allows_team: true,
-        min_team_size: 2,
-        max_team_size: 2,
+        allows_solo: ev.allows_solo ?? (ev.min_team_size === 1),
+        allows_team: ev.allows_team ?? (ev.max_team_size > 1),
+        min_team_size: ev.min_team_size || 1,
+        max_team_size: ev.max_team_size || 2,
         rules: typeof ev.rules === 'string' ? ev.rules : (Array.isArray(ev.rules) ? ev.rules.join('\n') : ''),
         instructions: ev.instructions || '',
         contact_info: ev.contact_info || { email: '', phone: '', name: '' },
@@ -119,10 +119,10 @@ export default function EventForm() {
         ...form,
         slug: form.slug || generatedSlug,
         status: form.status || 'PUBLISHED',
-        allows_solo: false,
-        allows_team: true,
-        min_team_size: 2,
-        max_team_size: 2,
+        allows_solo: parseInt(form.min_team_size || 1, 10) === 1,
+        allows_team: parseInt(form.max_team_size || 2, 10) > 1,
+        min_team_size: parseInt(form.min_team_size || 1, 10),
+        max_team_size: Math.max(parseInt(form.min_team_size || 1, 10), parseInt(form.max_team_size || 2, 10)),
         registration_opens_at: form.registration_opens_at || null,
         registration_closes_at: form.registration_closes_at || null,
         event_date: form.event_date || null,
@@ -275,6 +275,77 @@ export default function EventForm() {
               <input type="text" className="form-input" value={form.venue}
                 onChange={(e) => set('venue', e.target.value)}
                 placeholder="" />
+            </div>
+          </div>
+        </div>
+
+        {/* Team Size & Player Requirements */}
+        <div className="event-form__section card">
+          <div className="card__header">
+            <h2 className="event-form__section-title">👥 Team Size & Player Requirements</h2>
+          </div>
+          <div className="card__body form-section">
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Total Players Playing (Team Size)</label>
+                <select
+                  className="form-input form-select"
+                  value={form.max_team_size}
+                  onChange={(e) => {
+                    const newMax = parseInt(e.target.value, 10);
+                    setForm((prev) => ({
+                      ...prev,
+                      max_team_size: newMax,
+                      min_team_size: Math.min(prev.min_team_size, newMax),
+                    }));
+                  }}
+                >
+                  <option value={1}>1 Player (Solo Only)</option>
+                  <option value={2}>2 Players</option>
+                  <option value={3}>3 Players</option>
+                  <option value={4}>4 Players</option>
+                  <option value={5}>5 Players</option>
+                  <option value={6}>6 Players</option>
+                </select>
+                <span className="form-hint">Maximum number of participants that can play together.</span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Compulsory Players (Minimum Required)</label>
+                <select
+                  className="form-input form-select"
+                  value={form.min_team_size}
+                  onChange={(e) => set('min_team_size', parseInt(e.target.value, 10))}
+                >
+                  {Array.from({ length: form.max_team_size }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      {n === 1 ? '1 Player Compulsory (Solo / Optional Teammates)' : `${n} Players Compulsory`}
+                    </option>
+                  ))}
+                </select>
+                <span className="form-hint">Minimum number of players that must be entered to submit.</span>
+              </div>
+            </div>
+
+            {/* Live Explanation Badge */}
+            <div style={{ padding: 'var(--space-3) var(--space-4)', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', marginTop: 'var(--space-2)' }}>
+              <div className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase', marginBottom: '2px' }}>
+                Participation Mode Rule Preview
+              </div>
+              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#000' }}>
+                {form.max_team_size === 1 && (
+                  <span>Solo Event — Exactly 1 participant will register.</span>
+                )}
+                {form.max_team_size > 1 && form.min_team_size === 1 && (
+                  <span>Flexible (Solo & Team) — 1 player can register alone, or invite up to {form.max_team_size - 1} optional teammate(s).</span>
+                )}
+                {form.max_team_size > 1 && form.min_team_size === form.max_team_size && (
+                  <span>Strict Team Event — All {form.max_team_size} players are compulsory to complete registration.</span>
+                )}
+                {form.max_team_size > 1 && form.min_team_size > 1 && form.min_team_size < form.max_team_size && (
+                  <span>Team Event — The first {form.min_team_size} players are compulsory, and up to {form.max_team_size - form.min_team_size} additional teammate(s) are optional.</span>
+                )}
+              </div>
             </div>
           </div>
         </div>

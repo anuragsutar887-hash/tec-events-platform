@@ -16,6 +16,7 @@ import Register from './pages/public/Register';
 import RegisterSuccess from './pages/public/RegisterSuccess';
 import Lookup from './pages/public/Lookup';
 import Leaderboard from './pages/public/Leaderboard';
+import ResetPassword from './pages/public/ResetPassword';
 
 // Admin pages
 import AdminLogin from './pages/admin/Login';
@@ -92,9 +93,13 @@ export default function App() {
         <Route path="/leaderboard/:eventSlug" element={
           <PublicLayout><Leaderboard isAdminView={false} /></PublicLayout>
         } />
+        <Route path="/reset-password" element={
+          <PublicLayout><ResetPassword /></PublicLayout>
+        } />
 
         {/* ── Admin auth ────────────────────────────────────────────────── */}
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/reset-password" element={<ResetPassword isAdminView={true} />} />
 
         {/* ── Admin protected routes (Enclosed inside AdminLayout) ────────── */}
         <Route path="/admin" element={

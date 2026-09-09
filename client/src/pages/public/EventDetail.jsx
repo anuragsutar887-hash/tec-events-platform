@@ -93,7 +93,23 @@ export default function EventDetail() {
   };
   const regBadge = regBadgeMap[regStatus] || { cls: '', label: regStatus };
 
-  const participationType = 'Duo Team (2 Players)';
+  const minSize = parseInt(event.min_team_size || 1, 10);
+  const maxSize = parseInt(event.max_team_size || 2, 10);
+  let participationType = 'Solo';
+  let compulsoryText = `${minSize} Player${minSize > 1 ? 's' : ''} Compulsory`;
+  if (maxSize === 1) {
+    participationType = 'Solo (1 Player)';
+    compulsoryText = '1 Player Compulsory';
+  } else if (minSize === 1 && maxSize > 1) {
+    participationType = `Solo or Team (Up to ${maxSize} Players)`;
+    compulsoryText = '1 Player Compulsory (Solo Allowed)';
+  } else if (minSize === maxSize) {
+    participationType = `Team (${maxSize} Players)`;
+    compulsoryText = `All ${maxSize} Players Compulsory`;
+  } else {
+    participationType = `Team (${minSize}–${maxSize} Players)`;
+    compulsoryText = `Minimum ${minSize} Compulsory`;
+  }
 
   return (
     <div className="event-detail">
@@ -263,6 +279,14 @@ export default function EventDetail() {
                 <div className="event-detail__info-item">
                   <span className="event-detail__info-label">Venue</span>
                   <span className="event-detail__info-val">{event.venue || '—'}</span>
+                </div>
+                <div className="event-detail__info-item">
+                  <span className="event-detail__info-label">Format</span>
+                  <span className="event-detail__info-val">{participationType}</span>
+                </div>
+                <div className="event-detail__info-item">
+                  <span className="event-detail__info-label">Rule</span>
+                  <span className="event-detail__info-val text-accent">{compulsoryText}</span>
                 </div>
                 {event.registration_closes_at && (
                   <div className="event-detail__info-item">

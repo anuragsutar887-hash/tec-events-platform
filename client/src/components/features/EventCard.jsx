@@ -18,11 +18,18 @@ export default function EventCard({ event }) {
   const { slug, name, short_description, event_date, start_time, venue,
     registration_status, allows_solo, allows_team, min_team_size, max_team_size } = event;
 
-  const participationType = allows_solo && allows_team
-    ? 'Solo & Team'
-    : allows_team
-    ? `Team (${min_team_size}–${max_team_size})`
-    : 'Solo';
+  const minSize = parseInt(min_team_size || 1, 10);
+  const maxSize = parseInt(max_team_size || 2, 10);
+  let participationType = 'Solo';
+  if (maxSize === 1) {
+    participationType = 'Solo (1 Player)';
+  } else if (minSize === 1 && maxSize > 1) {
+    participationType = `Solo / Team (Up to ${maxSize})`;
+  } else if (minSize === maxSize) {
+    participationType = `${maxSize} Players Team`;
+  } else {
+    participationType = `${minSize}–${maxSize} Players Team`;
+  }
 
   return (
     <div className="event-card card card--hover">
@@ -49,6 +56,12 @@ export default function EventCard({ event }) {
             <div className="event-card__meta-item">
               <span className="event-card__meta-icon">📍</span>
               <span>{venue}</span>
+            </div>
+          )}
+          {participationType && (
+            <div className="event-card__meta-item">
+              <span className="event-card__meta-icon">👥</span>
+              <span>{participationType}</span>
             </div>
           )}
         </div>

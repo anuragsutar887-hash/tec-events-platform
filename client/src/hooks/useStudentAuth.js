@@ -185,7 +185,41 @@ export function useStudentAuth() {
     if (!cleanPrn) throw new Error('PRN is required');
     const authEmail = `${cleanPrn}@prn.indiraicem.ac.in`;
 
-    const cred = await signInWithEmailAndPassword(auth, authEmail, password);
+    let cred = null;
+    try {
+      cred = await signInWithEmailAndPassword(auth, authEmail, password);
+    } catch (firebaseErr) {
+      const storedResetPass = typeof localStorage !== 'undefined' ? localStorage.getItem(`tec_student_pass_${cleanPrn}`) : null;
+      if (storedResetPass && storedResetPass === password) {
+        // Authenticated with locally reset password
+        let email = '';
+        let name = '';
+        try {
+          const { data: part } = await supabase
+            .from('participants')
+            .select('full_name, email')
+            .ilike('student_id', (prn || '').trim())
+            .limit(1)
+            .maybeSingle();
+          if (part) {
+            email = part.email || '';
+            name = part.full_name || '';
+          }
+        } catch {}
+
+        const userData = {
+          full_name: name || 'Participant',
+          prn: (prn || '').trim().toUpperCase(),
+          email: email,
+          uid: `student_${cleanPrn}`,
+          college: 'Indira College of Engineering & Management',
+          logged_in_at: new Date().toISOString(),
+        };
+        login(userData);
+        return userData;
+      }
+      throw firebaseErr;
+    }
     
     let parsed = {};
     try {

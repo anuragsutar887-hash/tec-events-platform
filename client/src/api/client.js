@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
-import { sendRegistrationEmail } from '../services/emailService';
+import { sendRegistrationEmail, sendPasswordResetEmail, generateRandomPassword } from '../services/emailService';
 
 const computeRegistrationStatus = (ev) => {
   const status = (ev.status || '').toUpperCase();
@@ -432,7 +432,14 @@ export const apiClient = {
     // 1. Admin Login
     if (url === '/auth/login') {
       const { username, password } = payload;
-      if ((username === 'admin' || username === 'admin@indiraicem.ac.in') && (password === 'admin123' || password === 'admin')) {
+      const cleanUser = (username || '').trim().toLowerCase();
+      const storedAdminPass = typeof localStorage !== 'undefined' ? localStorage.getItem('tec_admin_password') : null;
+
+      const isAllowedUser = cleanUser === 'admin' || cleanUser === 'admin@indiraicem.ac.in' || cleanUser === 'admin@college.edu';
+      const isDefaultPass = password === 'admin123' || password === 'admin';
+      const isCustomPass = storedAdminPass && password === storedAdminPass;
+
+      if (isAllowedUser && (isDefaultPass || isCustomPass)) {
         return {
           data: {
             token: 'mock-session-token-' + Date.now(),
@@ -441,8 +448,97 @@ export const apiClient = {
         };
       }
       const err = new Error('Invalid credentials');
-      err.response = { data: { error: 'Invalid username or password. Default is admin / admin123' } };
+      err.response = { data: { error: 'Invalid username or password.' } };
       throw err;
+    }
+
+    // 1b. Forgot Password (Public Student & Committee Admin)
+    if (url === '/auth/forgot-password') {
+      const { email, prn, role } = payload;
+      let targetEmail = (email || '').trim().toLowerCase();
+      let targetName = 'User';
+      const token = 'rst_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+
+      if (role === 'admin') {
+        targetEmail = targetEmail || 'admin@indiraicem.ac.in';
+        targetName = 'Committee Admin';
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('tec_admin_reset_token', JSON.stringify({ token, email: targetEmail, expires: Date.now() + 3600000 }));
+        }
+      } else {
+        // Look up student email from participants table by student_id (PRN) or email
+        if (prn) {
+          try {
+            const { data: part } = await supabase
+              .from('participants')
+              .select('full_name, email, student_id')
+              .ilike('student_id', prn.trim())
+              .limit(1)
+              .maybeSingle();
+            if (part) {
+              targetEmail = targetEmail || part.email?.trim().toLowerCase();
+              targetName = part.full_name?.trim() || 'Participant';
+            }
+          } catch (e) {
+            console.warn('[client] Lookup student error:', e);
+          }
+        }
+        if (!targetEmail && email) {
+          targetEmail = email.trim().toLowerCase();
+        }
+        if (!targetEmail) {
+          const err = new Error('No registered email found for this PRN. Please check your PRN or register an account.');
+          err.response = { data: { error: err.message } };
+          throw err;
+        }
+
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(`tec_reset_${targetEmail}`, JSON.stringify({ token, prn, email: targetEmail, expires: Date.now() + 3600000 }));
+        }
+      }
+
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://tec-events-platform.vercel.app';
+      const resetUrl = `${currentOrigin}/reset-password?type=${role || 'student'}&token=${token}&email=${encodeURIComponent(targetEmail)}${prn ? `&prn=${encodeURIComponent(prn)}` : ''}`;
+
+      const emailResult = await sendPasswordResetEmail({
+        recipient: targetEmail,
+        userName: targetName,
+        resetUrl,
+        role: role || 'student',
+      });
+
+      return {
+        data: {
+          success: true,
+          message: `Password reset instructions have been sent to ${targetEmail}. Please check your inbox.`,
+          email: targetEmail,
+          emailStatus: emailResult
+        }
+      };
+    }
+
+    // 1c. Reset Password (Public Student & Committee Admin)
+    if (url === '/auth/reset-password') {
+      const { newPassword, role, email, prn } = payload;
+      if (!newPassword || newPassword.length < 6) {
+        const err = new Error('Password must be at least 6 characters long.');
+        err.response = { data: { error: err.message } };
+        throw err;
+      }
+
+      if (role === 'admin') {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('tec_admin_password', newPassword);
+          localStorage.removeItem('tec_admin_reset_token');
+        }
+        return { data: { success: true, message: 'Admin password updated successfully! You can now sign in.' } };
+      } else {
+        const key = (prn || email || '').trim().toLowerCase();
+        if (typeof localStorage !== 'undefined' && key) {
+          localStorage.setItem(`tec_student_pass_${key}`, newPassword);
+        }
+        return { data: { success: true, message: 'Password reset successfully! You can now sign in with your new password.' } };
+      }
     }
 
     // 2. Create Event (Sanitized with actual database columns)
@@ -563,44 +659,63 @@ export const apiClient = {
 
       if (regError) throw regError;
 
-      // Insert Player 1 (Includes PRN in student_id)
-      await supabase.from('participants').insert({
-        registration_id: reg.id,
-        event_id: eventRecord.id,
-        is_leader: true,
-        full_name: p1.full_name?.trim() || '',
-        email: p1.email?.trim() || '',
-        phone: p1.phone || '',
-        college: p1.college || 'ICEM Pune',
-        department: p1.department || 'IT',
-        year: p1.year || '',
-        student_id: p1.prn?.trim() || p1.student_id?.trim() || ''
-      });
+      // Generate cryptographically random team password
+      const generatedPassword = payload.password || generateRandomPassword();
 
-      // Insert Player 2 (Includes PRN in student_id)
-      if (p2.full_name) {
+      // Collect all players to insert
+      const playersToInsert = [];
+      if (Array.isArray(payload.players) && payload.players.length > 0) {
+        payload.players.forEach((p, idx) => {
+          if (p && p.full_name?.trim()) {
+            playersToInsert.push({ ...p, is_leader: idx === 0 });
+          }
+        });
+      } else {
+        if (p1 && p1.full_name?.trim()) playersToInsert.push({ ...p1, is_leader: true });
+        if (p2 && p2.full_name?.trim()) playersToInsert.push({ ...p2, is_leader: false });
+        if (payload.player_3 && payload.player_3.full_name?.trim()) playersToInsert.push({ ...payload.player_3, is_leader: false });
+        if (payload.player_4 && payload.player_4.full_name?.trim()) playersToInsert.push({ ...payload.player_4, is_leader: false });
+      }
+
+      // Insert all players
+      for (const p of playersToInsert) {
         await supabase.from('participants').insert({
           registration_id: reg.id,
           event_id: eventRecord.id,
-          is_leader: false,
-          full_name: p2.full_name?.trim() || '',
-          email: p2.email?.trim() || '',
-          phone: p2.phone || '',
-          college: p2.college || p1.college || 'ICEM Pune',
-          department: p2.department || p1.department || 'IT',
-          year: p2.year || p1.year || '',
-          student_id: p2.prn?.trim() || p2.student_id?.trim() || ''
+          is_leader: Boolean(p.is_leader),
+          full_name: p.full_name?.trim() || '',
+          email: p.email?.trim() || '',
+          phone: p.phone || '',
+          college: p.college || p1.college || 'ICEM Pune',
+          department: p.department || p1.department || 'IT',
+          year: p.year || p1.year || '',
+          student_id: p.prn?.trim() || p.student_id?.trim() || ''
         });
+      }
+
+      // Persist password locally for instant recall & display
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const storedPwds = JSON.parse(localStorage.getItem('tec_team_passwords') || '{}');
+          storedPwds[reg.registration_id] = generatedPassword;
+          storedPwds[String(reg.id)] = generatedPassword;
+          localStorage.setItem('tec_team_passwords', JSON.stringify(storedPwds));
+        }
+      } catch (err) {
+        console.warn('[client] Storing team password note:', err);
       }
 
       // Dispatch registration confirmation email to all registered teammates via nodemailer
       sendRegistrationEmail({
         registration: reg,
         event: eventRecord,
-        participants: [
-          { is_leader: true, full_name: p1.full_name, email: p1.email, prn: p1.prn || p1.student_id || '' },
-          ...(p2?.full_name ? [{ is_leader: false, full_name: p2.full_name, email: p2.email, prn: p2.prn || p2.student_id || '' }] : [])
-        ]
+        participants: playersToInsert.map((p) => ({
+          is_leader: Boolean(p.is_leader),
+          full_name: p.full_name,
+          email: p.email,
+          prn: p.prn || p.student_id || ''
+        })),
+        password: generatedPassword,
       }).catch((e) => console.warn('[client] Registration email dispatch warning:', e));
 
       return {
@@ -608,14 +723,18 @@ export const apiClient = {
           registration: {
             id: reg.id,
             registration_id: reg.registration_id,
+            password: generatedPassword,
+            team_password: generatedPassword,
             event_name: eventRecord.name,
             team_name: reg.team_name,
-            participation_mode: 'TEAM',
+            participation_mode: playersToInsert.length > 1 ? 'TEAM' : 'SOLO',
             status: reg.status,
-            participants: [
-              { is_leader: true, full_name: p1.full_name, email: p1.email, prn: p1.prn || p1.student_id || '' },
-              { is_leader: false, full_name: p2.full_name, email: p2.email, prn: p2.prn || p2.student_id || '' }
-            ]
+            participants: playersToInsert.map((p) => ({
+              is_leader: Boolean(p.is_leader),
+              full_name: p.full_name,
+              email: p.email,
+              prn: p.prn || p.student_id || ''
+            }))
           }
         }
       };
@@ -718,14 +837,39 @@ export const apiClient = {
         .single();
       if (error) throw error;
 
+      // Retrieve or generate password for the approved registration
+      let teamPwd = null;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const storedPwds = JSON.parse(localStorage.getItem('tec_team_passwords') || '{}');
+          teamPwd = storedPwds[data.registration_id] || storedPwds[String(data.id)];
+        }
+      } catch {}
+
+      if (!teamPwd) {
+        teamPwd = generateRandomPassword();
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const storedPwds = JSON.parse(localStorage.getItem('tec_team_passwords') || '{}');
+            storedPwds[data.registration_id] = teamPwd;
+            storedPwds[String(data.id)] = teamPwd;
+            localStorage.setItem('tec_team_passwords', JSON.stringify(storedPwds));
+          }
+        } catch {}
+      }
+
       // Dispatch confirmation email to all teammates upon approval via nodemailer
       sendRegistrationEmail({
         registration: data,
         event: data.events,
         participants: data.participants || [],
+        password: teamPwd,
       }).catch((e) => console.warn('[client] Teammate approval email dispatch warning:', e));
 
-      return { data: { message: 'Registration approved and confirmed!', registration: formatRegistration(data) } };
+      const formatted = formatRegistration(data);
+      formatted.password = teamPwd;
+      formatted.team_password = teamPwd;
+      return { data: { message: 'Registration approved and confirmed!', registration: formatted } };
     }
 
     // 6. Teammate Declines Team Registration
