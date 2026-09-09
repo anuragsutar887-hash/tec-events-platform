@@ -839,35 +839,38 @@ export default function Register() {
       {successModalReg && (
         <div className="credentials-modal-overlay" onClick={handleCloseSuccessModal}>
           <div className="credentials-modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <div style={{ background: '#000000', color: '#ffffff', padding: 'var(--space-6)', borderBottom: '2px solid #27272a' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+
+            {/* Header — clean black bar, badge only */}
+            <div style={{ background: '#000000', color: '#ffffff', padding: 'var(--space-4) var(--space-5)', borderBottom: '2px solid #27272a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div>
                 <span className="badge badge--bronze" style={{ fontSize: '0.75rem', fontWeight: 800 }}>
                   🎉 REGISTRATION SUCCESSFUL
                 </span>
-                <button
-                  type="button"
-                  onClick={handleCloseSuccessModal}
-                  style={{ background: 'none', border: 'none', color: '#a1a1aa', fontSize: '1.25rem', cursor: 'pointer', lineHeight: 1 }}
-                >
-                  ✕
-                </button>
+                <div style={{ color: '#ffffff', fontFamily: 'var(--font-serif)', fontSize: '1.1rem', fontWeight: 800, marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                  {successModalReg.team_name || 'Team Registration'}
+                </div>
+                <div style={{ color: '#a1a1aa', fontSize: '0.8rem', marginTop: '2px' }}>
+                  {event.name}
+                </div>
               </div>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', fontWeight: 800, margin: 0, textTransform: 'uppercase' }}>
-                {successModalReg.team_name || 'Team Registration'}
-              </h2>
-              <p style={{ color: '#a1a1aa', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                {event.name}
-              </p>
+              <button
+                type="button"
+                onClick={handleCloseSuccessModal}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#ffffff', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1, width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              >
+                ✕
+              </button>
             </div>
 
-            <div style={{ padding: 'var(--space-6)' }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 'var(--space-4)', lineHeight: 1.5 }}>
-                Your registration has been created. Here are your <strong>official team credentials</strong>:
+            {/* Scrollable Body */}
+            <div style={{ padding: 'var(--space-5)', overflowY: 'auto', maxHeight: 'calc(90vh - 110px)' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: 'var(--space-4)', lineHeight: 1.5 }}>
+                Your registration is confirmed. Save your <strong>official team credentials</strong> below:
               </p>
 
               {/* Team ID Card */}
               <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-4)', marginBottom: 'var(--space-3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
                     Team ID / Registration Number
                   </span>
@@ -883,18 +886,18 @@ export default function Register() {
                     {copiedId ? '✓ Copied!' : '📋 Copy ID'}
                   </button>
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#000000', marginTop: '4px' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#000000', letterSpacing: '0.04em' }}>
                   {successModalReg.registration_id}
                 </div>
               </div>
 
               {/* Password Card */}
               <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span className="text-xs text-muted font-mono fw-bold" style={{ textTransform: 'uppercase' }}>
-                    Generated Team Password
+                    Team Password
                   </span>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -913,30 +916,38 @@ export default function Register() {
                           setTimeout(() => setCopiedPwd(false), 2000);
                         }
                       }}
+                      disabled={!(successModalReg.password || successModalReg.team_password)}
                     >
                       {copiedPwd ? '✓ Copied!' : '📋 Copy Password'}
                     </button>
                   </div>
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#2563eb', marginTop: '4px' }}>
-                  {showPassword ? (successModalReg.password || successModalReg.team_password || 'TEC-2026') : '••••••••••'}
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#2563eb', letterSpacing: '0.04em' }}>
+                  {showPassword
+                    ? (successModalReg.password || successModalReg.team_password || '—')
+                    : '••••••••••'}
                 </div>
+                {!(successModalReg.password || successModalReg.team_password) && (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Check your registered email for credentials
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
-                <button
-                  type="button"
-                  className="btn btn--secondary btn--sm btn--full"
-                  onClick={() => {
-                    const text = `IND-TEC REGISTRATION\nEvent: ${event.name}\nTeam Name: ${successModalReg.team_name}\nTeam ID: ${successModalReg.registration_id}\nPassword: ${successModalReg.password || successModalReg.team_password}\n`;
-                    navigator.clipboard.writeText(text);
-                    setCopiedAll(true);
-                    setTimeout(() => setCopiedAll(false), 2500);
-                  }}
-                >
-                  {copiedAll ? '✓ Copied All Credentials!' : '📋 Copy All Credentials'}
-                </button>
-              </div>
+              {/* Copy All */}
+              <button
+                type="button"
+                className="btn btn--secondary btn--sm btn--full"
+                style={{ marginBottom: 'var(--space-4)' }}
+                onClick={() => {
+                  const text = `IND-TEC REGISTRATION\nEvent: ${event.name}\nTeam Name: ${successModalReg.team_name}\nTeam ID: ${successModalReg.registration_id}\nPassword: ${successModalReg.password || successModalReg.team_password || ''}\n`;
+                  navigator.clipboard.writeText(text);
+                  setCopiedAll(true);
+                  setTimeout(() => setCopiedAll(false), 2500);
+                }}
+              >
+                {copiedAll ? '✓ Copied All Credentials!' : '📋 Copy All Credentials'}
+              </button>
 
               <div style={{ padding: 'var(--space-3)', background: '#fafafa', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', marginBottom: 'var(--space-5)' }}>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
@@ -949,7 +960,7 @@ export default function Register() {
                 className="btn btn--primary btn--full btn--lg"
                 onClick={handleCloseSuccessModal}
               >
-                Proceed to Official Confirmation →
+                Proceed to Official Confirmation
               </button>
             </div>
           </div>
