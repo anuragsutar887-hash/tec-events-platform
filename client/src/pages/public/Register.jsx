@@ -5,7 +5,7 @@ import { useStudent } from '../../context/StudentAuthContext';
 import StudentLoginModal from '../../components/auth/StudentLoginModal';
 import './Register.css';
 
-const isValidEmail = (val) => /^[^s@]+@[^s@]+.[^s@]+$/.test(val.trim());
+const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 
 export default function Register() {
   const { slug } = useParams();
