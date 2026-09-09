@@ -90,6 +90,18 @@ export default function Register() {
       .catch(() => setUserRegistration(null));
   }, [isAuthenticated, user?.email, slug]);
 
+  // 🔒 Lock scroll on html+body when success pop-up modal is open
+  useEffect(() => {
+    if (successModalReg) {
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
+      return () => {
+        document.documentElement.classList.remove('modal-open');
+        document.body.classList.remove('modal-open');
+      };
+    }
+  }, [successModalReg]);
+
   // Live polling for teammate approval when in pending state
   useEffect(() => {
     let timer = null;

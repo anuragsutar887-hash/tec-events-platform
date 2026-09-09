@@ -144,6 +144,14 @@ body {
   position: relative;
 }
 
+/* ─── Modal Scroll Lock ─────────────────────────────────── */
+html.modal-open,
+body.modal-open {
+  overflow: hidden !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }

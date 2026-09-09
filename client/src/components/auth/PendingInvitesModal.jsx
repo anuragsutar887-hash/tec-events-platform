@@ -7,13 +7,14 @@ export default function PendingInvitesModal({ isOpen, onClose, invites = [], onA
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // 🔒 Prevent background scrolling without causing page scroll jump
+  // 🔒 Prevent background scrolling on both html and body (cross-browser)
   useEffect(() => {
     if (isOpen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
       return () => {
-        document.body.style.overflow = originalOverflow;
+        document.documentElement.classList.remove('modal-open');
+        document.body.classList.remove('modal-open');
       };
     }
   }, [isOpen]);
