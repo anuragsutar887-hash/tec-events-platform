@@ -110,6 +110,14 @@ export default function PublicHeader() {
                 >
                   Standings
                 </Link>
+
+                <Link
+                  to="/teacher/login"
+                  className={`pub-header__link ${location.pathname.startsWith('/teacher') ? 'active' : ''}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Teacher Portal
+                </Link>
               </nav>
 
               {/* 🔔 Header Bell Icon with Red Dot Indicator */}

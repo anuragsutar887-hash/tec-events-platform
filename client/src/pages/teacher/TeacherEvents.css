@@ -1,0 +1,115 @@
+.teacher-events-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.teacher-events-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.teacher-events-title {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 4px 0 2px;
+  letter-spacing: -0.01em;
+}
+
+.teacher-events-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 800px;
+}
+
+.teacher-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.teacher-event-card {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  padding: var(--space-5);
+  gap: var(--space-5);
+  align-items: center;
+  background: #ffffff;
+}
+
+.teacher-event-name {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 var(--space-3);
+  text-transform: uppercase;
+}
+
+.teacher-event-metrics {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.teacher-event-metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.teacher-event-metric__num {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #000000;
+}
+
+.teacher-event-metric__lbl {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.teacher-test-url-box {
+  padding: var(--space-2) var(--space-3);
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.teacher-event-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.teacher-q-select-row {
+  display: flex;
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.teacher-q-select-row:hover {
+  background: #f4f4f5;
+  border-color: #000000;
+}
+
+.teacher-q-select-row.selected {
+  background: #f0fdf4;
+  border-color: #15803d;
+}
+
+@media (max-width: 800px) {
+  .teacher-event-card {
+    grid-template-columns: 1fr;
+  }
+}

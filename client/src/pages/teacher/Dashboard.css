@@ -1,0 +1,117 @@
+.teacher-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.teacher-dashboard__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.teacher-dashboard__title {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 4px 0 2px;
+  letter-spacing: -0.01em;
+}
+
+.teacher-dashboard__subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.teacher-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+
+.teacher-stat-card {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #ffffff;
+}
+
+.teacher-stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.teacher-stat-value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #000000;
+  letter-spacing: -0.02em;
+}
+
+.teacher-stat-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.teacher-workflows-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.teacher-questions-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.teacher-question-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s ease;
+}
+
+.teacher-question-row:last-child {
+  border-bottom: none;
+}
+
+.teacher-question-row:hover {
+  background: #fafafa;
+}
+
+.teacher-pipeline-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fafafa;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s ease;
+  gap: 2px;
+}
+
+.teacher-pipeline-card:hover {
+  background: #ffffff;
+  border-color: #000000;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .teacher-workflows-grid {
+    grid-template-columns: 1fr;
+  }
+}

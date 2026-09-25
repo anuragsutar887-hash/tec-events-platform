@@ -1,0 +1,114 @@
+.question-bank {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.question-bank__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.question-bank__title {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 4px 0 2px;
+  letter-spacing: -0.01em;
+}
+
+.question-bank__subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.question-bank__filters {
+  padding: var(--space-3) var(--space-4);
+  background: #ffffff;
+}
+
+.q-tab-btn {
+  padding: 0.45rem 0.9rem;
+  background: #fafafa;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.q-tab-btn:hover {
+  background: #f4f4f5;
+  color: #000000;
+}
+
+.q-tab-btn.active {
+  background: #000000;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.q-table-statement {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #000000;
+  margin-bottom: var(--space-2);
+  line-height: 1.4;
+}
+
+.q-table-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 4px;
+}
+
+.q-table-opt {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  background: #f4f4f5;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.q-table-opt.correct {
+  background: #f0fdf4;
+  color: #15803d;
+  font-weight: 700;
+  border-color: #bbf7d0;
+}
+
+/* ─── Question Dialog ────────────────────────────────────────── */
+.q-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.q-modal-dialog {
+  width: 100%;
+  max-width: 680px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #000000;
+  border-radius: var(--radius-md);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}

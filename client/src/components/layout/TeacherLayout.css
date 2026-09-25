@@ -1,0 +1,212 @@
+.teacher-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+/* ─── Sidebar ────────────────────────────────────────────────────────────────── */
+.teacher-sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  transition: transform 0.25s ease;
+}
+
+.teacher-sidebar__header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+}
+
+.teacher-sidebar__logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.teacher-sidebar__nav {
+  flex: 1;
+  padding: var(--space-4) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.teacher-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.65rem var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.teacher-sidebar__link:hover {
+  background: var(--accent-subtle);
+  color: #000000;
+}
+
+.teacher-sidebar__link.active {
+  background: #f4f4f5;
+  color: #000000;
+  font-weight: 700;
+  border-left: 3px solid #000000;
+}
+
+.teacher-sidebar__link-icon {
+  font-size: 1.05rem;
+  width: 22px;
+  text-align: center;
+}
+
+.teacher-sidebar__footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: #fafafa;
+}
+
+.teacher-sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.teacher-sidebar__user-avatar {
+  width: 34px;
+  height: 34px;
+  background: #000000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-bold);
+  color: white;
+  flex-shrink: 0;
+}
+
+.teacher-sidebar__user-name {
+  font-size: 0.8125rem;
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teacher-sidebar__user-role {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.teacher-sidebar__logout {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 1rem;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.teacher-sidebar__logout:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+}
+
+/* ─── Main Content ───────────────────────────────────────────────────────────── */
+.teacher-main {
+  flex: 1;
+  margin-left: 240px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.teacher-topbar {
+  height: 56px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  position: sticky;
+  top: 0;
+  z-index: calc(var(--z-sticky) - 1);
+}
+
+.teacher-topbar__menu {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: var(--space-2);
+}
+
+.teacher-topbar__title {
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.teacher-content {
+  flex: 1;
+  padding: var(--space-6);
+  background: var(--bg-base);
+}
+
+/* ─── Mobile overlay ─────────────────────────────────────────────────────────── */
+.teacher-layout__overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: calc(var(--z-sticky) - 1);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .teacher-sidebar {
+    transform: translateX(-100%);
+  }
+  .teacher-sidebar.open {
+    transform: translateX(0);
+  }
+  .teacher-main {
+    margin-left: 0;
+  }
+  .teacher-topbar__menu {
+    display: block;
+  }
+  .teacher-layout__overlay {
+    display: block;
+  }
+  .teacher-content {
+    padding: var(--space-4);
+  }
+}

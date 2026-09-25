@@ -28,6 +28,17 @@ import CheckIn from './pages/admin/CheckIn';
 import OnsiteRegistration from './pages/admin/OnsiteRegistration';
 import Settings from './pages/admin/Settings';
 
+// Teacher portal
+import TeacherLayout from './components/layout/TeacherLayout';
+import TeacherProtectedRoute from './components/layout/TeacherProtectedRoute';
+import TeacherLogin from './pages/teacher/Login';
+import TeacherDashboard from './pages/teacher/Dashboard';
+import TeacherEvents from './pages/teacher/TeacherEvents';
+import QuestionBank from './pages/teacher/QuestionBank';
+import ImportQuestions from './pages/teacher/ImportQuestions';
+import TeacherStudents from './pages/teacher/TeacherStudents';
+import TeacherSettings from './pages/teacher/TeacherSettings';
+
 // Student auth
 import { StudentAuthProvider } from './context/StudentAuthContext';
 import StudentLogin from './pages/public/StudentLogin';
@@ -171,6 +182,41 @@ export default function App() {
               <Settings />
             </AdminLayout>
           </ProtectedRoute>
+        } />
+
+        {/* ── Teacher auth ─────────────────────────────────────────────── */}
+        <Route path="/teacher/login" element={<TeacherLogin />} />
+
+        {/* ── Teacher protected routes ──────────────────────────────────── */}
+        <Route path="/teacher" element={
+          <TeacherProtectedRoute>
+            <TeacherLayout><TeacherDashboard /></TeacherLayout>
+          </TeacherProtectedRoute>
+        } />
+        <Route path="/teacher/events" element={
+          <TeacherProtectedRoute>
+            <TeacherLayout><TeacherEvents /></TeacherLayout>
+          </TeacherProtectedRoute>
+        } />
+        <Route path="/teacher/questions" element={
+          <TeacherProtectedRoute>
+            <TeacherLayout><QuestionBank /></TeacherLayout>
+          </TeacherProtectedRoute>
+        } />
+        <Route path="/teacher/import" element={
+          <TeacherProtectedRoute>
+            <TeacherLayout><ImportQuestions /></TeacherLayout>
+          </TeacherProtectedRoute>
+        } />
+        <Route path="/teacher/students" element={
+          <TeacherProtectedRoute>
+            <TeacherLayout><TeacherStudents /></TeacherLayout>
+          </TeacherProtectedRoute>
+        } />
+        <Route path="/teacher/settings" element={
+          <TeacherProtectedRoute>
+            <TeacherLayout><TeacherSettings /></TeacherLayout>
+          </TeacherProtectedRoute>
         } />
 
         {/* ── Fallback ──────────────────────────────────────────────────── */}
