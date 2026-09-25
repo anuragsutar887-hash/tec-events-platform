@@ -1,5 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- SUPABASE MIGRATION: TEACHER & QUESTION MANAGEMENT EXTENSION
+-- Idempotent: safe to run multiple times
 -- ═══════════════════════════════════════════════════════════════════
 
 -- 1. Profiles Table (Linked to Supabase Auth)
@@ -16,11 +17,13 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Enable RLS on Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public profiles are viewable by authenticated users" ON public.profiles;
 CREATE POLICY "Public profiles are viewable by authenticated users"
   ON public.profiles FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile"
   ON public.profiles FOR UPDATE
   TO authenticated
@@ -50,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.questions (
 -- Enable RLS on Questions
 ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Teachers can view their own non-deleted questions" ON public.questions;
 CREATE POLICY "Teachers can view their own non-deleted questions"
   ON public.questions FOR SELECT
   TO authenticated
@@ -60,6 +64,7 @@ CREATE POLICY "Teachers can view their own non-deleted questions"
     )
   );
 
+DROP POLICY IF EXISTS "Teachers can insert questions" ON public.questions;
 CREATE POLICY "Teachers can insert questions"
   ON public.questions FOR INSERT
   TO authenticated
@@ -67,6 +72,7 @@ CREATE POLICY "Teachers can insert questions"
     auth.uid() IS NOT NULL
   );
 
+DROP POLICY IF EXISTS "Teachers can update their own questions" ON public.questions;
 CREATE POLICY "Teachers can update their own questions"
   ON public.questions FOR UPDATE
   TO authenticated
@@ -75,6 +81,7 @@ CREATE POLICY "Teachers can update their own questions"
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "Teachers can safe-delete (archive) their questions" ON public.questions;
 CREATE POLICY "Teachers can safe-delete (archive) their questions"
   ON public.questions FOR DELETE
   TO authenticated
@@ -97,11 +104,13 @@ CREATE TABLE IF NOT EXISTS public.event_questions (
 -- Enable RLS on Event Questions
 ALTER TABLE public.event_questions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can view event questions without answers" ON public.event_questions;
 CREATE POLICY "Authenticated users can view event questions without answers"
   ON public.event_questions FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Teachers and Admins can manage event questions" ON public.event_questions;
 CREATE POLICY "Teachers and Admins can manage event questions"
   ON public.event_questions FOR ALL
   TO authenticated
@@ -129,6 +138,7 @@ CREATE TABLE IF NOT EXISTS public.question_imports (
 
 ALTER TABLE public.question_imports ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Teachers can view their own imports" ON public.question_imports;
 CREATE POLICY "Teachers can view their own imports"
   ON public.question_imports FOR SELECT
   TO authenticated
@@ -137,6 +147,7 @@ CREATE POLICY "Teachers can view their own imports"
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "Teachers can manage their imports" ON public.question_imports;
 CREATE POLICY "Teachers can manage their imports"
   ON public.question_imports FOR ALL
   TO authenticated
@@ -159,11 +170,13 @@ CREATE TABLE IF NOT EXISTS public.test_platform_sync (
 
 ALTER TABLE public.test_platform_sync ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view synced test URL for live events" ON public.test_platform_sync;
 CREATE POLICY "Anyone can view synced test URL for live events"
   ON public.test_platform_sync FOR SELECT
   TO anon, authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Teachers and Admins can manage test sync" ON public.test_platform_sync;
 CREATE POLICY "Teachers and Admins can manage test sync"
   ON public.test_platform_sync FOR ALL
   TO authenticated
@@ -199,12 +212,14 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('question-imports', 'question-imports', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Storage RLS
+-- Storage RLS (idempotent)
+DROP POLICY IF EXISTS "Authenticated users can upload question imports" ON storage.objects;
 CREATE POLICY "Authenticated users can upload question imports"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'question-imports');
 
+DROP POLICY IF EXISTS "Users can access their own uploaded files" ON storage.objects;
 CREATE POLICY "Users can access their own uploaded files"
   ON storage.objects FOR SELECT
   TO authenticated
