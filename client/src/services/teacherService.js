@@ -404,14 +404,20 @@ export const teacherService = {
 
   async assignQuestionsToEvent(eventId, questionIds = []) {
     try {
-      const rows = questionIds.map((qid, idx) => ({
-        event_id: eventId,
-        question_id: qid,
-        question_order: idx + 1,
-        marks: 1
-      }));
-      await supabase.from('event_questions').insert(rows);
-    } catch {}
+      // Delete existing assignments first, then re-insert (proper upsert)
+      await supabase.from('event_questions').delete().eq('event_id', eventId);
+      if (questionIds.length > 0) {
+        const rows = questionIds.map((qid, idx) => ({
+          event_id: eventId,
+          question_id: qid,
+          question_order: idx + 1,
+          marks: 1
+        }));
+        await supabase.from('event_questions').insert(rows);
+      }
+    } catch (e) {
+      console.warn('Supabase event_questions upsert note:', e);
+    }
 
     try {
       localStorage.setItem(`${FALLBACK_EVENT_QUESTIONS_KEY}_${eventId}`, JSON.stringify(questionIds));
@@ -523,9 +529,10 @@ export const teacherService = {
     }
 
     if (!syncResult) {
-      // Direct standard sync response
-      const testId = `TEST-${event.slug ? event.slug.toUpperCase() : 'EVENT'}-${Date.now().toString().slice(-4)}`;
-      const testUrl = `https://test-platform.indiraicem.ac.in/portal/exam/${testId}`;
+      // Generate internal test URL — students take the test on this platform
+      const testId = `TEST-${event.id}-${Date.now().toString().slice(-6)}`;
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://tec-events-platform.vercel.app';
+      const testUrl = `${origin}/test/${event.id}`;
       syncResult = {
         test_id: testId,
         test_url: testUrl,

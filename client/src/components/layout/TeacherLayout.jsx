@@ -103,7 +103,7 @@ export default function TeacherLayout({ children }) {
             {teacherNavItems.find(isActive)?.label || 'Teacher Portal'}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <Link to="/teacher/questions/new" className="btn btn--secondary btn--sm">
+            <Link to="/teacher/questions" className="btn btn--secondary btn--sm">
               + Add Question
             </Link>
             <Link to="/teacher/import" className="btn btn--primary btn--sm">

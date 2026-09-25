@@ -187,10 +187,9 @@ export default function EventDetail() {
                   {event.short_description || 'Join this competitive technical symposium organized by the IT Department Technical Committee.'}
                 </p>
 
-                {/* Clean, Non-overlapping Action Buttons */}
+                {/* ✅ Already Registered — show confirmed registration details */}
                 <div className="event-detail__action-buttons">
                   {userRegistration ? (
-                    /* ✅ Already Registered — show confirmed registration details */
                     <div className="event-detail__already-registered">
                       <div className="event-detail__already-badge">
                         {userRegistration.status === 'CONFIRMED' ? (
@@ -204,6 +203,17 @@ export default function EventDetail() {
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                         Registration ID: <span className="font-mono" style={{ fontWeight: 700, color: '#000', fontSize: '1rem' }}>{userRegistration.reg_code}</span>
                       </div>
+
+                      {/* 🔴 ENTER TEST button — only when test is published */}
+                      {event.test_platform_url && (
+                        <a
+                          href={event.test_platform_url}
+                          className="btn btn--primary btn--lg"
+                          style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#dc2626', border: 'none', animation: 'pulse 1.5s infinite' }}
+                        >
+                          🔴 ENTER TEST — Click to Begin
+                        </a>
+                      )}
                     </div>
                   ) : regStatus === 'OPEN' ? (
                     <Link

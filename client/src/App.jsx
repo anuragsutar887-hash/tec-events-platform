@@ -17,6 +17,7 @@ import RegisterSuccess from './pages/public/RegisterSuccess';
 import Lookup from './pages/public/Lookup';
 import Leaderboard from './pages/public/Leaderboard';
 import ResetPassword from './pages/public/ResetPassword';
+import StudentTest from './pages/public/StudentTest';
 
 // Admin pages
 import AdminLogin from './pages/admin/Login';
@@ -107,6 +108,9 @@ export default function App() {
         <Route path="/reset-password" element={
           <PublicLayout><ResetPassword /></PublicLayout>
         } />
+
+        {/* ── Student Test Portal (standalone, no nav) ──────────────── */}
+        <Route path="/test/:eventId" element={<StudentTest />} />
 
         {/* ── Admin auth ────────────────────────────────────────────────── */}
         <Route path="/admin/login" element={<AdminLogin />} />
