@@ -150,9 +150,22 @@ export function useStudentAuth() {
   const registerWithPRN = async ({ fullName, prn, email, password }) => {
     const cleanPrn = (prn || '').trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (!cleanPrn) throw new Error('PRN is required');
-    const authEmail = `${cleanPrn}@prn.indiraicem.ac.in`;
+    const authEmail = `${cleanPrn}@student.indiraicem.ac.in`;
     
-    const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
+    let cred;
+    try {
+      cred = await createUserWithEmailAndPassword(auth, authEmail, password);
+    } catch (err) {
+      if (err.code === 'auth/email-already-in-use') {
+        try {
+          cred = await signInWithEmailAndPassword(auth, authEmail, password);
+        } catch {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
     const profilePayload = {
       name: (fullName || '').trim(),
       prn: (prn || '').trim().toUpperCase(),
@@ -183,7 +196,7 @@ export function useStudentAuth() {
   const loginWithPRN = async ({ prn, password }) => {
     const cleanPrn = (prn || '').trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (!cleanPrn) throw new Error('PRN is required');
-    const authEmail = `${cleanPrn}@prn.indiraicem.ac.in`;
+    const authEmail = `${cleanPrn}@student.indiraicem.ac.in`;
 
     let cred = null;
     try {

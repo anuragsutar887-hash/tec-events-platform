@@ -28,7 +28,7 @@ export default function Dashboard() {
         apiClient.get('/admin/dashboard/events'),
       ]);
       setStats(statsRes.data.global);
-      const recentData = statsRes.data.recent || [];
+      const recentData = statsRes.data.global?.recent || [];
       setStats({ ...statsRes.data.global, recent: recentData });
       setEvents(eventsRes.data.events || []);
       if (eventsRes.data.events.length > 0) {
