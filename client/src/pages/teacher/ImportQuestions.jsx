@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { questionParserService } from '../../services/questionParserService';
 import { teacherService } from '../../services/teacherService';
+import * as pdfjsLib from 'pdfjs-dist';
 import './ImportQuestions.css';
+
+// Set worker source for PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
+
 
 export default function ImportQuestions() {
   const navigate = useNavigate();
@@ -76,39 +84,42 @@ export default function ImportQuestions() {
     setError('');
     setLoading(true);
     try {
-      // Read raw text stream from PDF or convert to AI review pipeline
-      const demoExtracted = [
-        {
-          id: `q_pdf_${Date.now()}_1`,
-          question: 'What is the primary objective of a Hash Table?',
-          option1: 'Sequential scanning of records',
-          option2: 'Direct constant-time average access O(1)',
-          option3: 'Hierarchical tree sorting',
-          option4: 'Memory compression',
-          correct_option: 2,
-          marks: 1,
-          subject: 'Data Structures',
-          topic: 'Hashing',
-          difficulty: 'MEDIUM',
-          question_type: 'MCQ',
-        },
-        {
-          id: `q_pdf_${Date.now()}_2`,
-          question: 'Which scheduling algorithm can cause starvation for low priority processes?',
-          option1: 'First-Come First-Served',
-          option2: 'Round Robin',
-          option3: 'Priority Scheduling',
-          option4: 'Shortest Remaining Time First',
-          correct_option: 3,
-          marks: 2,
-          subject: 'Operating Systems',
-          topic: 'CPU Scheduling',
-          difficulty: 'MEDIUM',
-          question_type: 'MCQ',
-        }
-      ];
+      // Read the PDF file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
 
-      const batchReview = questionParserService.validateBatch(demoExtracted);
+      // Load the PDF document using pdfjs-dist
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdfDoc = await loadingTask.promise;
+
+      const totalPages = pdfDoc.numPages;
+      let fullText = '';
+
+      // Extract text from every page
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const page = await pdfDoc.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        // Join items with proper spacing
+        const pageText = textContent.items
+          .map(item => item.str)
+          .join(' ');
+        fullText += pageText + '\n';
+      }
+
+      if (!fullText.trim()) {
+        throw new Error('No text could be extracted from this PDF. The file may be image-based or scanned — try the Image OCR tab instead.');
+      }
+
+      // Use the AI text parser which handles numbered MCQ formats
+      const questions = questionParserService.parseAIText(fullText);
+
+      if (questions.length === 0) {
+        throw new Error(
+          `PDF text was extracted (${totalPages} pages) but no MCQ questions were detected. ` +
+          'Ensure the PDF contains numbered questions (e.g. "1.", "Q1.") with 4 options and a correct answer indicator.'
+        );
+      }
+
+      const batchReview = questionParserService.validateBatch(questions);
       setParsedBatch(batchReview);
       setStage('REVIEW');
     } catch (err) {
@@ -117,6 +128,7 @@ export default function ImportQuestions() {
       setLoading(false);
     }
   };
+
 
   // ─── 4. IMAGE OCR HANDLER ───────────────────────────────────
   const handleImageUpload = async (e) => {
@@ -352,10 +364,20 @@ Correct Answer: 3`)}
             {/* ─── TAB 3: PDF ────────────────────────────────────── */}
             {activeTab === 'pdf' && (
               <form onSubmit={handlePdfUpload} className="import-form">
+                <div className="import-instructions" style={{ marginBottom: 'var(--space-4)' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontWeight: 700 }}>PDF MCQ Extraction</h4>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                      Upload any PDF containing numbered MCQ questions. The system reads every page and automatically detects
+                      questions in formats like <code>1.</code>, <code>Q1.</code>, <code>Question 1:</code> with options
+                      <code>A.</code> / <code>1.</code> and a correct-answer line. Works on 50+ question papers.
+                    </p>
+                  </div>
+                </div>
                 <div className="import-dropzone">
                   <span style={{ fontSize: '2.5rem' }}>📄</span>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Upload Exam PDF Document</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Files are uploaded to Supabase Storage and parsed via the pipeline</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Upload Exam / Question Paper PDF</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Text-based PDFs only — scanned images use Image OCR tab</div>
                   <input
                     type="file"
                     accept=".pdf"
@@ -374,10 +396,11 @@ Correct Answer: 3`)}
                   className={`btn btn--primary btn--full ${loading ? 'btn--loading' : ''}`}
                   disabled={loading || !file}
                 >
-                  {loading ? '' : 'Extract Questions from PDF →'}
+                  {loading ? '' : '📄 Extract All Questions from PDF →'}
                 </button>
               </form>
             )}
+
 
             {/* ─── TAB 4: IMAGE ──────────────────────────────────── */}
             {activeTab === 'image' && (

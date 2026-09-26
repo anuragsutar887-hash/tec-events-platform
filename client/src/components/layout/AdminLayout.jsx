@@ -5,14 +5,7 @@ import { accountService } from '../../services/accountService';
 import './AdminLayout.css';
 
 const navItems = [
-  { path: '/admin', label: 'Dashboard', icon: '📊', exact: true },
-  { path: '/admin/events', label: 'Events', icon: '📅' },
-  { path: '/admin/registrations', label: 'Registrations', icon: '📋' },
-  { path: '/admin/accounts', label: 'Accounts & Approvals', icon: '👥', badgeKey: 'pending' },
-  { path: '/admin/checkin', label: 'Check-in Console', icon: '✅' },
-  { path: '/admin/onsite', label: 'On-site Reg', icon: '➕' },
-  { path: '/admin/arena', label: 'Standings', icon: '🏆' },
-  { path: '/admin/settings', label: 'Settings', icon: '⚙️' },
+  { path: '/admin/accounts', label: 'Account Approvals', icon: '👥', badgeKey: 'pending' },
 ];
 
 export default function AdminLayout({ children }) {
@@ -132,7 +125,7 @@ export default function AdminLayout({ children }) {
           </button>
           
           <div className="admin-topbar__title">
-            {navItems.find(isActive)?.label || 'Dashboard'}
+            Account Approvals
           </div>
 
           <div className="admin-topbar__actions">

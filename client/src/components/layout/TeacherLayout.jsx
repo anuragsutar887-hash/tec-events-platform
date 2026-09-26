@@ -45,15 +45,11 @@ export default function TeacherLayout({ children }) {
       <aside className={`teacher-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="teacher-sidebar__header">
           <Link to="/teacher" className="teacher-sidebar__logo-link" title="Teacher Portal">
-            <span style={{ fontSize: '1.25rem', marginRight: '8px' }}>🎓</span>
-            <div>
-              <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 800, fontSize: '0.95rem', color: '#000000', letterSpacing: '0.04em' }}>
-                FACULTY PORTAL
-              </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                TEC Question System
-              </div>
-            </div>
+            <img
+              src="/logo.png"
+              alt="TEC Portal"
+              style={{ height: '40px', width: 'auto', objectFit: 'contain' }}
+            />
           </Link>
         </div>
 
@@ -103,9 +99,6 @@ export default function TeacherLayout({ children }) {
             {teacherNavItems.find(isActive)?.label || 'Teacher Portal'}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <Link to="/teacher/questions" className="btn btn--secondary btn--sm">
-              + Add Question
-            </Link>
             <Link to="/teacher/import" className="btn btn--primary btn--sm">
               📥 Import Questions
             </Link>

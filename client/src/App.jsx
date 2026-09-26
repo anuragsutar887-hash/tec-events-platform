@@ -21,14 +21,7 @@ import StudentTest from './pages/public/StudentTest';
 
 // Admin pages
 import AdminLogin from './pages/admin/Login';
-import Dashboard from './pages/admin/Dashboard';
-import AdminEvents from './pages/admin/AdminEvents';
-import EventForm from './pages/admin/EventForm';
-import AdminRegistrations from './pages/admin/AdminRegistrations';
-import CheckIn from './pages/admin/CheckIn';
-import OnsiteRegistration from './pages/admin/OnsiteRegistration';
 import AccountManagement from './pages/admin/AccountManagement';
-import Settings from './pages/admin/Settings';
 
 // Teacher portal
 import TeacherLayout from './components/layout/TeacherLayout';
@@ -117,39 +110,12 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/reset-password" element={<ResetPassword isAdminView={true} />} />
 
-        {/* ── Admin protected routes (Enclosed inside AdminLayout) ────────── */}
+        {/* ── Admin protected routes ─────────────────────────────────── */}
+        {/* Admin only has access to Account Approvals */}
         <Route path="/admin" element={
           <ProtectedRoute>
             <AdminLayout>
-              <Dashboard />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/events" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <AdminEvents />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/events/new" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <EventForm />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/events/:id/edit" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <EventForm />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/registrations" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <AdminRegistrations />
+              <AccountManagement />
             </AdminLayout>
           </ProtectedRoute>
         } />
@@ -157,41 +123,6 @@ export default function App() {
           <ProtectedRoute>
             <AdminLayout>
               <AccountManagement />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/checkin" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <CheckIn />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/onsite" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <OnsiteRegistration />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/arena" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Leaderboard isAdminView={true} />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/arena/:eventSlug" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Leaderboard isAdminView={true} />
-            </AdminLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/settings" element={
-          <ProtectedRoute>
-            <AdminLayout>
-              <Settings />
             </AdminLayout>
           </ProtectedRoute>
         } />
