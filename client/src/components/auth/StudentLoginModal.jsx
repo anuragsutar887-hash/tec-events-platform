@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { useStudent } from '../../context/StudentAuthContext';
 import './StudentLoginModal.css';
@@ -8,12 +9,13 @@ const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
   const { registerWithPRN, loginWithPRN } = useStudent();
 
-  // Mode: 'LOGIN', 'REGISTER', or 'FORGOT_PASSWORD'
+  // Mode: 'LOGIN', 'REGISTER', 'REGISTER_PENDING', or 'FORGOT_PASSWORD'
   const [tab, setTab] = useState('LOGIN');
 
   // Login Form Fields
   const [loginPrn, setLoginPrn] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Register Form Fields
   const [fullName, setFullName] = useState('');
@@ -21,6 +23,11 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
   const [email, setEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Pending Approval State
+  const [pendingStudent, setPendingStudent] = useState(null);
 
   // Forgot Password Fields
   const [forgotIdentifier, setForgotIdentifier] = useState('');
@@ -46,11 +53,15 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
     if (!isOpen) {
       setLoginPrn('');
       setLoginPassword('');
+      setShowLoginPassword(false);
       setFullName('');
       setRegisterPrn('');
       setEmail('');
       setRegisterPassword('');
       setConfirmPassword('');
+      setShowRegisterPassword(false);
+      setShowConfirmPassword(false);
+      setPendingStudent(null);
       setForgotIdentifier('');
       setForgotSuccess('');
       setError('');
@@ -135,13 +146,20 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      const userData = await registerWithPRN({
+      const res = await registerWithPRN({
         fullName: fullName.trim(),
         prn: registerPrn.trim(),
         email: email.trim(),
         password: registerPassword,
       });
-      if (onSuccess) onSuccess(userData);
+
+      if (res?.pendingApproval) {
+        setPendingStudent(res);
+        setTab('REGISTER_PENDING');
+        return;
+      }
+
+      if (onSuccess) onSuccess(res);
       onClose();
     } catch (err) {
       console.error('Registration error:', err);
@@ -197,12 +215,16 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
         {/* Header */}
         <div className="student-modal-header">
           <div className="student-modal-title-group">
-            <span className="section__label" style={{ marginBottom: '2px' }}>
-              STUDENT PORTAL
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+              <span className="section__label" style={{ marginBottom: 0 }}>
+                STUDENT PORTAL
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Option 1 of 3</span>
+            </div>
             <h2 className="student-modal-title">
               {tab === 'LOGIN' && 'Sign In to Your Account'}
               {tab === 'REGISTER' && 'Create Student Account'}
+              {tab === 'REGISTER_PENDING' && 'Request Submitted'}
               {tab === 'FORGOT_PASSWORD' && 'Reset Your Password'}
             </h2>
           </div>
@@ -217,7 +239,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Tab Switcher (Only in Login or Register) */}
-        {tab !== 'FORGOT_PASSWORD' ? (
+        {tab === 'LOGIN' || tab === 'REGISTER' ? (
           <div className="student-modal-tabs">
             <button
               type="button"
@@ -234,7 +256,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
               Create Account
             </button>
           </div>
-        ) : (
+        ) : tab === 'FORGOT_PASSWORD' ? (
           <div style={{ padding: 'var(--space-2) var(--space-6)', borderBottom: '1px solid var(--border)', background: '#fafafa' }}>
             <button
               type="button"
@@ -244,7 +266,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
               ← Back to Sign In
             </button>
           </div>
-        )}
+        ) : null}
 
         <div className="card__body" style={{ padding: 'var(--space-6)' }}>
           {error && (
@@ -280,15 +302,26 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
 
               <div className="form-group">
                 <label className="form-label form-label--required">Password</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  value={loginPassword}
-                  onChange={(e) => { setLoginPassword(e.target.value); if (error) setError(''); }}
-                  placeholder=""
-                  autoComplete="current-password"
-                  required
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    className="form-input"
+                    value={loginPassword}
+                    onChange={(e) => { setLoginPassword(e.target.value); if (error) setError(''); }}
+                    placeholder=""
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    title={showLoginPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showLoginPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-8px', marginBottom: 'var(--space-3)' }}>
@@ -352,7 +385,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   autoComplete="off"
                   required
                 />
-                <span className="form-hint">Your official College PRN number</span>
+                <span className="form-hint">Official College PRN (e.g. IT250B1016)</span>
               </div>
 
               <div className="form-group">
@@ -366,34 +399,56 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   autoComplete="email"
                   required
                 />
-                <span className="form-hint">Event updates and credentials will be sent here</span>
+                <span className="form-hint">Event updates and confirmations will be sent here</span>
               </div>
 
               <div className="form-group">
                 <label className="form-label form-label--required">Password</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  value={registerPassword}
-                  onChange={(e) => { setRegisterPassword(e.target.value); if (error) setError(''); }}
-                  placeholder=""
-                  autoComplete="new-password"
-                  required
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    type={showRegisterPassword ? 'text' : 'password'}
+                    className="form-input"
+                    value={registerPassword}
+                    onChange={(e) => { setRegisterPassword(e.target.value); if (error) setError(''); }}
+                    placeholder=""
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                    title={showRegisterPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showRegisterPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showRegisterPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
                 <span className="form-hint">At least 6 characters</span>
               </div>
 
               <div className="form-group">
                 <label className="form-label form-label--required">Confirm Password</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  value={confirmPassword}
-                  onChange={(e) => { setConfirmPassword(e.target.value); if (error) setError(''); }}
-                  placeholder=""
-                  autoComplete="new-password"
-                  required
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="form-input"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); if (error) setError(''); }}
+                    placeholder=""
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
               </div>
 
               <div className="student-modal-actions">
@@ -402,7 +457,7 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
                   className={`btn btn--primary btn--full ${loading ? 'btn--loading' : ''}`}
                   disabled={loading}
                 >
-                  {loading ? '' : 'Create Account'}
+                  {loading ? '' : 'Submit Registration for Approval'}
                 </button>
               </div>
 
@@ -419,7 +474,49 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
             </form>
           )}
 
-          {/* ─── Tab 3: FORGOT PASSWORD ────────────────────────────── */}
+          {/* ─── Tab 3: REGISTER PENDING APPROVAL CONFIRMATION ─────── */}
+          {tab === 'REGISTER_PENDING' && pendingStudent && (
+            <div className="approval-pending-card">
+              <div className="approval-pending-icon">⏳</div>
+              <h3 className="approval-pending-title">Account Request Sent!</h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '8px 0' }}>
+                Thank you, <strong>{pendingStudent.fullName}</strong>. Your student account registration has been submitted to the Administrator for verification.
+              </p>
+
+              <div className="approval-pending-box">
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span className="text-muted">PRN Number:</span>
+                  <span className="font-mono fw-bold">{pendingStudent.prn}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span className="text-muted">Registered Email:</span>
+                  <span className="font-mono fw-bold">{pendingStudent.email}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="text-muted">Status:</span>
+                  <span className="badge badge--warning">🟡 AWAITING ADMIN APPROVAL</span>
+                </div>
+              </div>
+
+              <div className="approval-pending-privacy">
+                <strong>🔒 Privacy Guarantee:</strong> Your password is cryptographically protected and will never be visible to the administrator. Once approved, you can sign in directly with your PRN and password.
+              </div>
+
+              <button
+                type="button"
+                className="btn btn--primary btn--full"
+                onClick={() => {
+                  setTab('LOGIN');
+                  setLoginPrn(pendingStudent.prn);
+                  setPendingStudent(null);
+                }}
+              >
+                Go to Sign In
+              </button>
+            </div>
+          )}
+
+          {/* ─── Tab 4: FORGOT PASSWORD ────────────────────────────── */}
           {tab === 'FORGOT_PASSWORD' && (
             <form onSubmit={handleForgotPasswordSubmit} className="student-login-form">
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: 'var(--space-4)', lineHeight: 1.5 }}>
@@ -461,6 +558,20 @@ export default function StudentLoginModal({ isOpen, onClose, onSuccess }) {
               </div>
             </form>
           )}
+
+          {/* ─── Unified 3 Portals Switcher ─────────────────────────── */}
+          <div className="student-modal-portal-switch">
+            <span>Looking for other portals?</span>
+            <div className="student-modal-portal-links">
+              <a href="/teacher/login" onClick={onClose}>
+                👨‍🏫 Teacher Portal
+              </a>
+              <span style={{ color: 'var(--border-strong)' }}>•</span>
+              <a href="/admin/login" onClick={onClose}>
+                ⚡ Admin Portal
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>

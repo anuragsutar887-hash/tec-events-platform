@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { accountService } from './accountService';
 
 const TEACHER_USER_KEY = 'tec_teacher_user';
 const FALLBACK_QUESTIONS_KEY = 'tec_local_questions';
@@ -129,8 +130,36 @@ export const teacherService = {
 
   async login(email, password) {
     const cleanEmail = (email || '').trim().toLowerCase();
-    
-    // 1. Attempt Supabase Auth
+
+    // 1. 🛡️ Check Admin Approval Status
+    const approvalCheck = await accountService.checkApproval({ email: cleanEmail, role: 'teacher' });
+    if (!approvalCheck.approved) {
+      if (approvalCheck.status === 'not_found') {
+        // Special check for demo/pre-existing teacher
+        if (cleanEmail === 'teacher@indiraicem.ac.in' || cleanEmail === 'faculty@indiraicem.ac.in') {
+          // Pre-approved demo teacher
+          await accountService.createAccountRequest({
+            fullName: cleanEmail.startsWith('teacher') ? 'Prof. Anjali Sharma' : 'Faculty Member',
+            email: cleanEmail,
+            department: 'Information Technology',
+            role: 'teacher',
+          });
+          const existing = await accountService.getAccountByIdentifier({ email: cleanEmail });
+          if (existing?.id) {
+            await accountService.approveAccount(existing.id, 'system_migration');
+          }
+        } else {
+          throw new Error(`No faculty account found for "${cleanEmail}". Please register to request access.`);
+        }
+      } else if (approvalCheck.status === 'pending') {
+        throw new Error('⏳ Your faculty account is pending administrator approval. Please wait for the admin to confirm your request.');
+      } else if (approvalCheck.status === 'rejected') {
+        throw new Error(approvalCheck.message || '❌ Your faculty account was declined by the administrator.');
+      }
+    }
+
+    // 2. Verify Credentials
+    // A. Attempt Supabase Auth
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
@@ -140,9 +169,9 @@ export const teacherService = {
         const teacherProfile = {
           id: data.user.id,
           email: data.user.email,
-          full_name: data.user.user_metadata?.full_name || 'Faculty Member',
-          role: data.user.user_metadata?.role || 'teacher',
-          department: data.user.user_metadata?.department || 'Information Technology',
+          full_name: data.user.user_metadata?.full_name || approvalCheck.account?.full_name || 'Faculty Member',
+          role: 'teacher',
+          department: data.user.user_metadata?.department || approvalCheck.account?.department || 'Information Technology',
         };
         localStorage.setItem(TEACHER_USER_KEY, JSON.stringify(teacherProfile));
         return teacherProfile;
@@ -151,31 +180,44 @@ export const teacherService = {
       console.warn('Supabase Auth attempt note:', err);
     }
 
-    // 2. Verified Faculty Credential Validation (Demo/Offline)
-    if (
-      (cleanEmail === 'teacher@indiraicem.ac.in' || cleanEmail === 'faculty@indiraicem.ac.in' || cleanEmail.includes('teacher') || cleanEmail.includes('faculty')) &&
-      (password === 'teacher123' || password === 'admin123' || password.length >= 6)
-    ) {
+    // B. Verified Faculty Credential Validation (Demo/Offline/Stored password)
+    const storedPass = typeof localStorage !== 'undefined' ? localStorage.getItem(`tec_teacher_pass_${cleanEmail}`) : null;
+    const isStoredMatch = storedPass && storedPass === password;
+    const isDemoMatch = (cleanEmail === 'teacher@indiraicem.ac.in' || cleanEmail === 'faculty@indiraicem.ac.in') && (password === 'teacher123' || password === 'admin123' || password.length >= 6);
+
+    if (isStoredMatch || isDemoMatch) {
       const teacherProfile = {
-        id: 'tc_' + Math.abs(cleanEmail.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0)),
+        id: approvalCheck.account?.id || ('tc_' + Math.abs(cleanEmail.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0))),
         email: cleanEmail,
-        full_name: cleanEmail.startsWith('teacher') ? 'Prof. Anjali Sharma' : 'Faculty Member',
+        full_name: approvalCheck.account?.full_name || (cleanEmail.startsWith('teacher') ? 'Prof. Anjali Sharma' : 'Faculty Member'),
         role: 'teacher',
-        department: 'Information Technology',
+        department: approvalCheck.account?.department || 'Information Technology',
       };
       localStorage.setItem(TEACHER_USER_KEY, JSON.stringify(teacherProfile));
       return teacherProfile;
     }
 
-    throw new Error('Invalid email or password. Use teacher@indiraicem.ac.in / teacher123 or registered Supabase credentials.');
+    throw new Error('Invalid email or password. Please verify your credentials.');
   },
 
-  async register({ fullName, email, password, department = 'IT' }) {
+  async register({ fullName, email, password, department = 'Information Technology' }) {
     const cleanEmail = (email || '').trim().toLowerCase();
-    
-    // 1. Try Supabase Auth Sign Up
+
+    // 1. Submit Account Request to Admin Approval System (Privacy: password is NOT saved here)
+    await accountService.createAccountRequest({
+      fullName: (fullName || '').trim(),
+      email: cleanEmail,
+      department: department.trim(),
+      role: 'teacher',
+    });
+
+    // 2. Set up credentials in Supabase Auth or local password store
     try {
-      const { data, error } = await supabase.auth.signUp({
+      localStorage.setItem(`tec_teacher_pass_${cleanEmail}`, password);
+    } catch {}
+
+    try {
+      await supabase.auth.signUp({
         email: cleanEmail,
         password,
         options: {
@@ -186,31 +228,19 @@ export const teacherService = {
           }
         }
       });
-      if (!error && data?.user) {
-        const teacherProfile = {
-          id: data.user.id,
-          email: data.user.email,
-          full_name: fullName.trim(),
-          role: 'teacher',
-          department: department.trim(),
-        };
-        localStorage.setItem(TEACHER_USER_KEY, JSON.stringify(teacherProfile));
-        return teacherProfile;
-      }
+      // Ensure session is signed out because account is pending approval!
+      await supabase.auth.signOut();
     } catch (err) {
       console.warn('Supabase Auth sign up note:', err);
     }
 
-    // 2. Client profile fallback
-    const teacherProfile = {
-      id: 'tc_' + Date.now(),
+    // 3. Return pending status without logging in
+    return {
+      pendingApproval: true,
       email: cleanEmail,
-      full_name: fullName.trim(),
-      role: 'teacher',
+      fullName: fullName.trim(),
       department: department.trim(),
     };
-    localStorage.setItem(TEACHER_USER_KEY, JSON.stringify(teacherProfile));
-    return teacherProfile;
   },
 
   async logout() {

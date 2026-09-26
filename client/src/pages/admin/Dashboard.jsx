@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../../api/client';
+import { accountService } from '../../services/accountService';
 import { formatDate, timeAgo } from '../../utils/dateHelpers';
 import './Dashboard.css';
 
@@ -11,6 +12,7 @@ export default function Dashboard() {
   const [eventStats, setEventStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pendingApprovals, setPendingApprovals] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -34,6 +36,8 @@ export default function Dashboard() {
       if (eventsRes.data.events.length > 0) {
         setSelectedEventId(String(eventsRes.data.events[0].id));
       }
+      // Load pending account approvals count (non-blocking)
+      accountService.getPendingCount().then(setPendingApprovals).catch(() => {});
     } catch (err) {
       setError('Failed to load dashboard data');
     } finally {
@@ -153,6 +157,20 @@ export default function Dashboard() {
             <span>{stats?.on_site_registrations || 0} on-site check-ins</span>
           </div>
         </div>
+
+        <Link to="/admin/accounts" className="stat-card stat-card--orange stat-card--clickable" style={{ textDecoration: 'none' }}>
+          <div className="stat-card__top">
+            <div className="stat-card__icon-box">🔔</div>
+            <span className="stat-card__badge stat-card__badge--orange">APPROVALS</span>
+          </div>
+          <div className="stat-card__value" style={{ color: pendingApprovals > 0 ? 'var(--warning, #f59e0b)' : 'inherit' }}>
+            {pendingApprovals}
+          </div>
+          <div className="stat-card__footer">
+            <span className="stat-card__sub-dot"></span>
+            <span>{pendingApprovals > 0 ? 'Accounts awaiting review' : 'No pending requests'}</span>
+          </div>
+        </Link>
       </div>
 
       {/* Event Breakdown */}

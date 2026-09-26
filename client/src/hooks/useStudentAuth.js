@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabaseClient';
+import { accountService } from '../services/accountService';
 
 const STORAGE_KEY = 'participant_user';
 const SYNC_CHANNEL = 'participant_auth_channel';
@@ -151,46 +152,54 @@ export function useStudentAuth() {
     const cleanPrn = (prn || '').trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (!cleanPrn) throw new Error('PRN is required');
     const authEmail = `${cleanPrn}@student.indiraicem.ac.in`;
-    
-    let cred;
-    try {
-      cred = await createUserWithEmailAndPassword(auth, authEmail, password);
-    } catch (err) {
-      if (err.code === 'auth/email-already-in-use') {
-        try {
-          cred = await signInWithEmailAndPassword(auth, authEmail, password);
-        } catch {
-          throw err;
-        }
-      } else {
-        throw err;
-      }
-    }
-    const profilePayload = {
-      name: (fullName || '').trim(),
+
+    // 1. Submit Account Request to Admin Approval System (Privacy: password is NOT saved here)
+    await accountService.createAccountRequest({
+      fullName: (fullName || '').trim(),
       prn: (prn || '').trim().toUpperCase(),
       email: (email || '').trim().toLowerCase(),
-    };
+      role: 'student',
+    });
+
+    // 2. Set up authentication credentials in Firebase & local password store
+    try {
+      localStorage.setItem(`tec_student_pass_${cleanPrn}`, password);
+    } catch {}
 
     try {
-      await updateProfile(cred.user, {
-        displayName: JSON.stringify(profilePayload),
-      });
-    } catch (err) {
-      console.warn('Profile update non-critical error:', err);
+      let cred;
+      try {
+        cred = await createUserWithEmailAndPassword(auth, authEmail, password);
+      } catch (err) {
+        if (err.code === 'auth/email-already-in-use') {
+          try {
+            cred = await signInWithEmailAndPassword(auth, authEmail, password);
+          } catch {}
+        }
+      }
+      if (cred?.user) {
+        const profilePayload = {
+          name: (fullName || '').trim(),
+          prn: (prn || '').trim().toUpperCase(),
+          email: (email || '').trim().toLowerCase(),
+        };
+        await updateProfile(cred.user, {
+          displayName: JSON.stringify(profilePayload),
+        });
+        // Immediately sign out since account is pending admin approval!
+        await signOut(auth);
+      }
+    } catch (e) {
+      console.warn('Firebase credential setup note:', e);
     }
 
-    const userData = {
-      full_name: profilePayload.name,
-      prn: profilePayload.prn,
-      email: profilePayload.email,
-      uid: cred.user.uid,
-      college: 'Indira College of Engineering & Management',
-      logged_in_at: new Date().toISOString(),
+    // 3. Return pending status — DO NOT log in the student yet
+    return {
+      pendingApproval: true,
+      prn: (prn || '').trim().toUpperCase(),
+      fullName: (fullName || '').trim(),
+      email: (email || '').trim().toLowerCase(),
     };
-
-    login(userData);
-    return userData;
   };
 
   const loginWithPRN = async ({ prn, password }) => {
@@ -198,27 +207,69 @@ export function useStudentAuth() {
     if (!cleanPrn) throw new Error('PRN is required');
     const authEmail = `${cleanPrn}@student.indiraicem.ac.in`;
 
+    // 1. 🛡️ Check Admin Approval Status
+    const approvalCheck = await accountService.checkApproval({ prn: cleanPrn });
+    if (!approvalCheck.approved) {
+      if (approvalCheck.status === 'not_found') {
+        // Check if legacy participant exists
+        let legacyPart = null;
+        try {
+          const { data } = await supabase
+            .from('participants')
+            .select('*')
+            .ilike('student_id', (prn || '').trim())
+            .limit(1)
+            .maybeSingle();
+          legacyPart = data;
+        } catch {}
+
+        if (legacyPart) {
+          // Pre-existing participant automatically approved
+          await accountService.createAccountRequest({
+            fullName: legacyPart.full_name,
+            prn: (prn || '').trim().toUpperCase(),
+            email: legacyPart.email,
+            department: legacyPart.department || 'IT',
+            role: 'student',
+          });
+          const existing = await accountService.getAccountByIdentifier({ prn: cleanPrn });
+          if (existing?.id) {
+            await accountService.approveAccount(existing.id, 'system_migration');
+          }
+        } else {
+          throw new Error(`No account found for PRN "${(prn || '').trim().toUpperCase()}". Please create an account to request access.`);
+        }
+      } else if (approvalCheck.status === 'pending') {
+        throw new Error('⏳ Your student account is pending administrator approval. Please wait for the admin to confirm your request.');
+      } else if (approvalCheck.status === 'rejected') {
+        throw new Error(approvalCheck.message || '❌ Your account request was declined by the administrator.');
+      }
+    }
+
+    // 2. Authenticate Password
     let cred = null;
     try {
       cred = await signInWithEmailAndPassword(auth, authEmail, password);
     } catch (firebaseErr) {
       const storedResetPass = typeof localStorage !== 'undefined' ? localStorage.getItem(`tec_student_pass_${cleanPrn}`) : null;
       if (storedResetPass && storedResetPass === password) {
-        // Authenticated with locally reset password
-        let email = '';
-        let name = '';
-        try {
-          const { data: part } = await supabase
-            .from('participants')
-            .select('full_name, email')
-            .ilike('student_id', (prn || '').trim())
-            .limit(1)
-            .maybeSingle();
-          if (part) {
-            email = part.email || '';
-            name = part.full_name || '';
-          }
-        } catch {}
+        // Authenticated with stored/reset password
+        let email = approvalCheck.account?.email || '';
+        let name = approvalCheck.account?.full_name || '';
+        if (!email || !name) {
+          try {
+            const { data: part } = await supabase
+              .from('participants')
+              .select('full_name, email')
+              .ilike('student_id', (prn || '').trim())
+              .limit(1)
+              .maybeSingle();
+            if (part) {
+              if (!email) email = part.email || '';
+              if (!name) name = part.full_name || '';
+            }
+          } catch {}
+        }
 
         const userData = {
           full_name: name || 'Participant',
@@ -233,7 +284,7 @@ export function useStudentAuth() {
       }
       throw firebaseErr;
     }
-    
+
     let parsed = {};
     try {
       parsed = JSON.parse(cred.user?.displayName || '{}');
@@ -241,9 +292,8 @@ export function useStudentAuth() {
       parsed = { name: cred.user?.displayName || 'Participant' };
     }
 
-    // If email is not stored in displayName, attempt fallback to participants table
-    let email = parsed.email || '';
-    let name = parsed.name || '';
+    let email = parsed.email || approvalCheck.account?.email || '';
+    let name = parsed.name || approvalCheck.account?.full_name || '';
     if (!email || !name) {
       try {
         const { data: part } = await supabase

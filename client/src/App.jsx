@@ -27,6 +27,7 @@ import EventForm from './pages/admin/EventForm';
 import AdminRegistrations from './pages/admin/AdminRegistrations';
 import CheckIn from './pages/admin/CheckIn';
 import OnsiteRegistration from './pages/admin/OnsiteRegistration';
+import AccountManagement from './pages/admin/AccountManagement';
 import Settings from './pages/admin/Settings';
 
 // Teacher portal
@@ -149,6 +150,13 @@ export default function App() {
           <ProtectedRoute>
             <AdminLayout>
               <AdminRegistrations />
+            </AdminLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/accounts" element={
+          <ProtectedRoute>
+            <AdminLayout>
+              <AccountManagement />
             </AdminLayout>
           </ProtectedRoute>
         } />

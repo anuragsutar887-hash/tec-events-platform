@@ -246,3 +246,112 @@
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Password Show/Hide Toggle ─────────────────────────── */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper .form-input {
+  padding-right: 44px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 1.05rem;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.password-toggle-btn:hover {
+  color: #000000;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ─── Approval Pending Notice Card ──────────────────────── */
+.approval-pending-card {
+  text-align: center;
+  padding: var(--space-2) 0;
+}
+
+.approval-pending-icon {
+  font-size: 2.8rem;
+  margin-bottom: var(--space-2);
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+.approval-pending-title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+  color: #000000;
+}
+
+.approval-pending-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin: var(--space-4) 0;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.approval-pending-privacy {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-size: 0.78rem;
+  color: #166534;
+  margin-bottom: var(--space-4);
+  text-align: left;
+  line-height: 1.4;
+}
+
+/* ─── Cross-Portal Switcher Footer ──────────────────────── */
+.student-modal-portal-switch {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--border);
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.student-modal-portal-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.student-modal-portal-links a {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+
+.student-modal-portal-links a:hover {
+  text-decoration: underline;
+}

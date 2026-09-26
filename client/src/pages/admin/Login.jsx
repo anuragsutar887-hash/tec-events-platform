@@ -11,6 +11,7 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -94,6 +95,7 @@ export default function AdminLogin() {
         <div className="login-card">
           <div className="login-card__header">
             <div className="login-card__logo-serif">TECH EVENTS</div>
+            <span className="login-card__badge">Option 3 of 3 • COMMITTEE ADMIN</span>
           </div>
 
           <h1 className="login-card__title">
@@ -136,16 +138,27 @@ export default function AdminLogin() {
                 <label htmlFor="password" className="form-label">
                   Password
                 </label>
-                <input
-                  id="password"
-                  type="password"
-                  className="form-input login-form__input"
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
-                  autoComplete="current-password"
-                  placeholder=""
-                  required
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-input login-form__input"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
+                    autoComplete="current-password"
+                    placeholder=""
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-6px', marginBottom: 'var(--space-2)' }}>
@@ -216,7 +229,18 @@ export default function AdminLogin() {
             </form>
           )}
 
-          <div className="login-card__footer">
+          <div className="login-card__footer" style={{ borderTop: '1px dashed var(--border)', paddingTop: 'var(--space-4)', marginTop: 'var(--space-6)', textAlign: 'center' }}>
+            <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+              Switch to another portal:
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: 'var(--space-3)' }}>
+              <Link to="/login" style={{ padding: '6px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}>
+                🎓 Student Portal
+              </Link>
+              <Link to="/teacher/login" style={{ padding: '6px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}>
+                👨‍🏫 Teacher Portal
+              </Link>
+            </div>
             <Link to="/" className="login-card__back">
               ← Return to public site
             </Link>

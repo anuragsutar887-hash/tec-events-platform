@@ -39,10 +39,10 @@
   flex-wrap: wrap;
 }
 
-/* ─── 4 Global Metric Cards ──────────────────────────────── */
+/* ─── 5 Global Metric Cards ──────────────────────────────── */
 .dashboard__metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--space-5);
   margin-bottom: var(--space-8);
 }
@@ -242,4 +242,28 @@
   .dashboard__breakdown-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── Pending Approvals (orange) stat card ─────────────────── */
+.stat-card--orange {
+  border-color: rgba(249, 115, 22, 0.3);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.06) 0%, var(--bg-card, #1e293b) 100%);
+}
+
+.stat-card__badge--orange {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+}
+
+.stat-card--clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  display: block;
+}
+
+.stat-card--clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.2);
+  border-color: rgba(249, 115, 22, 0.55);
 }
